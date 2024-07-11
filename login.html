@@ -1,42 +1,37 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  </head>
-  <body>
-    <div class="container-fluid">
-      <div class="row-fluid">
-        <div class="span12 center" style="padding:20px">
-          <h1 id="top_title"></h1>
-        </div>
-      </div>
-      <div id="loginpage" class="row-fluid">
-        <div style="width:560px;margin:0 auto;">
-          <form class="form-horizontal well" id="form_login" action="" method="post">
-            <h1 class="center">Authorization Required</h1>
-            <hr style="border-bottom-color: #E5E5E5;">
-            <div id="uid_ctl" class="control-group">
-              <label class="control-label" for="uid">Name:</label>
-              <div class="controls">
-                <input autofocus="autofocus" type="text" id="uid" name="uid" placeholder="Username">
-              </div>
-            </div>
-            <div id="pwd_ctl" class="control-group">
-                <label class="control-label" for="pwd">Password:</label>
-                <div class="controls">
-                  <input id="pwd" name="pwd" type="password" placeholder="Password">
-                </div>
-            </div>
-            <div class="control-group">
-              <div class="controls">
-                <input id="signin" type="submit" value="Sign in" class="btn btn-primary">
-                <a href="http://121.36.103.216/reg.html" style="line-height:30px">Sign up</a>
-              </div>
-            </div>
-            <input id="ret_url" name="url" value="index.php" type="hidden">
-          </form>
-        </div>
-      </div>
-  </body>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Login Page</title>  
+</head>  
+<body>  
+    <div class="container mt-5">  
+        <div class="row justify-content-center">  
+            <div class="col-md-6">  
+                <div class="card">  
+                    <div class="card-header">  
+                        <h3 class="text-center">Authorization Required</h3>  
+                    </div>  
+                    <div class="card-body">  
+                        <form id="form_login" method="post" action="/api/login">  
+                            <div class="form-group">  
+                                <label for="uid">Username</label>  
+                                <input type="text" class="form-control" id="uid" name="uid" placeholder="Username" required>  
+                            </div>  
+                            <div class="form-group">  
+                                <label for="pwd">Password</label>  
+                                <input type="password" class="form-control" id="pwd" name="pwd" placeholder="Password" required>  
+                            </div>  
+                            <button type="submit" class="btn btn-primary btn-block">Sign in</button>  
+                            <div class="text-center mt-3">  
+                                <a href="http://121.36.103.216/reg.html">Sign up</a>  
+                            </div>  
+                        </form>  
+                    </div>  
+                </div>  
+            </div>  
+        </div>  
+    </div>  
+</body>
 </html>
