@@ -8,24 +8,18 @@
 #include<errno.h>
 #include<pthread.h>
 #include<vector>
+#include"/password.h"
 const char Head1[]="HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length:";
 const char Head2[]="HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS\r\nAccess-Control-Allow-Credentials: false";
+const char Head3[]="HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length:";
+const char Head4[]="<script>window.location.href = 'http://121.36.103.216/board.html';</script>";
+const char Head5[]="<script>alert('Login failed, please try again.');</script>";
 struct point{
 	const char* content,*mat;
 	int n;
 };
 std::vector<point>e;
-void add(const char* file,const char* mat,const char* head){
-	char *fil=(char*)malloc(102400);
-	FILE*fin=fopen(file,"r");
-	int n=fread(fil,1,102400,fin);
-    printf("%d\n",n);
-	fclose(fin);
-	char* content=(char*)malloc(n+100);
-	sprintf(content,"%s%d\r\n\r\n%s",head,n,fil);
-	free(fil);
-	e.push_back((point){content,mat,(int)strlen(content)});
-}
+#include"/ini.h"
 void post(int cl,char*get,int len){
     char t[]="Content-Length:";
     int n=0,i=0;
@@ -35,31 +29,31 @@ void post(int cl,char*get,int len){
         if(bj==1)sscanf(get+i+j+1,"%d",&n);
         if(get[i+2]=='\n')break;
     }
-    write(cl,get+i+3,n);
+    get[i+3+(n=std::min(n,4100-i))]=0;
+    if(check(get+i+3))write(cl,Head4,strlen(Head4));
+    else write(cl,Head5,strlen(Head5));
 }
 void* work(void* cli) {
 	char* get=(char*)malloc(4196);
-	int cl=(long long)cli,n=recv(cl,get,4196,0);
+	int cl=(long long)cli,n=recv(cl,get,4000,0);
 	for(int i=0;i<e.size();i++){
 		int bj=1;
 		for(int j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=0;
 		if(bj==1){
-            if(i==0)post(cl,get,n);
+            if(e[i].n==0)post(cl,get,n);
 			else write(cl,e[i].content,e[i].n);
-			close(cl);
-			return 0;
+			goto out;
 		}
 	}
 	printf("%s\n",get);
+	out:
+	// printf("%s\n-----------------------------------------\n",get);
+	free(get);
 	close(cl);
 	return 0;
 }
 int main() {
-	e.push_back((point){0,"POST",0});
-	add("/main.html","GET / ",Head1);
-	add("/login.html","GET /login.html ",Head1);
-	add("/reg.html","GET /reg.html ",Head1);
-	e.push_back((point){Head2,"OPTIONS",strlen(Head2)});
+    ini();
 	int serverSock=-1;
 	struct sockaddr_in serverAddr;
 	serverSock=socket(AF_INET, SOCK_STREAM, 0);
