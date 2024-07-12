@@ -8,32 +8,30 @@
 #include<errno.h>
 #include<pthread.h>
 #include<vector>
+#include<time.h>
+#include"/myio.h"
 #include"/password.h"
-const char Head1[]="HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length:";
-const char Head2[]="HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS\r\nAccess-Control-Allow-Credentials: false";
-const char Head3[]="HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length:";
-// const char Head404[]="HTTP/1.1 404 Not Found";
-struct point{
-	const char* content,*mat;
-	int n;
-};
-std::vector<point>e;
 #include"/ini.h"
 void post(int cl,char*get,int len,void(*fun)(char*,int)){
+    if(fun==check_cookie_js)return check_cookie_js(get,cl);
     char t[]="Content-Length:";
     int n=0,i=0;
     for(;i<len;i++)if(get[i]=='\n'){
         int bj=1,j=0;
         for(;t[j];j++)if(get[i+1+j]!=t[j])bj=0;
-        if(bj==1)sscanf(get+i+j+1,"%d",&n);
-        if(get[i+2]=='\n')break;
+        if(bj==1)n=readint(get+i+j);
+        if(get[i+2]=='\n')return fun(get+i+3,cl);
     }
-    get[i+3+(n=std::min(n,4100-i))]=0;
-    fun(get+i+3,cl);
 }
 void* work(void* cli) {
 	char* get=(char*)malloc(4196);
-	int cl=(long long)cli,n=recv(cl,get,4000,0);
+	int cl=(long long)cli;
+    int n=recv(cl,get,4000,0);//post不会超过4000
+    if(n<0){
+        free(get);
+        return 0;
+    }
+    get[n]=0;
 	for(int i=0;i<e.size();i++){
 		int bj=1;
 		for(int j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=0;

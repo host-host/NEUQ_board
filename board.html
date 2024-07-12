@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>User Status</title>
+</head>
+<body></body>
+<p id="userStatus">Loading...</p>
+<a id="signOutLink" href="http://121.36.103.216/logout.html" style="display:none;">sign out</a>
+<a id="signInLink" href="http://121.36.103.216/login.html">sign in</a>
+<script>
+fetch('http://121.36.103.216/api/user')
+.then(response => {
+if (!response.ok)throw new Error('Network response was not ok');
+return response.text();
+})
+.then(data => {
+if (data=="Not_Logged_In") {
+document.getElementById('userStatus').textContent =data;
+document.getElementById('signOutLink').style.display = 'none';
+document.getElementById('signInLink').style.display = 'inline';
+} else {
+document.getElementById('userStatus').textContent = 'Your id is: '+data ;
+document.getElementById('signOutLink').style.display = 'inline';
+document.getElementById('signInLink').style.display = 'none';
+}
+})
+.catch(error => {
+console.error('There was a problem with your fetch operation:', error);
+document.getElementById('userStatus').textContent = 'Error loading user status!';
+});
+</script>
+</body>
+</html>

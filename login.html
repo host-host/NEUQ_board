@@ -5,33 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">  
     <title>Login Page</title>  
 </head>  
-<body>  
-    <div class="container mt-5">  
-        <div class="row justify-content-center">  
-            <div class="col-md-6">  
-                <div class="card">  
-                    <div class="card-header">  
-                        <h3 class="text-center">Authorization Required</h3>  
-                    </div>  
-                    <div class="card-body">  
-                        <form id="form_login" method="post" action="/api/login">  
-                            <div class="form-group">  
-                                <label for="uid">Username</label>  
-                                <input type="text" class="form-control" id="uid" name="uid" placeholder="Username" required>  
-                            </div>  
-                            <div class="form-group">  
-                                <label for="pwd">Password</label>  
-                                <input type="password" class="form-control" id="pwd" name="pwd" placeholder="Password" required>  
-                            </div>  
-                            <button type="submit" class="btn btn-primary btn-block">Sign in</button>  
-                            <div class="text-center mt-3">  
-                                <a href="http://121.36.103.216/reg.html">Sign up</a>  
-                            </div>  
-                        </form>  
-                    </div>  
-                </div>  
-            </div>  
-        </div>  
-    </div>  
+<body>
+ <h3 class="text-center">Authorization Required</h3>  
+ <form id="form_login" method="post" action="/api/login">  
+ <label for="uid">Username</label>  
+ <input type="text" class="form-control" id="uid" name="uid" placeholder="Username" required>  
+ <br>
+ <label for="pwd">Password</label>
+ <input type="password" class="form-control" id="pwd" name="pwd" placeholder="Password" required>  
+ <br>
+ <button type="submit" class="btn btn-primary btn-block">Sign in</button>  
+ <a href="http://121.36.103.216/reg.html">Sign up</a>  
+ </form>
 </body>
 </html>
