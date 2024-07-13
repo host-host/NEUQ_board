@@ -1,0 +1,43 @@
+<!DOCTYPE html>    
+<html lang="en">    
+<head>    
+    <meta charset="UTF-8">    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <title>Change Password</title>    
+    <!-- 可以引入Bootstrap或其他CSS框架来美化页面，这里仅展示基本结构 -->  
+    <style>  
+        .form-control {  
+            width: 100%;  
+            padding: 0.375rem 0.75rem;  
+            font-size: 1rem;  
+            line-height: 1.5;  
+            color: #495057;  
+            background-color: #fff;  
+            background-clip: padding-box;  
+            border: 1px solid #ced4da;  
+            border-radius: 0.25rem;  
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;  
+        }  
+        .btn-block {  
+            display: block;  
+            width: 100%;  
+        }  
+    </style>  
+</head>    
+<body>  
+    <h3 class="text-center">Change Your Password</h3>    
+    <form id="form_change_password" method="post" action="/api/change_password">    
+        <label for="current_pwd">Current Password</label>    
+        <input type="password" class="form-control" id="current_pwd" name="current_pwd" placeholder="Current Password" required>    
+        <br>  
+        <label for="new_pwd">New Password</label>  
+        <input type="password" class="form-control" id="new_pwd" name="new_pwd" placeholder="New Password" required>    
+        <br>  
+        <label for="confirm_pwd">Confirm New Password</label>  
+        <input type="password" class="form-control" id="confirm_pwd" name="confirm_pwd" placeholder="Confirm New Password" required>    
+        <br>  
+        <button type="submit" class="btn btn-primary btn-block">Change Password</button>    
+        <a href="http://121.36.103.216/board.html">Go back to Board</a>    
+    </form>  
+</body>  
+</html>

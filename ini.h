@@ -1,6 +1,3 @@
-const char Head1[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:";
-const char Head2[]="HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS\r\nAccess-Control-Allow-Credentials: false";
-const char Head4[]="HTTP/1.1 302 Found\r\nLocation: http://121.36.103.216/board.html\r\nContent-Length: 0\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=121.36.103.216";
 struct point{
 	const char* content,*mat;
 	int n;
@@ -20,7 +17,6 @@ void add(const char* file,const char* mat,const char* head){
 	e.push_back((point){content,mat,m+n});
 }
 void ini(){
-    srand(time(0));
     FILE*fin=fopen("/user.txt","r");
     char ch[10240],*p=ch,*p2=ch,tmp[10240];//一个用户不会超过10k
     int t_=0;
@@ -43,9 +39,14 @@ void ini(){
 	add("/reg.html","GET /reg.html",Head1);
 	add("/favicon.ico","GET /favicon.ico",Head1);
 	add("/board.html","GET /board.html",Head1);
+	add("/profile.html","GET /profile.html",Head1);
 	e.push_back((point){(char*)login,"POST /api/login",0});
 	e.push_back((point){(char*)reg,"POST /api/register",0});
 	e.push_back((point){(char*)check_cookie_js,"GET /api/user",0});
+	e.push_back((point){(char*)change_password,"POST /api/change_password",0});
+	e.push_back((point){(char*)getp,"GET /p=",0});
+	e.push_back((point){(char*)getcon,"GET /con=",0});
 	e.push_back((point){Head2,"OPTIONS",strlen(Head2)});
 	e.push_back((point){Head4,"GET /logout.html",strlen(Head4)});
+    srand(time(0));
 }

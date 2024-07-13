@@ -1,33 +1,113 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>User Status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEUQ-board</title>
+  <style>
+    .board-item {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .item-content {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+    }
+    .item-title {
+      cursor: pointer;
+      color: blue;
+    }
+    .item-title:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
-<body></body>
+<body>
 <p id="userStatus">Loading...</p>
 <a id="signOutLink" href="http://121.36.103.216/logout.html" style="display:none;">sign out</a>
+<a id="profile" href="http://121.36.103.216/profile.html" style="display:none;">change my profile</a>
 <a id="signInLink" href="http://121.36.103.216/login.html">sign in</a>
+<div id="boardContent">
+  <div id="boardItems">Loading board content...</div>
+</div>
+
 <script>
-fetch('http://121.36.103.216/api/user')
-.then(response => {
-if (!response.ok)throw new Error('Network response was not ok');
-return response.text();
-})
-.then(data => {
-if (data=="Not_Logged_In") {
-document.getElementById('userStatus').textContent =data;
-document.getElementById('signOutLink').style.display = 'none';
-document.getElementById('signInLink').style.display = 'inline';
-} else {
-document.getElementById('userStatus').textContent = 'Your id is: '+data ;
-document.getElementById('signOutLink').style.display = 'inline';
-document.getElementById('signInLink').style.display = 'none';
-}
-})
-.catch(error => {
-console.error('There was a problem with your fetch operation:', error);
-document.getElementById('userStatus').textContent = 'Error loading user status!';
-});
+  fetch('http://121.36.103.216/api/user')
+  .then(response => {
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.text();
+  })
+  .then(data => {
+    if (data === "Not_Logged_In") {
+      document.getElementById('userStatus').textContent = data;
+    } else {
+      document.getElementById('userStatus').textContent = 'Your id is: ' + data;
+      document.getElementById('profile').style.display = 'inline';
+      document.getElementById('signOutLink').style.display = 'inline';
+      document.getElementById('signInLink').style.display = 'none';
+    }
+  })
+  .catch(error => {
+    document.getElementById('userStatus').textContent = 'Error loading user status!';
+  });
+
+  function fetchBoardContent() {
+    fetch('http://121.36.103.216/p=1')
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    })
+    .then(data => {
+      const boardItemsDiv = document.getElementById('boardItems');
+      boardItemsDiv.innerHTML = '';
+      data.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'board-item';
+        itemDiv.innerHTML = `
+          <strong>Name:</strong> ${item.name}
+          <strong>Date:</strong> ${item.date}<br>
+          <strong class="item-title" data-id="${item.id}">Title:</strong> ${item.title}
+          <div class="item-content" id="content-${item.id}"></div>
+        `;
+        boardItemsDiv.appendChild(itemDiv);
+      });
+
+      // Add click event listeners to titles
+      document.querySelectorAll('.item-title').forEach(titleElement => {
+        titleElement.addEventListener('click', function() {
+          const contentDiv = this.nextElementSibling; // Use nextElementSibling to get the corresponding content div
+          if (contentDiv.style.display === 'none' || contentDiv.style.display === '') {
+            fetchContent(this.dataset.id, contentDiv);
+          } else {
+            contentDiv.style.display = 'none';
+          }
+        });
+      });
+    })
+    .catch(error => {
+      document.getElementById('boardItems').textContent = 'Error loading board content!';
+    });
+  }
+
+  function fetchContent(id, contentDiv) {
+    fetch(`http://121.36.103.216/con=${id}`)
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.text();
+    })
+    .then(data => {
+      contentDiv.innerHTML = data;
+      contentDiv.style.display = 'block';
+    })
+    .catch(error => {
+      contentDiv.innerHTML = 'Error loading content!';
+      contentDiv.style.display = 'block';
+    });
+  }
+
+  fetchBoardContent();
 </script>
 </body>
 </html>
