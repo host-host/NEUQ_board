@@ -1,8 +1,3 @@
-struct point{
-	const char* content,*mat;
-	int n;
-};
-std::vector<point>e;
 void add(const char* file,const char* mat,const char* head){
 	char *fil=(char*)malloc(102400);//文件长度没有超过102400
 	FILE*fin=fopen(file,"r");
@@ -10,30 +5,20 @@ void add(const char* file,const char* mat,const char* head){
     printf("%s:%d\n",file,n);
 	fclose(fin);
 	char* content=(char*)malloc(n+300);//head不会超过300
-    if(head)sprintf(content,"%s%d\r\n\r\n",head,n);
+    sprintf(content,"%s%d\r\n\r\n",head,n);
     int m=strlen(content);
-    for(int i=0;i<n;i++)content[i+m]=fil[i];
+    memcpy(content+m,fil,n);
 	free(fil);
 	e.push_back((point){content,mat,m+n});
 }
-void ini(){
-    FILE*fin=fopen("/user.txt","r");
-    char ch[10240],*p=ch,*p2=ch,tmp[10240];//一个用户不会超过10k
-    int t_=0;
-    if(fin){
-        while(1){
-            if(p==p2)p2=(p=ch)+fread(ch,1,10240,fin);
-            if(p==p2)break;
-            if((tmp[t_++]=*p++)=='\0'){
-                char* t=(char*)malloc(t_);
-                memcpy(t,tmp,t_);
-                t_=0;
-                user.push_back(t);
-            }
-        }
-        fclose(fin);
+void init(){
+    int fil=open("/user.txt",O_RDWR|O_CREAT);
+    user=(char(*)[128])mmap(0,128*100000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
+    for(int i=0;i<200000;i++){
+        if(user[i][0]==0)break;
+        users[(std::string)user[i]]=i;
     }
-    printf("user:%d\n",(int)user.size());
+    printf("user:%d\n",(int)users.size());
 	add("/main.html","GET / ",Head1);
 	add("/login.html","GET /login.html",Head1);
 	add("/reg.html","GET /reg.html",Head1);

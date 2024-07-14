@@ -3,56 +3,56 @@
 #include<string.h>
 #include<sys/types.h>
 #include<sys/socket.h>
+#include<sys/mman.h>
 #include<netinet/in.h>
 #include<unistd.h>
+#include<fcntl.h>
 #include<errno.h>
 #include<pthread.h>
-#include<vector>
 #include<time.h>
+#include<map>
+#include<vector>
+#include<string>
 #include"/myio.h"
 #include"/password.h"
 #include"/data.h"
 #include"/ini.h"
-void post(int cl,char*get,int len,void(*fun)(const char*,int,const char*)){
-    char t[]="Content-Length:",id[25]="01234567890123456789",MAT[]="Cookie: id=";
+void post(int cl,char*get,int len,fun func){
+    char t[]="Content-Length:",id[13]="0123456789",MAT[]="Cookie: id=";
     for(int n=0,i=0,k;i<len;i++){
         for(k=0;MAT[k];k++)if(MAT[k]!=get[i+k])break;
-        if(!MAT[k])memcpy(id,get+i+k,20);
-        if(get[i]=='\n'){
-            int bj=1,j=0;
-            for(;t[j];j++)if(get[i+1+j]!=t[j])bj=0;
-            if(bj==1)n=readint(get+i+j);
-            if(get[i+2]=='\n')return fun(get+i+3,cl,id);
+        if(!MAT[k])memcpy(id,get+i+k,10);
+        for(k=0;t[k];k++)if(t[k]!=get[i+k])break;
+        if(!t[k])n=readint(get+i+k);
+        if(get[i]=='\n'&&get[i+2]=='\n')return func(cl,get,get+i+3,n,id);
+    }
+    func(cl,get,"",0,id);
+}
+void* work(void* cil){
+    char* get=(char*)malloc(4096);
+    memset(get,0,4096);
+    int cl=(long long)cil,n=recv(cl,get,4000,0);
+    if(n>=0){
+        for(int i=0,bj;i<e.size();i++){
+            for(int j=bj=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=1;
+            if(bj==0){
+                if(e[i].n)write(cl,e[i].content,e[i].n);
+                else post(cl,get,n,(fun)e[i].content);
+                goto out;
+            }
         }
+        printf("%s\n-----------------------------------------\n",get);
     }
-    fun("",cl,id);
+    out:
+    free(get);
+    close(cl);
+    return 0;
 }
-void* work(void* cli) {
-	char* get=(char*)malloc(4196);
-	int cl=(long long)cli;
-    int n=recv(cl,get,4000,0);//post不会超过4000
-    if(n<0){
-        free(get);
-        return 0;
-    }
-    get[n]=0;
-	for(int i=0;i<e.size();i++){
-		int bj=1;
-		for(int j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=0;
-		if(bj==1){
-            if(e[i].n==0)post(cl,get,n,(void(*)(const char*,int,const char*))e[i].content);
-			else write(cl,e[i].content,e[i].n);
-			goto out;
-		}
-	}
-	printf("%s\n-----------------------------------------\n",get);
-	out:
-	free(get);
-	close(cl);
-	return 0;
-}
-int main() {
-    ini();
+int main(){
+    // char c[1280];memset(c,0,1280);
+    // FILE*fout=fopen("/user.txt","w");
+    // for(int i=1;i<=20000;i++)fwrite(c,1,1280,fout);return 0;
+    init();
 	int serverSock=-1;
 	struct sockaddr_in serverAddr;
 	serverSock=socket(AF_INET, SOCK_STREAM, 0);
@@ -66,7 +66,6 @@ int main() {
 	printf("Bind successful.\n");
 	if(listen(serverSock,10)==-1)return-1;
 	pthread_t thread_id;
-    pthread_create(&thread_id,0,savedata,0);
 	printf("Start to listen!\n");
 	while(1) {
 		socklen_t len=sizeof(struct sockaddr_in);
@@ -75,5 +74,5 @@ int main() {
 		else pthread_create(&thread_id,0,work,(void*)(long long)clientSock);
 	}
 	close(serverSock);
-	return 0;
+    return 0;
 }
