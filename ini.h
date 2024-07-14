@@ -13,7 +13,7 @@ void add(const char* file,const char* mat,const char* head){
 }
 void init(){
     int fil=open("/user.txt",O_RDWR|O_CREAT);
-    user=(char(*)[128])mmap(0,128*100000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
+    user=(char(*)[128])mmap(0,128*200000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;i<200000;i++){
         if(user[i][0]==0)break;
         users[(std::string)user[i]]=i;
@@ -25,6 +25,7 @@ void init(){
 	add("/favicon.ico","GET /favicon.ico",Head1);
 	add("/board.html","GET /board.html",Head1);
 	add("/profile.html","GET /profile.html",Head1);
+	add("/common.js","GET /common.js",Head1);
 	e.push_back((point){(char*)login,"POST /api/login",0});
 	e.push_back((point){(char*)reg,"POST /api/register",0});
 	e.push_back((point){(char*)check_cookie_js,"GET /api/user",0});
