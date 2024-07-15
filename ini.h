@@ -16,9 +16,16 @@ void init(){
     user=(char(*)[128])mmap(0,128*200000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;i<200000;i++){
         if(user[i][0]==0)break;
+        // printf("%s %s\n",user[i],user[i]+36);
         users[(std::string)user[i]]=i;
     }
     printf("user:%d\n",(int)users.size());
+    ldata=lseek(fdata=open("/data.txt",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
+    data=(char*)mmap(0,4ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
+    printf("data:%lld\n",ldata);
+    lcont=lseek(fcont=open("/cont.txt",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
+    cont=(char*)mmap(0,20ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
+    printf("content:%lld\n",lcont);
 	add("/main.html","GET / ",Head1);
 	add("/login.html","GET /login.html",Head1);
 	add("/reg.html","GET /reg.html",Head1);
@@ -32,6 +39,7 @@ void init(){
 	e.push_back((point){(char*)change_password,"POST /api/change_password",0});
 	e.push_back((point){(char*)getp,"GET /p=",0});
 	e.push_back((point){(char*)getcon,"GET /con=",0});
+	e.push_back((point){(char*)postmsg,"POST /api/sendmessage",0});
 	e.push_back((point){Head2,"OPTIONS",strlen(Head2)});
 	e.push_back((point){Head4,"GET /logout.html",strlen(Head4)});
     srand(time(0));

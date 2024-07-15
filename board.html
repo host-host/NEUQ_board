@@ -4,90 +4,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NEUQ-board</title>
   <style>
-    .board-item {
-      border: 1px solid #ddd;
-      padding: 8px;
-      margin-bottom: 0;
-      margin-left: 0;
-      position: relative;
-    }
-    .item-content {
-      display: none;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #ddd;
-    }
-    .item-title {
-      cursor: pointer;
-      color: blue;
-    }
-    .item-title:hover {
-      text-decoration: underline;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgb(0,0,0);
-      padding-top: 60px;
-    }
-    .modal-content {
-      background-color: #fefefe;
-      margin: 5% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%;
-    }
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-    }
-    .close:hover,
-    .close:focus {
-      color: black;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .modal-button {
-      margin-top: 10px;
-    }
-    #pagination {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    .pagination-button {
-      padding: 10px 20px;
-      margin: 0 10px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background-color: #007bff;
-      color: white;
-      font-size: 16px;
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    }
-    .pagination-button:hover {
-      background-color: #0056b3;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .pagination-button:active {
-      background-color: #003d7a;
-    }
+    .board-item {border: 1px solid #ddd;padding: 8px;margin-bottom: 0;margin-left: 0;position: relative;}
+    .item-content {display: none;margin-top: 10px;padding-top: 10px;border-top: 1px solid #ddd;}
+    .item-title {cursor: pointer;color: blue;}
+    .item-title:hover {text-decoration: underline;}
+    .modal-button {margin-top: 10px;}
+    #pagination {display: flex;justify-content: center;margin-top: 20px;}
+    .pagination-button {padding: 10px 20px;margin: 0 10px;cursor: pointer;border: none;border-radius: 5px;background-color: #007bff;color: white;font-size: 16px;transition: background-color 0.3s ease, box-shadow 0.3s ease;}
+    .pagination-button:hover {background-color: #0056b3;box-shadow: 0 4px 8px rgba(0,0,0,0.2);}
+    .pagination-button:active {background-color: #003d7a;}
+    .modal {display: none;position: fixed;z-index: 1;left: 50%;top: 50%;transform: translate(-50%, -50%);width: 80%;max-width: 600px;background-color: rgba(0, 0, 0, 0.4);padding: 20px;}
+    .modal-content {background-color: #fefefe;padding: 20px;border: 1px solid #888;}
+    .close {color: #aaa;float: right;font-size: 28px;font-weight: bold;}
+    .close:hover,.close:focus {color: black;text-decoration: none;cursor: pointer;}
   </style>
 </head>
 <body>
 <p id="userStatus">Loading...</p>
-<a id="signOutLink" href="http://121.36.103.216/logout.html" style="display:none;">sign out</a>
-<a id="profile" href="http://121.36.103.216/profile.html" style="display:none;">change my profile</a>
-<a id="signInLink" href="http://121.36.103.216/login.html">sign in</a>
+<a id="signOutLink" href="/logout.html" style="display:none;">sign out</a>
+<a id="profile" href="/profile.html" style="display:none;">change my profile</a>
+<a id="signInLink" href="/login.html">sign in</a><br>
+<button type="button" class="modal-button" id="newMessage">Post New Message</button>
 <div id="boardItems">Loading board content...</div>
 <div id="pagination">
   <button class="pagination-button" id="newerButton">Newer</button>
@@ -107,6 +44,6 @@
     </form>
   </div>
 </div>
-<script src="http://121.36.103.216/common.js"></script>
+<script src="/common.js"></script>
 </body>
 </html>
