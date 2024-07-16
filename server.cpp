@@ -24,7 +24,13 @@ void post(int cl,char*get,int len,fun func){
         if(!MAT[k])memcpy(id,get+i+k,10);
         for(k=0;t[k];k++)if(t[k]!=get[i+k])break;
         if(!t[k])n=readint(get+i+k);
-        if(get[i]=='\n'&&get[i+2]=='\n')return func(cl,get,get+i+3,n,id);
+        if(get[i]=='\n'&&get[i+2]=='\n'){
+            if(n>len-(i+3)){
+                printf("%d %d\n",n,len-(i+3));
+                recv(cl,get+len,4000-len,0);
+            }
+            return func(cl,get,get+i+3,n,id);
+        }
     }
     func(cl,get,"",0,id);
 }

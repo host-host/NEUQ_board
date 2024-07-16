@@ -6,14 +6,17 @@ void getp(int cl,const char* re,const char* con,int n,const char* id){
     if(pd<=0||pd>ldata-8||*(ll*)(data+pd)!=pc)return;
     int s=0;
     char *c=(char*)malloc(10*1024*1024);
-    memcpy(c,Head_d,n=sizeof(Head_d));
+    memcpy(c,Head_d,n=strlen(Head_d));
     while(s<=50&&n<=10000000&&(pd=*(ll*)(data+pd+16))){
         int px=*(int*)(data+pd+28);
         sprintf(c+n,"{\"id\":\"%lld\",\"date\":\"%d\",\"px\":\"%d\",\"name\":\"%s\",\"title\":%s},",*(ll*)(data+pd),*(int*)(data+pd+24),px,data+pd+32,data+pd+33+strlen(data+pd+32));
         n+=strlen(c+n);
         if(px==0)s++;
     }
-    c[n-1]=']';
+    if(c[n-1]=='['){
+        c[n++]=']';
+        c[n++]='\0';
+    }else c[n-1]=']';
     int m=66,x=n-strlen(Head_d)+1;
     for(int i=x;i;i/=10)m++;
     for(;x;x/=10)c[m--]='0'+x%10;
@@ -59,17 +62,17 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     *(ll*)a=lcont;
     if(pd==1){
         *(ll*)(a+8)=1;
-        ll tmp=*(ll*)(a+16)=*(ll*)(data+pd+16);
+        ll tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
         *(int*)(a+28)=0;
-        *(ll*)(data+pd+16)=ldata;
+        *(ll*)(data+1+16)=ldata;
         if(tmp)*(ll*)(data+tmp+8)=ldata;
     }else{
         ll f=*(ll*)(data+fpd+8),l=*(ll*)(data+lpd+16);
         *(ll*)(data+f+16)=l;
         if(l)*(ll*)(data+l+8)=f;
-        *(ll*)(data+a+8)=lpd;
+        *(ll*)(a+8)=lpd;
         *(ll*)(data+lpd+16)=ldata;
-        ll tmp=*(ll*)(data+a+16)=*(ll*)(data+1+16);
+        ll tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
         if(tmp)*(ll*)(data+tmp+8)=ldata;
         *(ll*)(data+fpd+8)=1;
         *(ll*)(data+1+16)=fpd;
@@ -77,8 +80,8 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     write(fdata,a,34+lu+ltitle);
     ldata+=34+lu+ltitle;
     write(fcont,&tlmp,8);
-    write(fcont,con+ltitle+1,lcon);
-    lcont+=lcon+8;
+    write(fcont,con+ltitle+1,lcon+1);
+    lcont+=lcon+9;
     u=0;
-    mysend("ok");
+    mysend(cl,"ok");
 }

@@ -12,6 +12,14 @@ void add(const char* file,const char* mat,const char* head){
 	e.push_back((point){content,mat,m+n});
 }
 void init(){
+    // char c[35];
+    // memset(c,0,sizeof(c));
+    // *(int*)(c+1)=1;
+    // FILE* fout=fopen("/data.dat","w");
+    // fwrite(c,1,35,fout);fclose(fout);
+    // fout=fopen("/cont.dat","w");
+    // fwrite(c,1,10,fout);fclose(fout);
+    // exit(0);
     int fil=open("/user.txt",O_RDWR|O_CREAT);
     user=(char(*)[128])mmap(0,128*200000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;i<200000;i++){
@@ -20,12 +28,13 @@ void init(){
         users[(std::string)user[i]]=i;
     }
     printf("user:%d\n",(int)users.size());
-    ldata=lseek(fdata=open("/data.txt",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
+    ldata=lseek(fdata=open("/data.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
     data=(char*)mmap(0,4ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
     printf("data:%lld\n",ldata);
-    lcont=lseek(fcont=open("/cont.txt",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
+    lcont=lseek(fcont=open("/cont.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
     cont=(char*)mmap(0,20ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
     printf("content:%lld\n",lcont);
+    // ll t=lcont+337
 	add("/main.html","GET / ",Head1);
 	add("/login.html","GET /login.html",Head1);
 	add("/reg.html","GET /reg.html",Head1);
