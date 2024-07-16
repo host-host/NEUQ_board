@@ -25,11 +25,8 @@ void post(int cl,char*get,int len,fun func){
         for(k=0;t[k];k++)if(t[k]!=get[i+k])break;
         if(!t[k])n=readint(get+i+k);
         if(get[i]=='\n'&&get[i+2]=='\n'){
-            if(n>len-(i+3)){
-                printf("%d %d\n",n,len-(i+3));
-                recv(cl,get+len,4000-len,0);
-            }
-            return func(cl,get,get+i+3,n,id);
+            if(n>len-(i+3))recv(cl,get+len,4000-len,0);
+            return func(cl,get,get+i+3,max(n,len-(i+3)),id);
         }
     }
     func(cl,get,"",0,id);
@@ -77,7 +74,10 @@ int main(){
 		socklen_t len=sizeof(struct sockaddr_in);
 		int clientSock=accept(serverSock,(struct sockaddr*)&serverAddr,&len);
 		if(clientSock<0)printf("accept failed\n");
-		else pthread_create(&thread_id,0,work,(void*)(long long)clientSock);
+		else {
+            pthread_create(&thread_id,0,work,(void*)(long long)clientSock);
+            pthread_detach(thread_id);
+        }
 	}
 	close(serverSock);
     return 0;
