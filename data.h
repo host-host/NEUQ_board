@@ -83,5 +83,5 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     write(fcont,con+ltitle+1,lcon+1);
     lcont+=lcon+9;
     u=0;
-    printf("23\n");
+    mysend(cl,"ok"); 
 }
