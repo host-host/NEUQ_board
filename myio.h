@@ -3,6 +3,7 @@ const char Head2[]="HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-
 const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:75\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=121.36.103.216\r\n\r\n<script>window.location.href = 'http://121.36.103.216/board.html';</script>";
 typedef void (*fun)(int cl,const char* re,const char* con,int n,const char* id);
 #define ll long long
+#define ul unsigned long long
 std::map<std::string,int>users;
 char (*user)[128],*data,*cont;
 int fdata,fcont;
@@ -16,6 +17,11 @@ ll readint(const char*a){
     ll x=0;
     while(*a&&(*a<'0'||'9'<*a))a++;
     while('0'<=*a&&*a<='9')x=x*10+(*a++)-'0';
+    return x;
+}
+ul hash(const char*a){
+    ul x=0;
+    while(*a)x=x*129+*a;
     return x;
 }
 int min(int x,int y){

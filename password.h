@@ -8,6 +8,7 @@ void login(int cl,const char* re,const char* con,int n,const char* id){
             if(!users.count((std::string)c))return mysend(cl,"<script>alert('User does not exist!');</script>");
             break;
         }
+    if(n-(i+5)<0)return;
     memcpy(c+36,con+i+5,min(35,n-(i+5)));
     char* w=user[users[(std::string)c]];
     for(int j=36;j<72;j++)if(w[j]!=c[j])i=-1;
@@ -24,10 +25,11 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
     for(;con[i];i++)if(con[i]=='&'){
             if(i-4<1||i-4>35)return mysend(cl,"<script>alert('Username length error!');</script>");
             memcpy(c,con+4,i-4);
-            if(c[0]==' '||c[i-4-1]==' ')return;
+            if(c[0]==' '||c[i-4-1]==' '||c[0]==0)return;
             if(users.count((std::string)c))return mysend(cl,"<script>alert('This user already exists.');</script>");
             break;
         }
+    if(i==4)return;
     for(j=i+5;con[j]&&con[j]!='&';j++);
     memcpy(c+36,con+i+5,min(35,j-(i+5)));
     while(con[j]&&con[j]!='=')j++;

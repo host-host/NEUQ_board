@@ -25,16 +25,20 @@ void post(int cl,char*get,int len,fun func){
         for(k=0;t[k];k++)if(t[k]!=get[i+k])break;
         if(!t[k])n=readint(get+i+k);
         if(get[i]=='\n'&&get[i+2]=='\n'){
-            if(n>len-(i+3))recv(cl,get+len,4000-len,0);
-            return func(cl,get,get+i+3,max(n,len-(i+3)),id);
+            while(n>len-(i+3)){
+                k=recv(cl,get+len,100500-len,0);
+                if(k>0)len+=k;
+                else break;
+            }
+            return func(cl,get,get+i+3,len-(i+3),id);
         }
     }
 }
 void* work(void* cil){
-    char* get=(char*)malloc(4096);
-    memset(get,0,4096);
-    int cl=(long long)cil,n=recv(cl,get,4000,0);
-    if(n>=0){
+    char* get=(char*)malloc(102400);
+    memset(get,0,102400);
+    int cl=(long long)cil,n=recv(cl,get,100500,0);
+    if(n>0){
         for(int i=0,bj;i<e.size();i++){
             for(int j=bj=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=1;
             if(bj==0){

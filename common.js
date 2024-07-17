@@ -22,19 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
           itemDiv.className = 'board-item';
           itemDiv.style.marginLeft = `${item.px * 20}px`;
           if (item.px === '0')itemDiv.style.clear = 'both';
-          const titleText = item.id === '0' ? `${item.title}` : `+ ${item.title}`;
+          const titleText = item.id <0 ? `${item.title}` : `+ ${item.title}`;
           newid=item.id;
-          itemDiv.innerHTML = `<strong>${item.name} </strong>${formatDate(item.date)}
-            <button class="modal-trigger" data-id="${item.id}">Reply</button><br>
-            <strong class="item-title" data-id="${item.id}">${titleText}</strong>
-            <div class="item-content" id="content-${item.id}"></div>`;
+          itemDiv.innerHTML = `<strong>${item.name} </strong>${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><strong class="item-title" data-id="${item.id}">${titleText}</strong><div class="item-content" id="content-${item.id}"></div>`;
           boardItemsDiv.appendChild(itemDiv);
         });
         if(newid!=-1)currentid.push(newid);
         document.querySelectorAll('.item-title').forEach(titleElement => {
           titleElement.addEventListener('click', function() {
             const itemId = this.dataset.id;
-            if (itemId === '0') {
+            if (itemId <0) {
               alert('No content available for this item.');
               return;
             }
@@ -89,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   document.getElementById('newerButton').addEventListener('click', function() {
-    currentid.pop();
+    if(currentid.length>1)currentid.pop();
     if(currentid.length>1)currentid.pop();
     fetchBoardContent(currentid[currentid.length-1]);
   });

@@ -25,7 +25,6 @@ void init(){
     user=(char(*)[128])mmap(0,128ll*26*26*26*26*26,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;i<200000;i++){
         if(user[i][0]==0)break;
-        // printf("%s %s\n",user[i],user[i]+36);
         users[(std::string)user[i]]=i;
     }
     printf("user:%d\n",(int)users.size());

@@ -3,7 +3,7 @@ void getp(int cl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
-    if(pd<=0||pd>ldata-8||*(ll*)(data+pd)!=pc)return;
+    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return;
     int s=0;
     char *c=(char*)malloc(10*1024*1024);
     memcpy(c,Head_d,n=strlen(Head_d));
@@ -27,7 +27,7 @@ void getcon(int cl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
-    if(pd<=0||pd>ldata-8||*(ll*)(data+pd)!=pc)return;
+    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return;
     mysend(cl,cont+pc+8);
 }
 volatile int u=0;
@@ -38,11 +38,11 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     if(x<0||x>=users.size())return mysend(cl,"ERROR: Something wrong.Code FR50.");
     for(int i=5;i<10;i++)if(id[i]!=user[x][72+i])return mysend(cl,"ERROR: Something wrong.Code AQ37.");
     int ltitle=strlen(con),lcon=strlen(con+ltitle+1),lu=strlen(user[x]);
-    if(ltitle>200)return mysend(cl,"The title is too long.");
+    if(ltitle>200||ltitle==0)return mysend(cl,"The title is too long.");
     ll pc=readint(con+ltitle+lcon+2);
     if(pc<=0||pc>lcont-8)return mysend(cl,"ERROR: Something wrong.Code VQ19.");
     ll pd=*(ll*)(cont+pc);
-    if(pd<=0||pd>ldata-8||*(ll*)(data+pd)!=pc)return mysend(cl,"ERROR: Something wrong.Code OV82.");
+    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return mysend(cl,"ERROR: Something wrong.Code OV82.");
     int npx=(*(int*)(data+pd+28))+1;
     ll fpd=pd,lpd=pd;
     while(*(int*)(data+fpd+28))fpd=*(ll*)(data+fpd+8);
@@ -55,11 +55,11 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     *(int*)(a+24)=time(0);
     *(int*)(a+28)=max((*(int*)(data+pd+28))+1,*(int*)(data+lpd+28));
     memcpy(a+32,user[x],lu+1);
-    memcpy(a+33+lu,con,ltitle+1);//a+34+lu+ltitle
+    memcpy(a+33+lu,con,ltitle+1);
     while(u)usleep(100000);
     u=1;
     ll tlmp=ldata;
-    *(ll*)a=lcont;
+    *(ll*)a=lcon?lcont:-lcont;
     if(pd==1){
         *(ll*)(a+8)=1;
         ll tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
@@ -83,5 +83,5 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     write(fcont,con+ltitle+1,lcon+1);
     lcont+=lcon+9;
     u=0;
-    mysend(cl,"ok");
+    printf("23\n");
 }
