@@ -1,3 +1,14 @@
+/********************************************
+ * 版权声明
+ * 
+ * 本程序由 刘峻畅 编写。
+ * 版权所有：2024 刘峻畅。
+ * 
+ * 本程序是开源的，你可以自由地复制、分发和修改它，
+ * 但请保留此版权声明。
+ * 
+ * 注意：使用本程序时，请遵守相关法律法规。 
+ ********************************************/
 const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:          \r\n\r\n[";
 void getp(int cl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);

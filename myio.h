@@ -1,3 +1,14 @@
+/********************************************
+ * 版权声明
+ * 
+ * 本程序由 刘峻畅 编写。
+ * 版权所有：2024 刘峻畅。
+ * 
+ * 本程序是开源的，你可以自由地复制、分发和修改它，
+ * 但请保留此版权声明。
+ * 
+ * 注意：使用本程序时，请遵守相关法律法规。 
+ ********************************************/
 const char Head1[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:";
 const char Head2[]="HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS\r\nAccess-Control-Allow-Credentials: false";
 const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:75\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=121.36.103.216\r\n\r\n<script>window.location.href = 'http://121.36.103.216/board.html';</script>";
