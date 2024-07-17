@@ -11,6 +11,7 @@ void add(const char* file,const char* mat,const char* head){
 	free(fil);
 	e.push_back((point){content,mat,m+n});
 }
+int fil;
 void init(){
     // char c[35];
     // memset(c,0,sizeof(c));
@@ -20,8 +21,8 @@ void init(){
     // fout=fopen("/cont.dat","w");
     // fwrite(c,1,10,fout);fclose(fout);
     // exit(0);
-    int fil=open("/user.txt",O_RDWR|O_CREAT);
-    user=(char(*)[128])mmap(0,128*200000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
+    fil=open("/user.txt",O_RDWR|O_CREAT);
+    user=(char(*)[128])mmap(0,128ll*26*26*26*26*26,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;i<200000;i++){
         if(user[i][0]==0)break;
         // printf("%s %s\n",user[i],user[i]+36);

@@ -16,6 +16,7 @@ void login(int cl,const char* re,const char* con,int n,const char* id){
     memcpy(X4+85,w+72,10);
     write(cl,X4,strlen(X4));
 }
+int lastt=-1;
 void reg(int cl,const char* re,const char* con,int n,const char* id){
     char c[128];
     memset(c,0,128);
@@ -23,6 +24,7 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
     for(;con[i];i++)if(con[i]=='&'){
             if(i-4<1||i-4>35)return mysend(cl,"<script>alert('Username length error!');</script>");
             memcpy(c,con+4,i-4);
+            if(c[0]==' '||c[i-4-1]==' ')return;
             if(users.count((std::string)c))return mysend(cl,"<script>alert('This user already exists.');</script>");
             break;
         }
@@ -33,7 +35,9 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
     while(con[j]&&con[j]!='=')j++;
     memcpy(c+82,con+j,min(46,strlen(con+j)));
     for(i=77;i<82;i++)c[i]=rand()%26+(rand()%2?'a':'A');
-    int x=users.size(),tx=x;
+    int x=users.size(),tx=x,T=time(0);
+    if(T-lastt<2)return;
+    lastt=T;
     users.insert(std::pair<std::string,int>(c,x));
     for(i=76;i>=72;tx/=26)c[i--]='A'+tx%26;
     memcpy(user[x],c,128);

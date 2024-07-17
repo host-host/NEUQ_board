@@ -29,7 +29,6 @@ void post(int cl,char*get,int len,fun func){
             return func(cl,get,get+i+3,max(n,len-(i+3)),id);
         }
     }
-    func(cl,get,"",0,id);
 }
 void* work(void* cil){
     char* get=(char*)malloc(4096);
