@@ -16,6 +16,17 @@
 #include"./myio.h"
 #include"./password.h"
 #include"./data.h"
+void mpage(int cl,const char* re,const char* con,int n,const char* id){
+    char t[]="free.neuqboard.cn";
+    for(int n=0,i=0,k;i<n;i++){
+        for(k=0;t[k];k++)if(t[k]!=con[i+k])break;
+        if(!t[k]){
+            write(cl,e[1].content,e[1].n);
+            return;
+        }
+    }
+    write(cl,e[0].content,e[0].n);
+}
 #include"./ini.h"
 void post(int cl,char*get,int len,fun func){
     memset(get+len,0,20);

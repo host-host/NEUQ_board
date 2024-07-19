@@ -23,7 +23,7 @@ void init(){
     // exit(0);
     fil=open("/80/user.txt",O_RDWR|O_CREAT);
     user=(char(*)[128])mmap(0,128ll*26*26*26*26*26,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
-    for(int i=0;i<200000;i++){
+    for(int i=0;i<26*26*26*26*26;i++){
         if(user[i][0]==0)break;
         users[(std::string)user[i]]=i;
     }
@@ -34,7 +34,6 @@ void init(){
     lcont=lseek(fcont=open("/80/cont.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
     cont=(char*)mmap(0,20ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
     printf("content:%lld\n",lcont);
-    // ll t=lcont+337
 	add("/80/.html","GET / ",Head1);
 	add("/80/main.html","GET /m",Head1);
 	add("/80/login.html","GET /login.html",Head1);
@@ -43,6 +42,8 @@ void init(){
 	add("/80/board.html","GET /board.html",Head1);
 	add("/80/profile.html","GET /profile.html",Head1);
 	add("/80/common.js","GET /common.js",Head1);
+	add("/80/common.css","GET /common.css",Head1);
+	// e.push_back((point){(char*)mpage,"GET / ",0});
 	e.push_back((point){(char*)login,"POST /api/login",0});
 	e.push_back((point){(char*)reg,"POST /api/register",0});
 	e.push_back((point){(char*)check_cookie_js,"GET /api/user",0});
