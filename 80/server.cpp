@@ -30,26 +30,36 @@ void mpage(int cl,const char* re,const char* con,int n,const char* id){
 #include"./ini.h"
 void post(int cl,char*get,int len,fun func){
     memset(get+len,0,20);
-    char t[]="Content-Length:",id[13]="0123456789",MAT[]="Cookie: id=";
-    for(int n=0,i=0,k;i<len;i++){
+    char t[]="Content-Length:",id[13]="0123456789",MAT[]="Cookie: id=",cont[]="\r\n\r\n";
+    for(int n=0,i=1,k;i<len;i++){
         for(k=0;MAT[k];k++)if(MAT[k]!=get[i+k])break;
         if(!MAT[k])memcpy(id,get+i+k,10);
         for(k=0;t[k];k++)if(t[k]!=get[i+k])break;
         if(!t[k])n=readint(get+i+k);
-        if(get[i]=='\n'&&get[i+2]=='\n'){
-            while(n>len-(i+3)){
+        for(k=0;cont[k];k++)if(cont[k]!=get[i+k])break;
+        if(!cont[k]){
+            while(n>len-(i+4)){
                 k=recv(cl,get+len,100500-len,0);
                 if(k>0)len+=k;
                 else break;
             }
             memset(get+len,0,200);
-            return func(cl,get,get+i+3,len-(i+3),id);
+            return func(cl,get,get+i+4,len-(i+4),id);
         }
     }
 }
 void* work(void* cil){
     char* get=(char*)malloc(102400);
     int cl=(long long)cil,n=recv(cl,get,2000,0);
+    char WX[]="com.tencent.mm",QQ[]="com.tencent.qqlive";
+    for(int i=0,k,w;i<n;i++){
+        for(k=0;WX[k];k++)if(WX[k]!=get[i+k])break;
+        for(w=0;QQ[w];w++)if(QQ[w]!=get[i+w])break;
+        if(!WX[k]||!QQ[w]){
+            mysend(cl,"<script>location.href=\"http://c.pc.qq.com/middleb.html\";</script>");
+            goto out;
+        }
+    }
     if(n>0){
         for(int i=0,bj;i<e.size();i++){
             for(int j=bj=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])bj=1;
