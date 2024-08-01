@@ -8,6 +8,6 @@ A:会!
 
 NEUQ_board有新域名啦！
 
-neuqboard.cn/m（还在备案）
+free.neuqboard.cn
 
-121.36.103.216/m（现在只能用ip地址访问）
+欢迎大家来访问！
