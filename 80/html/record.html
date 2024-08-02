@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIT的投资</title>
+    <style>
+        canvas {
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+    <script src="/js/chart.js"></script>
+</head>
+<body>
+    <h1>NIT的投资
+    </h1>
+    <canvas id="profitChart"></canvas>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/data/record.txt')
+                .then(response => response.json())
+                .then(data => {
+                    const labels = [...new Set(data.map(record => record.date))];
+                    const types = [...new Set(data.map(record => record.type))];
+                    
+                    const datasets = types.map(type => {
+                        return {
+                            label: type,
+                            data: labels.map(date => {
+                                const record = data.find(r => r.date === date && r.type === type);
+                                return record ? record.profit : 0;
+                            }),
+                            borderColor: getRandomColor(),
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: false,
+                            tension: 0.1
+                        };
+                    });
+
+                    const ctx = document.getElementById('profitChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: datasets
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: '日期'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: '收益'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        });
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+    </script>
+</body>
+</html>

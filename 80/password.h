@@ -25,7 +25,7 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
         for(j=i+5;con[j]&&con[j]!='&';j++);
         memcpy(c+36,con+i+5,min(35,j++-(i+5)));
         while(con[j]&&con[j]!='&')j++;
-        memcpy(c+82,con+j+1,min(46,strlen(con+j+1)));
+        memcpy(c+82,con+j+1,min(46,(int)strlen(con+j+1)));
         for(i=77;i<82;i++)c[i]=rand()%26+(rand()%2?'a':'A');
         int x=users.size(),tx=x;
         users.insert(std::pair<std::string,int>(c,x));
@@ -42,6 +42,9 @@ void check_cookie_js(int cl,const char* re,const char* con,int n,const char* id)
         if(i==5)return mysend(cl,user[x]);
     }
     mysend(cl,"Not_Logged_In");
+}
+void logout(int cl,const char* re,const char* con,int n,const char* id){
+    write(cl,Head4,strlen(Head4));
 }
 void change_password(int cl,const char* re,const char* con,int n,const char* id){
     if(id[0]=='0')return mysend(cl,"<script>alert('ERROR: Not Logged In');</script>");
