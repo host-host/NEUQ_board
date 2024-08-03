@@ -19,7 +19,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/data/record.txt')
+            fetch('/data/record.json')
                 .then(response => response.json())
                 .then(data => {
                     const labels = [...new Set(data.map(record => record.date))];
@@ -57,7 +57,7 @@
                                 y: {
                                     title: {
                                         display: true,
-                                        text: '收益'
+                                        text: '金额'
                                     }
                                 }
                             }

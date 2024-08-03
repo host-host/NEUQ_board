@@ -16,51 +16,36 @@
 #include"./myio.h"
 #include"./password.h"
 #include"./data.h"
-void post(int cl,char*g,int l,fun func){
-    char id[13]="0";
-    for(int n=0,i=1,k;i<l;i++){
-        if(*(ll*)(g+i)==0x3D6469203A65696B)memcpy(id,g+i+8,10);
-        if(*(ll*)(g+i)==0x6874676E654C2D74)n=readint(g+i);
-        if(*(int*)(g+i)==168626701){
-            while(n>l-(i+4)&&(k=recv(cl,g+l,100500-l,0))>0)l+=k;
-            memset(g+l,0,200);
-            return func(cl,g,g+i+4,l-(i+4),id);
-        }
-    }
-}
 void* work(void* cil){
-    char* get=(char*)malloc(102400);
+    char* get=(char*)malloc(102400),id[13]="0";
     int cl=(long long)cil,n=recv(cl,get,2000,0),i,j;
     if(n<=0)goto out;
     for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
     if(i>=n){
-        sendfile(cl,"/fix.html");
+        if(*(int*)get==542393671)sendfile(cl,"/fix.html");
+        else write(cl,Head404,strlen(Head404));
         goto out;
     }
     for(i=0;i<e.size();i++){
         for(j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])break;
-        if(!e[i].mat[j]){
-            post(cl,get,n,e[i].a);
-            goto out;
+        if(e[i].mat[j])continue;
+        for(int len=0,j=1,k;j<n;j++){
+            if(*(ll*)(get+j)==0x3D6469203A65696B)memcpy(id,get+j+8,10);
+            if(*(ll*)(get+j)==0x6874676E654C2D74)len=readint(get+j);
+            if(*(int*)(get+j)==168626701){
+                while(len>n-(j+4)&&(k=recv(cl,get+n,100500-n,0))>0)n+=k;
+                memset(get+n,0,200);
+                e[i].a(cl,get,get+j+4,n-(j+4),id);
+                goto out;
+            }
         }
     }
     if(*(int*)get==542393671){
         char file[128];
-        int l=0;
-        for(;l<127;l++){
-            file[l]=get[l+4];
-            if(l&&file[l]=='.'&&file[l-1]=='.')break;
-            int bj=0;
-            bj+=file[l]=='.';
-            bj+=file[l]=='/';
-            bj+=file[l]=='_';
-            bj+='a'<=file[l]&&file[l]<='z';
-            bj+='A'<=file[l]&&file[l]<='Z';
-            bj+='0'<=file[l]&&file[l]<='9';
-            if(bj==0)break;
-        }
-        file[l]=0;
-        sendfile(cl,file);
+        for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46);n++)
+            if((file[n]<46||57<file[n])&&(file[n]<95||122<file[n]))break;
+        file[n]=0;
+        sendfile(cl,file+1);
     }
     out:
     free(get);
@@ -71,9 +56,9 @@ int main(){
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,fil=open("/user.txt",O_RDWR|O_CREAT),0);
     for(int i=0;*user[i];i++)users[(std::string)user[i]]=i;
     ldata=lseek(fdata=open("/data.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
-    data=(char*)mmap(0,4ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
+    data=(char*)mmap(0,4ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
     lcont=lseek(fcont=open("/cont.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
-    cont=(char*)mmap(0,20ll*1024*1024*1024,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
+    cont=(char*)mmap(0,20ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
     printf("user:%d\ndata:%lld\ncontent:%lld\n",(int)users.size(),ldata,lcont);
 	e.push_back((point){"POST /api/login",login});
 	e.push_back((point){"POST /api/register",reg});

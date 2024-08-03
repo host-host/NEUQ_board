@@ -28,19 +28,16 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
         memcpy(c+82,con+j+1,min(46,(int)strlen(con+j+1)));
         for(i=77;i<82;i++)c[i]=rand()%26+(rand()%2?'a':'A');
         int x=users.size(),tx=x;
-        users.insert(std::pair<std::string,int>(c,x));
+        users[(std::string)c]=x;
         for(i=76;i>=72;tx/=26)c[i--]='A'+tx%26;
         memcpy(user[x],c,128);
-        mysend(cl,"<script>alert('Success, please log in.');window.location.href = '/login.html';</script>");
+        mysend(cl,"<script>alert('Success, please log in.');window.location.href='/login.html';</script>");
     }
 }
 void check_cookie_js(int cl,const char* re,const char* con,int n,const char* id){
     int x=0,i=0;
     for(;i<5;i++)x=x*26+id[i]-'A';
-    if(0<=x&&x<users.size()){
-        for(int j=5;j<10;j++)if(id[j]!=user[x][72+j])i=0;
-        if(i==5)return mysend(cl,user[x]);
-    }
+    if(0<=x&&x<users.size()&&*(ll*)(id+2)==*(ll*)(user[x]+74))return mysend(cl,user[x]);
     mysend(cl,"Not_Logged_In");
 }
 void logout(int cl,const char* re,const char* con,int n,const char* id){
@@ -50,8 +47,7 @@ void change_password(int cl,const char* re,const char* con,int n,const char* id)
     if(id[0]=='0')return mysend(cl,"<script>alert('ERROR: Not Logged In');</script>");
     int x=0,i=0,j;
     for(;i<5;i++)x=x*26+id[i]-'A';
-    if(x<0||x>=users.size())return;
-    for(;i<10;i++)if(id[i]!=user[x][72+i])return;
+    if(x<0||x>=users.size()||*(ll*)(id+2)!=*(ll*)(user[x]+74))return;
     for(i=0;user[x][36+i];i++)if(con[12+i]!=user[x][36+i])break;
     if(user[x][36+i]||(con[12+i]!='&'&&i!=36))return mysend(cl,"<script>alert('Password error!');</script>");
     for(j=i+21;con[j]&&con[j]!='&';)j++;
