@@ -35,10 +35,9 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     if(pc<=0||pc>lcont-8)return mysend(cl,"ERROR: Something wrong.Code VQ19.");
     ll pd=*(ll*)(cont+pc);
     if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return mysend(cl,"ERROR: Something wrong.Code OV82.");
-    int npx=(*(int*)(data+pd+28))+1;
-    ll fpd=pd,lpd=pd,tlpd;
+    ll fpd=pd,lpd=pd,tmp;
     while(*(int*)(data+fpd+28))fpd=*(ll*)(data+fpd+8);
-    while((tlpd=*(ll*)(data+lpd+16))&&*(int*)(data+tlpd+28))lpd=tlpd;
+    while((tmp=*(ll*)(data+lpd+16))&&*(int*)(data+tmp+28))lpd=tmp;
     char a[300];
     *(ll*)(a+8)=lpd;
     *(int*)(a+24)=time(0);
@@ -49,7 +48,7 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     u=1;
     *(ll*)a=lcon?lcont:-lcont;
     if(pd==1){
-        ll tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
+        tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
         *(int*)(a+28)=0;
         *(ll*)(data+1+16)=ldata;
         if(tmp)*(ll*)(data+tmp+8)=ldata;
@@ -58,7 +57,7 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
         *(ll*)(data+f+16)=l;
         if(l)*(ll*)(data+l+8)=f;
         *(ll*)(data+lpd+16)=ldata;
-        ll tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
+        tmp=*(ll*)(a+16)=*(ll*)(data+1+16);
         if(tmp)*(ll*)(data+tmp+8)=ldata;
         *(ll*)(data+fpd+8)=1;
         *(ll*)(data+1+16)=fpd;

@@ -1,4 +1,18 @@
 const char Head1[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\nContent-Length:";
+const char Headhtml[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: text/html\r\nContent-Length:";
+const char Headjson[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: application/json\r\nContent-Length:";
+const char Headjs[]=  "HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: application/javascript\r\nContent-Length:";
+const char Headcss[]= "HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: text/css\r\nContent-Length:";
+const char Headico[]= "HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: image/x-icon\r\nContent-Length:";
+const char Headwebp[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: image/webp\r\nContent-Length:";
+const char Headtxt[]= "HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
+                      "Content-Type: text/plain\r\nContent-Length:";
 const char Head2[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:";
 const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:52\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/;\r\n\r\n<script>window.location.href='/board.html';</script>";
 const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
@@ -39,8 +53,16 @@ int sendfile__(int cl, const char* a){
     fseek(file,0,SEEK_END);
     int fileSize=ftell(file);
     fseek(file,0,SEEK_SET);
+    const char* head=Head1;
+    if(strstr(a,".html"))head=Headhtml;
+    else if(strstr(a,".json"))head=Headjson;
+    else if(strstr(a,".js"))head=Headjs;
+    else if(strstr(a,".css"))head=Headcss;
+    else if(strstr(a,".ico"))head=Headico;
+    else if(strstr(a,".webp"))head=Headwebp;
+    else if(strstr(a,".txt"))head=Headtxt;
     char* content=(char*)malloc(fileSize+300);
-    sprintf(content,"%s%d\r\n\r\n",Head1,fileSize);
+    sprintf(content,"%s%d\r\n\r\n",head,fileSize);
     int headerLength=strlen(content);
     size_t bytesRead=fread(content+headerLength,1,fileSize,file);
     if (bytesRead!=fileSize) {
