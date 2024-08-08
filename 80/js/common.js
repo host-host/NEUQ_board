@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.text();
         })
         .then(data => {
-            contentDiv.innerHTML = data;
+            contentDiv.textContent = data;
             contentDiv.style.display = 'block';
         })
         .catch(error => {

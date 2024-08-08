@@ -1,4 +1,4 @@
-const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:          \r\n\r\n[";
+const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length:          \r\n\r\n[";
 const char sprintf_n[]="{\"id\":\"%lld\",\"date\":\"%d\",\"px\":\"%d\",\"name\":\"%s\",\"title\":%s},";
 void getp(int cl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
@@ -12,7 +12,7 @@ void getp(int cl,const char* re,const char* con,int n,const char* id){
         n+=sprintf(c+n,sprintf_n,*(ll*)(data+pd),*(int*)(data+pd+24),*(int*)(data+pd+28),data+pd+32,data+pd+33+strlen(data+pd+32));
     if(c[n-1]=='[')c[n++]=']';
     else c[n-1]=']';
-    c[sprintf(c+66,"%d",n-80)+66]=' ';
+    c[sprintf(c+66+47,"%d",n-80-47)+66+47]=' ';
     write(cl,c,n);
     free(c);
 }

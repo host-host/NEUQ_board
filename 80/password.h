@@ -6,7 +6,7 @@ void login(int cl,const char* re,const char* con,int n,const char* id){
         char* w=user[users[(std::string)c]];
         for(;w[j];j++)if(w[j]!=con[i+j-31])break;
         if(w[j]||con[i+j-31])return mysend(cl,"<script>alert('Password Error!');</script>");
-        char X4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:52\r\nSet-Cookie: id=          ; Max-Age=604800; Path=/; HttpOnly\r\n\r\n<script>window.location.href='/board.html';</script>";
+        char X4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:47\r\nSet-Cookie: id=          ; Max-Age=604800; Path=/; HttpOnly\r\n\r\n<script>window.location.href='/board';</script>";
         memcpy(X4+85,w+72,10);
         write(cl,X4,strlen(X4));
     }
@@ -31,7 +31,7 @@ void reg(int cl,const char* re,const char* con,int n,const char* id){
         users[(std::string)c]=x;
         for(i=76;i>=72;tx/=26)c[i--]='A'+tx%26;
         memcpy(user[x],c,128);
-        mysend(cl,"<script>alert('Success, please log in.');window.location.href='/login.html';</script>");
+        mysend(cl,"<script>alert('Success, please log in.');window.location.href='/login';</script>");
     }
 }
 void check_cookie_js(int cl,const char* re,const char* con,int n,const char* id){

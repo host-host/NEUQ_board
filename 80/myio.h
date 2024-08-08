@@ -14,7 +14,7 @@ const char Headwebp[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\
 const char Headtxt[]= "HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
                       "Content-Type: text/plain\r\nContent-Length:";
 const char Head2[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:";
-const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:52\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/;\r\n\r\n<script>window.location.href='/board.html';</script>";
+const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Length:47\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/;\r\n\r\n<script>window.location.href='/board';</script>";
 const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
 typedef void (*fun)(int cl,const char* re,const char* con,int n,const char* id);
 #define ll long long
@@ -79,6 +79,7 @@ void sendfile(int cl,const char* a) {
     if(a[0]){
         std::string b="/80/html"+(std::string)a;
         if(a[strlen(a)-1]=='/')b+="index.html";
+        else b+=".html";
         if(sendfile__(cl,b.c_str()))return;
         b="/80"+(std::string)a;
         if(sendfile__(cl,b.c_str()))return;

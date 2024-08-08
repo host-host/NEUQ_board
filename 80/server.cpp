@@ -22,7 +22,7 @@ void* work(void* cil){
     if(n<=0)goto out;
     for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
     if(i>=n){
-        if(*(int*)get==542393671)sendfile(cl,"/fix.html");
+        if(*(int*)get==542393671)sendfile(cl,"/fix");
         else write(cl,Head404,strlen(Head404));
         goto out;
     }
