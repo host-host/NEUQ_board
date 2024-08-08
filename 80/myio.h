@@ -39,6 +39,27 @@ ll readint(const char*a){
     while('0'<=*a&&*a<='9')x=x*10+(*a++)-'0';
     return x;
 }
+void JSON(char* p,char* a){
+    int i=0,bj=0;
+    if(p[0]=='\"')p++;
+    a[i++]='\"';
+    while(*p){
+        if(*p=='\\'){
+            char nex=*(p+1);
+            if(nex=='\"'||nex=='\\'||nex=='/')a[i++]=*p++;
+            else a[i++]='\\';
+            a[i++]=*p++;
+            continue;
+        }
+        if(*p=='\"'){
+            if(*(p+1))a[i++]='\\';
+            else bj=1;
+        }
+        a[i++]=*p++;
+    }
+    if(bj==0)a[i++]='\"';
+    a[i]=0;
+}
 void mysend(int cl,const char*a,int n=0){
     if(n==0)n=strlen(a);
     char* content=(char*)malloc(n+300);//head不会超过300

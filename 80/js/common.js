@@ -24,8 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.px === '0') itemDiv.style.clear = 'both';
                 const titleText = item.id < 0 ? `${item.title}` : `+ ${item.title}`;
                 newid = item.id;
-                itemDiv.innerHTML = `<strong>${item.name} </strong>${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><strong class="item-title" data-id="${item.id}">${titleText}</strong><div class="item-content" id="content-${item.id}"></div>`;
+                itemDiv.innerHTML = `<strong id="s${item.id}"></strong> ${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><strong class="item-title" data-id="${item.id}" id="tit${item.id}"></strong><div class="item-content" id="content-${item.id}"></div>`;
                 boardItemsDiv.appendChild(itemDiv);
+                document.getElementById(`s${item.id}`).textContent=item.name;
+                document.getElementById(`tit${item.id}`).textContent=titleText;
             });
             if(bj==0)boardItemsDiv.innerHTML = 'No content available for this page.';
             if (newid != -1) currentid.push(newid);
