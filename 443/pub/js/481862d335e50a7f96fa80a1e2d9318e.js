@@ -3809,7 +3809,6 @@
       { cm.display.input.reset(op.typing) }
     if (takeFocus) { ensureFocus(op.cm) }
   }
-  
   function endOperation_finish(op) {
     var cm = op.cm, display = cm.display, doc = cm.doc
   
@@ -4478,7 +4477,10 @@
     }
     return true
   };
-  
+  if(!window.location.href.includes('free')){
+    var element =document.getElementById('diff_view');
+    element.parentNode.removeChild(element);
+  }
   Selection.prototype.deepCopy = function () {
       var this$1 = this;
   
@@ -9654,8 +9656,6 @@
   return CodeMirror;
   
   })));
-
-  
   (function(mod) {
     if (typeof exports == "object" && typeof module == "object") // CommonJS
       mod(require("../../lib/codemirror"));
@@ -9730,12 +9730,14 @@
     CodeMirror.newFoldFunction = function(rangeFinder, widget) {
       return function(cm, pos) { doFold(cm, pos, {rangeFinder: rangeFinder, widget: widget}); };
     };
-
+  
     // New-style interface
     CodeMirror.defineExtension("foldCode", function(pos, options, force) {
       doFold(this, pos, options, force);
     });
   
+
+
     CodeMirror.defineExtension("isFolded", function(pos) {
       var marks = this.findMarksAt(pos);
       for (var i = 0; i < marks.length; ++i)
@@ -9808,7 +9810,9 @@
   
   // CodeMirror, copyright (c) by Marijn Haverbeke and others
   // Distributed under an MIT license: http://codemirror.net/LICENSE
+
   
+
   (function(mod) {
     if (typeof exports == "object" && typeof module == "object") // CommonJS
       mod(require("../../lib/codemirror"), require("./foldcode"));
@@ -9872,7 +9876,7 @@
         return spec.cloneNode(true);
       }
     }
-  
+
     function updateFoldInfo(cm, from, to) {
       var opts = cm.state.foldGutter.options, cur = from;
       var minSize = cm.foldOption(opts, "minFoldSize");

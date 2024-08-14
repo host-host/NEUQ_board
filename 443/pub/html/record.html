@@ -10,20 +10,20 @@
           width: min(200vh, 160vw);
         }
       </style>
-    <script src="/js/chart.js"></script>
+    <script src="https://free.neuqboard.cn/js/chart.js"></script>
 </head>
 <body>
     <h1>NIT的投资</h1>
 <br>
     <div>
-        <a href="/data/record.json">JSON格式数据</a>
+        <a href="https://free.neuqboard.cn/data/record.json">JSON格式数据</a>
     </div>
     <div class="canvas-class">
         <canvas id="profitChart"></canvas>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/data/record.json')
+            fetch('https://free.neuqboard.cn/data/record.json')
             .then(response => response.json())
             .then(data => {
                 const labels = [...new Set(data.map(record => record.date))];

@@ -1,6 +1,6 @@
-const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length:          \r\n\r\n[";
+const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Type: application/json; charset=utf-8\r\n\r\n[";
 const char sprintf_n[]="{\"id\":\"%lld\",\"date\":\"%d\",\"px\":\"%d\",\"name\":%s,\"title\":%s},";
-void getp(int cl,const char* re,const char* con,int n,const char* id){
+void getp(SSL* ssl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
@@ -16,29 +16,28 @@ void getp(int cl,const char* re,const char* con,int n,const char* id){
     }
     if(c[n-1]=='[')c[n++]=']';
     else c[n-1]=']';
-    c[sprintf(c+66+47,"%d",n-80-47)+66+47]=' ';
-    write(cl,c,n);
+    SSL_write(ssl,c,n);
     free(c);
 }
-void getcon(int cl,const char* re,const char* con,int n,const char* id){
+void getcon(SSL* ssl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
     if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return;
-    mysend(cl,cont+pc+8);
+    mysend(ssl,cont+pc+8);
 }
 volatile int u=0;
-void postmsg(int cl,const char* re,const char* con,int n,const char* id){
-    if(id[0]=='0')return mysend(cl,"Please log in first.");
+void postmsg(SSL* ssl,const char* re,const char* con,int n,const char* id){
+    if(id[0]=='0')return mysend(ssl,"Please log in first.");
     int x=0;
     for(int i=0;i<5;i++)x=x*26+id[i]-'A';
     if(x<0||x>=users.size()||*(ll*)(id+2)!=*(ll*)(user[x]+74))return;
     int ltitle=strlen(con),lcon=strlen(con+ltitle+1),lu=strlen(user[x]);
-    if(ltitle>200||ltitle==0)return mysend(cl,"The title is too long.");
+    if(ltitle>200||ltitle==0)return mysend(ssl,"The title is too long.");
     ll pc=readint(con+ltitle+lcon+2);
-    if(pc<=0||pc>lcont-8)return mysend(cl,"ERROR: Something wrong.Code VQ19.");
+    if(pc<=0||pc>lcont-8)return mysend(ssl,"ERROR: Something wrong.Code VQ19.");
     ll pd=*(ll*)(cont+pc);
-    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return mysend(cl,"ERROR: Something wrong.Code OV82.");
+    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return mysend(ssl,"ERROR: Something wrong.Code OV82.");
     ll fpd=pd,lpd=pd,tmp;
     while(*(int*)(data+fpd+28))fpd=*(ll*)(data+fpd+8);
     while((tmp=*(ll*)(data+lpd+16))&&*(int*)(data+tmp+28))lpd=tmp;
@@ -72,5 +71,5 @@ void postmsg(int cl,const char* re,const char* con,int n,const char* id){
     lcont+=lcon+9;
     ldata+=34+lu+ltitle;
     u=0;
-    mysend(cl,"ok");
+    mysend(ssl,"ok");
 }
