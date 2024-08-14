@@ -24,20 +24,20 @@ void* work(void* cil){
     int cl=(long long)cil,n=0,i,j;
     SSL* ssl=SSL_new(ctx);
     SSL_set_fd(ssl, cl);
-    if (SSL_accept(ssl)<=0)goto out;
+    if (SSL_accept(ssl)<=0)goto https;
     while(1){
         int m=SSL_read(ssl,get+n,1024-n);//head less than 1024
         if(m<=0)break;
         get[n+=m]=0;
         if(strstr(get,"\r\n\r\n"))break;
     }
-    if(n<=0)goto out;
+    if(n<=0)goto https;
     for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
     if(i>=n){
         if(*(int*)get==542393671)sendfile(ssl,"/fix");
         else SSL_write(ssl,Head404,strlen(Head404));
         SSL_shutdown(ssl);
-        goto out;
+        goto https;
     }
     for(i=0;i<e.size();i++){
         for(j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])break;
@@ -50,7 +50,7 @@ void* work(void* cil){
                 memset(get+n,0,200);
                 e[i].a(ssl,get,get+j+4,n-(j+4),id);
                 SSL_shutdown(ssl);
-                goto out;
+                goto https;
             }
         }
     }
@@ -62,7 +62,7 @@ void* work(void* cil){
         sendfile(ssl,file+1);
     }
     SSL_shutdown(ssl);
-    out:
+    https://free.neuqboard.cn/
     SSL_free(ssl);
     close(cl);
     free(get);
@@ -77,8 +77,8 @@ int main() {
         int client = accept(sock, (struct sockaddr*)&addr, &len);
         if(client<0)printf("accept failed\n");
 		else {
-            struct timeval timeout = {10,0};
-            setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(struct timeval));
+            struct timeval timehttps = {10,0};
+            setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char *)&timehttps,sizeof(struct timeval));
             pthread_create(&thread_id,0,work,(void*)(long long)client);
             pthread_detach(thread_id);
         }
