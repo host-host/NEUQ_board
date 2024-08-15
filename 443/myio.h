@@ -13,7 +13,7 @@ const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
 typedef void (*fun)(SSL* ssl,const char* re,const char* con,int n,const char* id);
 #define ll long long
 std::map<std::string,int>users;
-char (*user)[128],*data,*cont;
+char (*user)[128],*data,*cont,*mylog;
 int fdata,fcont,fil;
 ll ldata,lcont;
 struct point{
@@ -63,7 +63,7 @@ void mysend(SSL* ssl,const char*a,int n=0){
     SSL_write(ssl,content,m+n);
     free(content);
 }
-int sendfile__(SSL* ssl, const char* a){
+int sendfile__(SSL* ssl, const char* a,int user){
     FILE* file=fopen(a,"rb");
     if(!file)return 0;
     fseek(file,0,SEEK_END);
@@ -85,17 +85,18 @@ int sendfile__(SSL* ssl, const char* a){
         fclose(file);
         return 0;
     }
+    if(strstr(a,"record.html"))((int*)mylog)[user]++;
     SSL_write(ssl,content,headerLength+fileSize);
     free(content);
     fclose(file);
     return 1;
 }
-void sendfile(SSL* ssl,const char* a) {
+void sendfile(SSL* ssl,const char* a,int user) {
     if(a[0]){
         std::string b="/443/pub/html"+(std::string)a+(a[strlen(a)-1]=='/'?"index.html":".html");
-        if(sendfile__(ssl,b.c_str()))return;
+        if(sendfile__(ssl,b.c_str(),user))return;
         b="/443/pub"+(std::string)a;
-        if(sendfile__(ssl,b.c_str()))return;
+        if(sendfile__(ssl,b.c_str(),user))return;
     }
     SSL_write(ssl,Head404,strlen(Head404));
 }

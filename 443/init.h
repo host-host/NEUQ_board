@@ -1,6 +1,8 @@
 int init(){
     int sock;
     fil=open("/443/pri/user.txt",O_RDWR|O_CREAT);
+    int flog=open("/443/pri/log.dat",O_RDWR|O_APPEND|O_CREAT);
+    mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,flog,0);
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,fil,0);
     for(int i=0;*user[i];i++)users[(std::string)user[i]]=i;
     ldata=lseek(fdata=open("/443/pri/data.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
@@ -16,6 +18,7 @@ int init(){
 	e.push_back((point){"GET /con=",getcon});
 	e.push_back((point){"POST /api/sendmessage",postmsg});
 	e.push_back((point){"GET /logout",logout});
+	e.push_back((point){"GET /api_admin",api_admin});
     srand(time(0));
     struct sockaddr_in addr;
     SSL_load_error_strings();

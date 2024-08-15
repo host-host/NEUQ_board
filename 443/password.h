@@ -7,7 +7,7 @@ void login(SSL *ssl,const char* re,const char* con,int n,const char* id){
         for(;w[j];j++)if(w[j]!=con[i+j-31])break;
         if(w[j]||con[i+j-31])return mysend(ssl,"<script>alert('Password Error!');</script>");
         char X4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nSet-Cookie: id=          ; Max-Age=604800; Path=/; Secure; HttpOnly\r\n\r\n<script>window.location.href='/board';</script>";
-        memcpy(X4+85,w+72,10);
+        memcpy(X4+66,w+72,10);
         SSL_write(ssl,X4,strlen(X4));
     }
 }
@@ -25,7 +25,7 @@ void reg(SSL *ssl,const char* re,const char* con,int n,const char* id){
         for(j=i+5;con[j]&&con[j]!='&';j++);
         memcpy(c+36,con+i+5,min(35,j++-(i+5)));
         while(con[j]&&con[j]!='&')j++;
-        memcpy(c+82,con+j+1,min(46,(int)strlen(con+j+1)));
+        memcpy(c+82,con+j+1,min(45,(int)strlen(con+j+1)));
         for(i=77;i<82;i++)c[i]=rand()%26+(rand()%2?'a':'A');
         int x=users.size(),tx=x;
         users[(std::string)c]=x;
@@ -34,9 +34,23 @@ void reg(SSL *ssl,const char* re,const char* con,int n,const char* id){
         mysend(ssl,"<script>alert('Success, please log in.');window.location.href='/login';</script>");
     }
 }
+int ifuser(const char*id){
+    int x=0,i=0;
+    for(;i<5;i++)x=x*26+id[i]-'A';
+    if(0<=x&&x<users.size()&&*(ll*)(id+2)==*(ll*)(user[x]+74))return user[x][127]?2:1;
+    return 0;
+}
+void api_admin(SSL *ssl,const char* re,const char* con,int n,const char* id){
+    if(ifuser(id)==2){
+        char u[100]={0};
+        sprintf(u,"Not_Logged_In:%d\nLogged_In:%d\nadmin:%d\n",((int*)mylog)[0],((int*)mylog)[1],((int*)mylog)[2]);
+        mysend(ssl,u);
+    }
+}
 void check_cookie_js(SSL *ssl,const char* re,const char* con,int n,const char* id){
     int x=0,i=0;
     for(;i<5;i++)x=x*26+id[i]-'A';
+    printf("%s\n",id);
     if(0<=x&&x<users.size()&&*(ll*)(id+2)==*(ll*)(user[x]+74))return mysend(ssl,user[x]);
     mysend(ssl,"Not_Logged_In");
 }
@@ -54,5 +68,5 @@ void change_password(SSL *ssl,const char* re,const char* con,int n,const char* i
     memset(user[x]+36,0,36);
     memcpy(user[x]+36,con+i+21,min(35,j-(i+21)));
     for(int i=77;i<82;i++)user[x][i]=rand()%26+(rand()%2?'a':'A');
-    return mysend(ssl,"<script>alert('Success!');window.location.href='/login.html';</script>");
+    return mysend(ssl,"<script>alert('Success!');window.location.href='/login';</script>");
 }
