@@ -15,13 +15,23 @@
 #include<map>
 #include<vector>
 #include<string>
+SSL_CTX *ctx;
 #include"./myio.h"
-#include"./password.h"
-#include"./data.h"
-#include"./init.h"
+const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
+std::map<std::string,int>mp;
+void sendfile(SSL* ssl,const char* a,int user) {
+    if(user)mp[(std::string)a]++;
+    if(a[0]){
+        std::string b="/443/pub/html"+(std::string)a+(a[strlen(a)-1]=='/'?"index.html":".html");
+        if(mysendfile(ssl,b.c_str()))return;
+        b="/443/pub"+(std::string)a;
+        if(mysendfile(ssl,b.c_str()))return;
+    }
+    mysslwrite(ssl,Head404,strlen(Head404));
+}
 void* work(void* cil){
-    char* get=(char*)malloc(102400),id[13]="0";
-    int cl=(long long)cil,n=0,i,j,user=0;
+    char* get=(char*)malloc(10240);
+    int cl=(long long)cil,n=0,i,j,user=1;
     SSL* ssl=SSL_new(ctx);
     SSL_set_fd(ssl, cl);
     if (SSL_accept(ssl)<=0)goto https;
@@ -31,49 +41,39 @@ void* work(void* cil){
         get[n+=m]=0;
         if(strstr(get,"\r\n\r\n"))break;
     }
-    if(n<=0){
-        SSL_shutdown(ssl);
-        goto https;
-    }
+    if(strstr(get,"AAAAE"))user=0;
+    if(n<=0)goto https;
     for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
     if(i>=n){
         if(*(int*)get==542393671)sendfile(ssl,"/fix",user);
-        else SSL_write(ssl,Head404,strlen(Head404));
-        SSL_shutdown(ssl);
+        else mysslwrite(ssl,Head404,strlen(Head404));
         goto https;
     }
-    for(j=0;j<n;j++)if(*(ll*)(get+j)==0x3D6469203A65696B)memcpy(id,get+j+8,10);
-    user=ifuser(id);
-    for(i=0;i<e.size();i++){
-        for(j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])break;
-        if(e[i].mat[j])continue;
-        for(int len=0,j=1,k;j<n;j++){
-            if(*(ll*)(get+j)==0x6874676E654C2D74)len=readint(get+j);
-            if(*(int*)(get+j)==168626701){
-                while(len>n-(j+4)&&(k=SSL_read(ssl,get+n,102200-n))>0)n+=k;
-                memset(get+n,0,200);
-                e[i].a(ssl,get,get+j+4,n-(j+4),id);
-                SSL_shutdown(ssl);
-                goto https;
-            }
-        }
-    }
     if(*(int*)get==542393671){
+        if(strstr(get,"AAAAE")&&strstr(get,"GET /admin")){
+            std::string a="";
+            for(auto i:mp){
+                char t[10]={0};
+                sprintf(t," %d\n",i.second);
+                a+=i.first+t;
+            }
+            mysend(ssl,a.c_str(),a.length());
+            goto https;
+        }
         char file[128];
         for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46);n++)
             if((file[n]<46||57<file[n])&&(file[n]<95||122<file[n]))break;
         file[n]=0;
         sendfile(ssl,file+1,user);
     }
-    SSL_shutdown(ssl);
     https://free.neuqboard.cn/
-    close(cl);
     SSL_free(ssl);
+    close(cl);
     free(get);
     return 0;
 }
 int main() {
-    int sock=init();
+    int sock=mycreatsock(999,&ctx);
 	pthread_t thread_id;
     while (1) {
         struct sockaddr_in addr;

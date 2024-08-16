@@ -6,9 +6,10 @@ void login(SSL *ssl,const char* re,const char* con,int n,const char* id){
         char* w=user[users[(std::string)c]];
         for(;w[j];j++)if(w[j]!=con[i+j-31])break;
         if(w[j]||con[i+j-31])return mysend(ssl,"<script>alert('Password Error!');</script>");
-        char X4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nSet-Cookie: id=          ; Max-Age=604800; Path=/; Secure; HttpOnly\r\n\r\n<script>window.location.href='/board';</script>";
-        memcpy(X4+66,w+72,10);
-        SSL_write(ssl,X4,strlen(X4));
+        std::string tmp="Set-Cookie: id=          ; Max-Age=604800; Path=/; Secure; HttpOnly\r\n";
+        for(int i=0;i<10;i++)tmp[15+i]=w[72+i];
+        tmp=Hok+tmp+Hc0+Hoptin+Ctoboard;
+        mysslwrite(ssl,tmp.c_str(),tmp.length());
     }
 }
 int lastt=-1;
@@ -31,7 +32,7 @@ void reg(SSL *ssl,const char* re,const char* con,int n,const char* id){
         users[(std::string)c]=x;
         for(i=76;i>=72;tx/=26)c[i--]='A'+tx%26;
         memcpy(user[x],c,128);
-        mysend(ssl,"<script>alert('Success, please log in.');window.location.href='/login';</script>");
+        mysend(ssl,"<script>alert('Success, please log in.');window.location.href='https://free.neuqboard.cn/login';</script>");
     }
 }
 int ifuser(const char*id){
@@ -39,13 +40,6 @@ int ifuser(const char*id){
     for(;i<5;i++)x=x*26+id[i]-'A';
     if(0<=x&&x<users.size()&&*(ll*)(id+2)==*(ll*)(user[x]+74))return user[x][127]?2:1;
     return 0;
-}
-void api_admin(SSL *ssl,const char* re,const char* con,int n,const char* id){
-    if(ifuser(id)==2){
-        char u[100]={0};
-        sprintf(u,"Not_Logged_In:%d\nLogged_In:%d\nadmin:%d\n",((int*)mylog)[0],((int*)mylog)[1],((int*)mylog)[2]);
-        mysend(ssl,u);
-    }
 }
 void check_cookie_js(SSL *ssl,const char* re,const char* con,int n,const char* id){
     int x=0,i=0;
@@ -55,7 +49,9 @@ void check_cookie_js(SSL *ssl,const char* re,const char* con,int n,const char* i
     mysend(ssl,"Not_Logged_In");
 }
 void logout(SSL *ssl,const char* re,const char* con,int n,const char* id){
-    SSL_write(ssl,Head4,strlen(Head4));
+    std::string tmp="Set-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/;\r\n";
+    tmp=Hok+tmp+Hc0+Hoptin+Ctoboard;
+    mysslwrite(ssl,tmp.c_str(),tmp.length());
 }
 void change_password(SSL *ssl,const char* re,const char* con,int n,const char* id){
     if(id[0]=='0')return mysend(ssl,"<script>alert('ERROR: Not Logged In');</script>");
@@ -68,5 +64,5 @@ void change_password(SSL *ssl,const char* re,const char* con,int n,const char* i
     memset(user[x]+36,0,36);
     memcpy(user[x]+36,con+i+21,min(35,j-(i+21)));
     for(int i=77;i<82;i++)user[x][i]=rand()%26+(rand()%2?'a':'A');
-    return mysend(ssl,"<script>alert('Success!');window.location.href='/login';</script>");
+    return mysend(ssl,"<script>alert('Success!');window.location.href='https://free.neuqboard.cn/login';</script>");
 }

@@ -1,3 +1,4 @@
+#define ll long long
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hc0[]=   "cache-control: max-age=0, public\r\n",
             Hc3600[]="cache-control: max-age=3600, public\r\n",
@@ -7,28 +8,17 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hcss[]=  "Content-Type: text/css\r\n",
             Hico[]=  "Content-Type: image/x-icon\r\n",
             Hwebp[]= "Content-Type: image/webp\r\n",
-            Htxt[]=  "Content-Type: text/plain\r\n";
-const char Head4[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nSet-Cookie: id=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/;\r\n\r\n<script>window.location.href='/board';</script>";
-const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
-typedef void (*fun)(SSL* ssl,const char* re,const char* con,int n,const char* id);
-#define ll long long
-std::map<std::string,int>users;
-char (*user)[128],*data,*cont,*mylog;
-int fdata,fcont,fil;
-ll ldata,lcont;
-struct point{
-	const char *mat;
-    fun a;
-};
-std::vector<point>e;
-SSL_CTX *ctx;
+            Htxt[]=  "Content-Type: text/plain\r\n",
+            Hoptin[]="Access-Control-Allow-Origin: https://free.neuqboard.cn\r\n"
+                     "Access-Control-Allow-Credentials: true\r\n";
+const char Ctoboard[]="\r\n<script>window.location.href='https://free.neuqboard.cn/board';</script>";
 int min(int x,int y){
     return x<y?x:y;
 }
 int max(int x,int y){
     return x>y?x:y;
 }
-ll readint(const char*a){
+ll readint(const char* a){
     ll x=0;
     while(*a&&(*a<'0'||'9'<*a))a++;
     while('0'<=*a&&*a<='9')x=x*10+(*a++)-'0';
@@ -55,15 +45,57 @@ void JSON(char* p,char* a){
     if(bj==0)a[i++]='\"';
     a[i]=0;
 }
+int mycreatsock(int port,SSL_CTX** __ctx){
+    struct sockaddr_in addr;
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+    SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
+    if (!ctx) {
+        perror("Unable to create SSL context");
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/free.neuqboard.cn.crt")<=0){
+        printf("ERROR crt\n");
+    }
+    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/free.neuqboard.cn.key", SSL_FILETYPE_PEM)<=0){
+        printf("ERROR KEY\n");
+    }
+    if (!SSL_CTX_check_private_key(ctx)) {
+        printf("Private key does not match the public certificate\n");
+    }
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Unable to create socket");
+        exit(EXIT_FAILURE);
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("Unable to bind");
+        exit(EXIT_FAILURE);
+    }
+    if (listen(sock, 1) < 0) {
+        perror("Unable to listen");
+        exit(EXIT_FAILURE);
+    }
+    *__ctx=ctx;
+    return sock;
+}
+void mysslwrite(SSL* ssl,const char* a,int n){
+    if(SSL_get_shutdown(ssl))return;
+    SSL_write(ssl,a,n);
+}
 void mysend(SSL* ssl,const char*a,int n=0){
     if(n==0)n=strlen(a);
     char* content=(char*)malloc(n+300);//head不会超过300
-    int m=sprintf(content,"%s%s\r\n",Hok,Hc0);
+    int m=sprintf(content,"%s%s%s\r\n",Hok,Hc0,Hoptin);
     memcpy(content+m,a,n);
-    SSL_write(ssl,content,m+n);
+    mysslwrite(ssl,content,m+n);
     free(content);
 }
-int sendfile__(SSL* ssl, const char* a,int user){
+int mysendfile(SSL* ssl, const char* a){
     FILE* file=fopen(a,"rb");
     if(!file)return 0;
     fseek(file,0,SEEK_END);
@@ -85,18 +117,8 @@ int sendfile__(SSL* ssl, const char* a,int user){
         fclose(file);
         return 0;
     }
-    if(strstr(a,"record.html"))((int*)mylog)[user]++;
-    SSL_write(ssl,content,headerLength+fileSize);
+    mysslwrite(ssl,content,headerLength+fileSize);
     free(content);
     fclose(file);
     return 1;
-}
-void sendfile(SSL* ssl,const char* a,int user) {
-    if(a[0]){
-        std::string b="/443/pub/html"+(std::string)a+(a[strlen(a)-1]=='/'?"index.html":".html");
-        if(sendfile__(ssl,b.c_str(),user))return;
-        b="/443/pub"+(std::string)a;
-        if(sendfile__(ssl,b.c_str(),user))return;
-    }
-    SSL_write(ssl,Head404,strlen(Head404));
 }

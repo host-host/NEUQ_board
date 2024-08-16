@@ -1,5 +1,3 @@
-const char Head_d[]="HTTP/1.1 200 OK\r\ncache-control: max-age=0, public\r\nContent-Type: application/json; charset=utf-8\r\n\r\n[";
-const char sprintf_n[]="{\"id\":\"%lld\",\"date\":\"%d\",\"px\":\"%d\",\"name\":%s,\"title\":%s},";
 void getp(SSL* ssl,const char* re,const char* con,int n,const char* id){
     ll pc=readint(re+7);
     if(pc<=0||pc>lcont-8)return;
@@ -7,16 +5,17 @@ void getp(SSL* ssl,const char* re,const char* con,int n,const char* id){
     if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return;
     int s=0;
     char *c=(char*)malloc(10*1024*1024);
-    memcpy(c,Head_d,n=strlen(Head_d));
+    n=sprintf(c,"%s%s%s%s\r\n[",Hok,Hc0,Hoptin,Hjson);
     char bug1[600],bug2[600];
     while((s+=(*(int*)(data+pd+28)==0))<=50&&n<=10000000&&(pd=*(ll*)(data+pd+16))){
         JSON(data+pd+32,bug1);
         JSON(data+pd+33+strlen(data+pd+32),bug2);
-        n+=sprintf(c+n,sprintf_n,*(ll*)(data+pd),*(int*)(data+pd+24),*(int*)(data+pd+28),bug1,bug2);
+        n+=sprintf(c+n,"{\"id\":\"%lld\",\"date\":\"%d\",\"px\":\"%d\",\"name\":%s,\"title\":%s},",
+                   *(ll*)(data+pd),*(int*)(data+pd+24),*(int*)(data+pd+28),bug1,bug2);
     }
     if(c[n-1]=='[')c[n++]=']';
     else c[n-1]=']';
-    SSL_write(ssl,c,n);
+    mysslwrite(ssl,c,n);
     free(c);
 }
 void getcon(SSL* ssl,const char* re,const char* con,int n,const char* id){
