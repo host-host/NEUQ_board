@@ -1,5 +1,3 @@
-#include<openssl/ssl.h>
-#include<openssl/err.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -15,10 +13,11 @@
 #include<map>
 #include<vector>
 #include<string>
+using std::string;
+#include"/443/myio.h"
 typedef void (*fun)(SSL* ssl,const char* re,const char* con,int n,const char* id);
-#define ll long long
-std::map<std::string,int>users;
-char (*user)[128],*data,*cont,*mylog;
+std::map<string,int>users;
+char (*user)[128],*data,*cont;
 int fdata,fcont;
 ll ldata,lcont;
 struct point{
@@ -27,15 +26,12 @@ struct point{
 };
 std::vector<point>e;
 SSL_CTX *ctx;
-#include"/443/myio.h"
 #include"./password.h"
 #include"./data.h"
-void* work(void* cil){
+void* work(void* __ssl){
+    SSL* ssl=(SSL*)__ssl;
+    int cl=SSL_get_fd(ssl),n=0,i,j;
     char* get=(char*)malloc(102400),id[13]="0";
-    int cl=(long long)cil,n=0,i,j;
-    SSL* ssl=SSL_new(ctx);
-    SSL_set_fd(ssl, cl);
-    if (SSL_accept(ssl)<=0)goto https;
     while(1){
         int m=SSL_read(ssl,get+n,1024-n);//head less than 1024
         if(m<=0)break;
@@ -61,17 +57,23 @@ void* work(void* cil){
     SSL_free(ssl);
     close(cl);
     free(get);
+    sumthread--;
     return 0;
 }
+void admin(SSL *ssl,const char* re,const char* con,int n,const char* id){
+    string a=printlog();
+    mysend(ssl,a.c_str(),a.length());
+}
 void OPTIONS(SSL *ssl,const char* re,const char* con,int n,const char* id){
-    std::string tmp="Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n";
+    string tmp="Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n";
     tmp=Hok+tmp+Hoptin+"\r\n";
     mysslwrite(ssl,tmp.c_str(),tmp.length());
 }
 int main() {
-    mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/log.dat",O_RDWR|O_APPEND|O_CREAT),0);
+    char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/log.dat",O_RDWR|O_APPEND|O_CREAT),0);
+    memset(mylog,0,102400);
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/user.txt",O_RDWR|O_CREAT),0);
-    for(int i=0;*user[i];i++)users[(std::string)user[i]]=i;
+    for(int i=0;*user[i];i++)users[(string)user[i]]=i;
     ldata=lseek(fdata=open("/1000/pri/data.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
     data=(char*)mmap(0,4ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
     lcont=lseek(fcont=open("/1000/pri/cont.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
@@ -85,24 +87,9 @@ int main() {
 	e.push_back((point){"GET /api/con=",getcon});
 	e.push_back((point){"POST /api/sendmessage",postmsg});
 	e.push_back((point){"GET /api/logout",logout});
+	e.push_back((point){"GET /admin",admin});
 	e.push_back((point){"OPTIONS",OPTIONS});
     srand(time(0));
-    int sock=mycreatsock(1000,&ctx);
-	pthread_t thread_id;
-    while (1) {
-        struct sockaddr_in addr;
-        uint len=sizeof(addr);
-        int client=accept(sock, (struct sockaddr*)&addr, &len);
-        if(client<0)printf("accept failed\n");
-		else {
-            struct timeval timehttps = {10,0};
-            setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char *)&timehttps,sizeof(struct timeval));
-            pthread_create(&thread_id,0,work,(void*)(long long)client);
-            pthread_detach(thread_id);
-        }
-    }
-    close(sock);
-    SSL_CTX_free(ctx);
-    EVP_cleanup();
+    mystart(1000,work,mylog);
     return 0;
 }

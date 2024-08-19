@@ -9,21 +9,31 @@
           height:100vh;
           width: min(200vh, 160vw);
         }
-      </style>
-    <script src="https://free.neuqboard.cn/js/chart.js"></script>
+        .navbar {overflow: hidden;background-color:rgba(20,20,20,0.1);position: fixed;top: 0;width: 100%;z-index: 1000;transition: top 0.3s;}
+        .navbar_a {float: left;display: flex;align-items: center;color: #000000;text-align: center;padding: 14px 16px;text-decoration: none;}
+        .navbar_a_img0 {margin-right: 8px;width: 20px;height: 20px;}
+        .navbar_a_img {margin-right: 8px;width: 20px;height: 20px;}
+        .navbar_a:hover {background-color: #ddd;color: black;}
+        body {padding-top: 50px;}
+    </style>
+    <script src="/js/chart.js"></script>
 </head>
 <body>
+<div class="navbar" id="navbar">
+    <a href="https://free.neuqboard.cn/" class="navbar_a"><img src="https://free.neuqboard.cn/favicon.ico" alt="NEUQ_board" class="navbar_a_img0">NEUQ_board</a>
+    <a href="https://free.neuqboard.cn/diff" class="navbar_a">代码比对工具</a>
+    <!-- <a href="#news" class="navbar_a">News</a>
+    <a href="#contact" class="navbar_a">Contact</a>
+    <a href="#about" class="navbar_a">About</a> -->
+</div>
     <h1>NIT的投资</h1>
-<br>
-    <div>
-        <a href="https://free.neuqboard.cn/data/record.json">JSON格式数据</a>
-    </div>
-    <div class="canvas-class">
-        <canvas id="profitChart"></canvas>
-    </div>
+    <div><a href="/data/record.json">JSON格式数据</a></div>
+    <div class="canvas-class"><canvas id="profitChart1"></canvas></div>
+    <div class="canvas-class"><canvas id="profitChart2"></canvas></div>
+    <div class="canvas-class"><canvas id="profitChart3"></canvas></div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('https://free.neuqboard.cn/data/record.json')
+            fetch('/data/record.json')
             .then(response => response.json())
             .then(data => {
                 const labels = [...new Set(data.map(record => record.date))];
@@ -39,8 +49,7 @@
                     const record = data.find(record => record.date === date && record.type === '累计手续费');
                     return record ? record.profit : 0;
                 });
-                const ctx = document.getElementById('profitChart').getContext('2d');
-                new Chart(ctx, {
+                new Chart(document.getElementById('profitChart1').getContext('2d'), {
                     type: 'line',
                     data: {
                         labels: labels,
@@ -50,35 +59,76 @@
                                 data: profitData,
                                 borderColor: getRandomColor(),
                                 display: false,
-                                yAxisID: 'y-axis-2',
-                                pointRadius: 2
-                            },
-                            {
-                                label: '本金',
-                                data: principalData,
-                                borderColor: getRandomColor(),
                                 yAxisID: 'y-axis-1',
-                                pointRadius: 2
-                            },
-                            {
-                                label: '累计手续费',
-                                data: feeData,
-                                borderColor: getRandomColor(),
-                                yAxisID: 'y-axis-2',
                                 pointRadius: 2
                             }
                         ]
                     },
                     options: {
                         scales: {
-                            'y-axis-2':{
-                                position: 'right',
-                            },
                             'y-axis-1':{
                                 position: 'left',
-                                grid: {
-                                    display: false
-                                }
+                            },
+                            'y-axis-2':{
+                                position: 'right',
+                                suggestedMin: -6000,
+                                suggestedMax: 8000
+                            }
+                        }
+                    }
+                });
+                new Chart(document.getElementById('profitChart2').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '本金',
+                                data: principalData,
+                                borderColor: getRandomColor(),
+                                yAxisID: 'y-axis-1',
+                                pointRadius: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            'y-axis-1':{
+                                position: 'left',
+                            },
+                            'y-axis-2':{
+                                position: 'right',
+                                suggestedMin: 0,
+                                suggestedMax: 35000
+                            }
+                        }
+                    }
+                });
+                new Chart(document.getElementById('profitChart3').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '累计手续费',
+                                data: feeData,
+                                borderColor: getRandomColor(),
+                                yAxisID: 'y-axis-1',
+                                pointRadius: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            'y-axis-1':{
+                                position: 'left',
+                                suggestedMin: 0,
+                                suggestedMax: 3000
+                            },
+                            'y-axis-2':{
+                                position: 'right',
+                                suggestedMin: 0,
+                                suggestedMax: 3000
                             }
                         }
                     }

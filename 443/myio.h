@@ -1,6 +1,9 @@
+#include<openssl/ssl.h>
+#include<openssl/err.h>
+#include<signal.h>
 #define ll long long
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
-            Hc0[]=   "cache-control: max-age=0, public\r\n",
+            Hc0[]=   "cache-control: no-cache\r\n",
             Hc3600[]="cache-control: max-age=3600, public\r\n",
             Hhtml[]= "Content-Type: text/html\r\n",
             Hjson[]= "Content-Type: application/json\r\n",
@@ -12,6 +15,8 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hoptin[]="Access-Control-Allow-Origin: https://free.neuqboard.cn\r\n"
                      "Access-Control-Allow-Credentials: true\r\n";
 const char Ctoboard[]="\r\n<script>window.location.href='https://free.neuqboard.cn/board';</script>";
+std::map<string,int>logmap;
+volatile int sumthread=0;
 int min(int x,int y){
     return x<y?x:y;
 }
@@ -45,45 +50,64 @@ void JSON(char* p,char* a){
     if(bj==0)a[i++]='\"';
     a[i]=0;
 }
+string printlog(){
+    string a="ALL threads: "+std::to_string(sumthread)+"\n";
+    for(auto i:logmap)a+=i.first+" "+std::to_string(i.second)+"\n";
+    return a;
+}
+void signal_handler(int sig){
+	logmap["SIGPIPE"+std::to_string(sig)]++;
+    signal(SIGPIPE,signal_handler);
+}
 int mycreatsock(int port,SSL_CTX** __ctx){
     struct sockaddr_in addr;
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
     SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
-    if (!ctx) {
-        perror("Unable to create SSL context");
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/free.neuqboard.cn.crt")<=0){
-        printf("ERROR crt\n");
-    }
-    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/free.neuqboard.cn.key", SSL_FILETYPE_PEM)<=0){
-        printf("ERROR KEY\n");
-    }
-    if (!SSL_CTX_check_private_key(ctx)) {
-        printf("Private key does not match the public certificate\n");
-    }
+    if (!ctx)exit(157);
+    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/free.neuqboard.cn.crt")<=0)exit(158);
+    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/free.neuqboard.cn.key",SSL_FILETYPE_PEM)<=0)exit(159);
+    if (!SSL_CTX_check_private_key(ctx))exit(160);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) {
-        perror("Unable to create socket");
-        exit(EXIT_FAILURE);
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("Unable to bind");
-        exit(EXIT_FAILURE);
-    }
-    if (listen(sock, 1) < 0) {
-        perror("Unable to listen");
-        exit(EXIT_FAILURE);
-    }
+    if (sock<0)exit(161);
+    addr.sin_family=AF_INET;
+    addr.sin_port=htons(port);
+    addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    if(bind(sock,(struct sockaddr*)&addr,sizeof(addr))<0)exit(162);
+    if(listen(sock,1)<0)exit(163);
+    signal(SIGPIPE,signal_handler);
     *__ctx=ctx;
     return sock;
 }
-void mysslwrite(SSL* ssl,const char* a,int n){
+void mystart(int sock,void* (*work)(void*),char* mylog){
+    SSL_CTX *ctx;
+    sock=mycreatsock(sock,&ctx);
+	pthread_t thread_id;
+    while (1) {
+        struct sockaddr_in addr;
+        uint len=sizeof(addr);
+        int client=accept(sock, (struct sockaddr*)&addr, &len);
+        if(client<0)continue;
+        struct timeval timehttps = {5,0};
+        setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
+        SSL* ssl=SSL_new(ctx);
+        mylog[0]=1;
+        if(SSL_set_fd(ssl,client)<=0||SSL_accept(ssl)<=0){
+            mylog[0]=0;
+            SSL_free(ssl);
+            close(client);
+            continue;
+        }
+        mylog[0]=0;
+        sumthread++;
+        pthread_create(&thread_id,0,work,(void*)ssl);
+        pthread_detach(thread_id);//need free : ssl,client,sumthread
+    }
+    close(sock);
+    SSL_CTX_free(ctx);
+    EVP_cleanup();
+}
+void mysslwrite(SSL* ssl,const char*a,int n){
     if(SSL_get_shutdown(ssl))return;
     SSL_write(ssl,a,n);
 }
@@ -112,7 +136,7 @@ int mysendfile(SSL* ssl, const char* a){
     sprintf(content,"%s%s%s\r\n",Hok,Hc3600,head);
     int headerLength=strlen(content);
     size_t bytesRead=fread(content+headerLength,1,fileSize,file);
-    if (bytesRead!=fileSize) {
+    if(bytesRead!=fileSize) {
         free(content);
         fclose(file);
         return 0;

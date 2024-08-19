@@ -1,5 +1,3 @@
-#include<openssl/ssl.h>
-#include<openssl/err.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
@@ -15,80 +13,69 @@
 #include<map>
 #include<vector>
 #include<string>
-SSL_CTX *ctx;
-#include"./myio.h"
+using std::string;
+#include"/443/myio.h"
 const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
-std::map<std::string,int>mp;
-void sendfile(SSL* ssl,const char* a,int user) {
-    if(user)mp[(std::string)a]++;
+char (*user)[128];
+void sendfile(SSL* ssl,const char* a,int notadmin) {
+    if(notadmin)logmap[(string)a]++;
     if(a[0]){
-        std::string b="/443/pub/html"+(std::string)a+(a[strlen(a)-1]=='/'?"index.html":".html");
+        string b="/443/pub/html"+(string)a+(a[strlen(a)-1]=='/'?"index.html":".html");
         if(mysendfile(ssl,b.c_str()))return;
-        b="/443/pub"+(std::string)a;
+        b="/443/pub"+(string)a;
         if(mysendfile(ssl,b.c_str()))return;
     }
     mysslwrite(ssl,Head404,strlen(Head404));
 }
-void* work(void* cil){
-    char* get=(char*)malloc(10240);
-    int cl=(long long)cil,n=0,i,j,user=1;
-    SSL* ssl=SSL_new(ctx);
-    SSL_set_fd(ssl, cl);
-    if (SSL_accept(ssl)<=0)goto https;
+void* work(void* __ssl){
+    SSL* ssl=(SSL*)__ssl;
+    int cl=SSL_get_fd(ssl),n=0,i,j,notadmin=1;
+    char* get=(char*)malloc(10240),*id;
     while(1){
         int m=SSL_read(ssl,get+n,1024-n);//head less than 1024
         if(m<=0)break;
         get[n+=m]=0;
         if(strstr(get,"\r\n\r\n"))break;
     }
-    if(strstr(get,"AAAAE"))user=0;
     if(n<=0)goto https;
-    for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
-    if(i>=n){
-        if(*(int*)get==542393671)sendfile(ssl,"/fix",user);
+    if((id=strstr(get,"Cookie: id="))){
+        int tmp=0;
+        for(i=11;i<16;i++)tmp=tmp*10+id[i]-'A';
+        if(0<=tmp&&tmp<=10000&&*(ll*)(id+11+2)==*(ll*)(user[tmp]+74)&&user[tmp][127]==1)notadmin=0;
+    }
+    if(!strstr(get,"free.neuqboard.cn")){
+        if(*(int*)get==542393671)sendfile(ssl,"/fix",notadmin);
         else mysslwrite(ssl,Head404,strlen(Head404));
         goto https;
     }
     if(*(int*)get==542393671){
-        if(strstr(get,"AAAAE")&&strstr(get,"GET /admin")){
-            std::string a="";
-            for(auto i:mp){
-                char t[10]={0};
-                sprintf(t," %d\n",i.second);
-                a+=i.first+t;
+        if(notadmin==0){
+            if(strstr(get,"GET /admin")){
+                string a=printlog();
+                mysend(ssl,a.c_str(),a.length());
+                goto https;
             }
-            mysend(ssl,a.c_str(),a.length());
-            goto https;
+            if(strstr(get,"GET /reset")){
+                logmap.clear();
+            }
         }
         char file[128];
         for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46);n++)
             if((file[n]<46||57<file[n])&&(file[n]<95||122<file[n]))break;
         file[n]=0;
-        sendfile(ssl,file+1,user);
+        sendfile(ssl,file+1,notadmin);
     }
     https://free.neuqboard.cn/
     SSL_free(ssl);
     close(cl);
     free(get);
+    sumthread--;
     return 0;
 }
 int main() {
-    int sock=mycreatsock(999,&ctx);
-	pthread_t thread_id;
-    while (1) {
-        struct sockaddr_in addr;
-        uint len=sizeof(addr);
-        int client=accept(sock, (struct sockaddr*)&addr, &len);
-        if(client<0)printf("accept failed\n");
-		else {
-            struct timeval timehttps = {10,0};
-            setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char *)&timehttps,sizeof(struct timeval));
-            pthread_create(&thread_id,0,work,(void*)(long long)client);
-            pthread_detach(thread_id);
-        }
-    }
-    close(sock);
-    SSL_CTX_free(ctx);
-    EVP_cleanup();
+    user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/user.txt",O_RDWR|O_CREAT),0);
+    char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/443/pri/log.dat",O_RDWR|O_CREAT),0);
+    memset(mylog,0,102400);
+    mystart(999,work,mylog);
     return 0;
 }
