@@ -27,6 +27,7 @@ void sendfile(SSL* ssl,const char* a,int notadmin) {
     }
     mysslwrite(ssl,Head404,strlen(Head404));
 }
+int ifacceptchar[256];
 void* work(void* __ssl){
     SSL* ssl=(SSL*)__ssl;
     int cl=SSL_get_fd(ssl),n=0,i,j,notadmin=1;
@@ -60,8 +61,10 @@ void* work(void* __ssl){
             }
         }
         char file[128];
-        for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46);n++)
-            if((file[n]<46||57<file[n])&&(file[n]<95||122<file[n]))break;
+        for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46);n++){
+            unsigned char f=file[n];
+            if(!ifacceptchar[f])break;
+        }
         file[n]=0;
         sendfile(ssl,file+1,notadmin);
     }
@@ -73,6 +76,13 @@ void* work(void* __ssl){
     return 0;
 }
 int main() {
+    for(char i='0';i<='9';i++)ifacceptchar[i]=1;
+    for(char i='A';i<='Z';i++)ifacceptchar[i]=1;
+    for(char i='a';i<='z';i++)ifacceptchar[i]=1;
+    ifacceptchar['.']=1;
+    ifacceptchar['-']=1;
+    ifacceptchar['_']=1;
+    ifacceptchar['/']=1;
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/user.txt",O_RDWR|O_CREAT),0);
     char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/443/pri/log.dat",O_RDWR|O_CREAT),0);
     memset(mylog,0,102400);

@@ -3,8 +3,8 @@
 #include<signal.h>
 #define ll long long
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
-            Hc0[]=   "cache-control: no-cache\r\n",
-            Hc3600[]="cache-control: max-age=3600, public\r\n",
+            Hc0[]=   "Cache-Control: no-cache\r\n",
+            Hc3600[]="Cache-Control: max-age=3600, public\r\n",
             Hhtml[]= "Content-Type: text/html\r\n",
             Hjson[]= "Content-Type: application/json\r\n",
             Hjs[]=   "Content-Type: application/javascript\r\n",
