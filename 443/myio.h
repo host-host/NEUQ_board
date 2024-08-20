@@ -5,6 +5,7 @@
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hc0[]=   "Cache-Control: no-cache\r\n",
             Hc3600[]="Cache-Control: max-age=3600, public\r\n",
+            Hc7d[]=  "Cache-Control: max-age=604800, public\r\n",
             Hhtml[]= "Content-Type: text/html\r\n",
             Hjson[]= "Content-Type: application/json\r\n",
             Hjs[]=   "Content-Type: application/javascript\r\n",
@@ -13,9 +14,12 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hwebp[]= "Content-Type: image/webp\r\n",
             Htxt[]=  "Content-Type: text/plain\r\n",
             Hoptin[]="Access-Control-Allow-Origin: https://free.neuqboard.cn\r\n"
-                     "Access-Control-Allow-Credentials: true\r\n";
+                     "Access-Control-Allow-Credentials: true\r\n",
+            Hgzip[]= "Content-Encoding: gzip\r\n",
+            Hzstd[]= "Content-Encoding: zstd\r\n";
 const char Ctoboard[]="\r\n<script>window.location.href='https://free.neuqboard.cn/board';</script>";
 std::map<string,int>logmap;
+char* mylog;
 volatile int sumthread=0;
 int min(int x,int y){
     return x<y?x:y;
@@ -51,7 +55,11 @@ void JSON(char* p,char* a){
     a[i]=0;
 }
 string printlog(){
-    string a="ALL threads: "+std::to_string(sumthread)+"\n";
+    string a="ALL threads: "+std::to_string(sumthread)+"\nTLE ERROR:";
+    for(int i=1;i<=12;i++)a+=std::to_string(((int*)mylog)[100+i])+" ";
+    a+="\nread ERROR:";
+    for(int i=0;i<=6;i++)a+=std::to_string(((int*)mylog)[200+i])+" ";
+    a+="\n";
     for(auto i:logmap)a+=i.first+" "+std::to_string(i.second)+"\n";
     return a;
 }
@@ -79,7 +87,7 @@ int mycreatsock(int port,SSL_CTX** __ctx){
     *__ctx=ctx;
     return sock;
 }
-void mystart(int sock,void* (*work)(void*),char* mylog){
+void mystart(int sock,void* (*work)(void*)){
     SSL_CTX *ctx;
     sock=mycreatsock(sock,&ctx);
 	pthread_t thread_id;
@@ -88,17 +96,14 @@ void mystart(int sock,void* (*work)(void*),char* mylog){
         uint len=sizeof(addr);
         int client=accept(sock, (struct sockaddr*)&addr, &len);
         if(client<0)continue;
-        struct timeval timehttps = {5,0};
+        struct timeval timehttps = {10,0};
         setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
         SSL* ssl=SSL_new(ctx);
-        mylog[0]=1;
         if(SSL_set_fd(ssl,client)<=0||SSL_accept(ssl)<=0){
-            mylog[0]=0;
             SSL_free(ssl);
             close(client);
             continue;
         }
-        mylog[0]=0;
         sumthread++;
         pthread_create(&thread_id,0,work,(void*)ssl);
         pthread_detach(thread_id);//need free : ssl,client,sumthread
@@ -107,9 +112,31 @@ void mystart(int sock,void* (*work)(void*),char* mylog){
     SSL_CTX_free(ctx);
     EVP_cleanup();
 }
+int mysslread(SSL* ssl,char* get,int maxn){
+    int n=0,bj=0;
+    while(1){
+        int m=SSL_read(ssl,get+n,maxn-n);//head less than 1024
+        if(m<=0){
+            int sslErr=SSL_get_error(ssl, m);
+            if(sslErr==SSL_ERROR_WANT_READ){
+                if(++bj>12)break;
+                ((int*)mylog)[100+bj]++;
+                usleep((1<<bj)*1000);
+                continue;
+            }
+            ((int*)mylog)[200+sslErr]++;
+            break;
+        }
+        get[n+=m]=bj=0;
+        if(strstr(get,"\r\n\r\n"))break;
+    }
+    get[n]=0;
+    return n;
+}
 void mysslwrite(SSL* ssl,const char*a,int n){
     if(SSL_get_shutdown(ssl))return;
-    SSL_write(ssl,a,n);
+    int p=SSL_write(ssl,a,n);
+    if(p!=n)logmap[" WRITEERR "+std::to_string(n)+" "+std::to_string(p)]++;
 }
 void mysend(SSL* ssl,const char*a,int n=0){
     if(n==0)n=strlen(a);
@@ -133,7 +160,9 @@ int mysendfile(SSL* ssl, const char* a){
     if(strstr(a,".ico"))head=Hico;
     if(strstr(a,".webp"))head=Hwebp;
     char* content=(char*)malloc(fileSize+300);
-    sprintf(content,"%s%s%s\r\n",Hok,Hc3600,head);
+    if(strstr(a,"/gzip/"))sprintf(content,"%s%s%s%s\r\n",Hok,Hc3600,head,Hgzip);
+    else if(strstr(a,"/zstd/"))sprintf(content,"%s%s%s%s\r\n",Hok,Hc3600,head,Hzstd);
+    else sprintf(content,"%s%s%s\r\n",Hok,Hc3600,head);
     int headerLength=strlen(content);
     size_t bytesRead=fread(content+headerLength,1,fileSize,file);
     if(bytesRead!=fileSize) {

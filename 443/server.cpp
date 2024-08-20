@@ -32,12 +32,7 @@ void* work(void* __ssl){
     SSL* ssl=(SSL*)__ssl;
     int cl=SSL_get_fd(ssl),n=0,i,j,notadmin=1;
     char* get=(char*)malloc(10240),*id;
-    while(1){
-        int m=SSL_read(ssl,get+n,1024-n);//head less than 1024
-        if(m<=0)break;
-        get[n+=m]=0;
-        if(strstr(get,"\r\n\r\n"))break;
-    }
+    n=mysslread(ssl,get,2048);
     if(n<=0)goto https;
     if((id=strstr(get,"Cookie: id="))){
         int tmp=0;
@@ -84,8 +79,8 @@ int main() {
     ifacceptchar['_']=1;
     ifacceptchar['/']=1;
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/user.txt",O_RDWR|O_CREAT),0);
-    char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/443/pri/log.dat",O_RDWR|O_CREAT),0);
+    mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/443/pri/log.dat",O_RDWR|O_CREAT),0);
     memset(mylog,0,102400);
-    mystart(999,work,mylog);
+    mystart(999,work);
     return 0;
 }
