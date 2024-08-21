@@ -9,42 +9,38 @@
 #include<fcntl.h>
 #include<errno.h>
 #include<pthread.h>
+#include<signal.h>
+#include<string>
+using std::string;
 #define ll long long
-const char Headhtml[]="HTTP/1.1 200 OK\r\ncache-control: max-age=3600, public\r\n"
-                      "Content-Type: text/html\r\nContent-Length:";
-const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
-const char uuu[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://free.neuqboard.cn\r\nStrict-Transport-Security: max-age=3600; includeSubDomains\r\n\r\n";
-int sendfile(int cl, const char* a){
-    FILE* file=fopen(a,"rb");
-    if(!file)return 0;
-    fseek(file,0,SEEK_END);
-    int fileSize=ftell(file);
-    fseek(file,0,SEEK_SET);
-    char* content=(char*)malloc(fileSize+300);
-    sprintf(content,"%s%d\r\n\r\n",Headhtml,fileSize);
-    int headerLength=strlen(content);
-    size_t bytesRead=fread(content+headerLength,1,fileSize,file);
-    if (bytesRead!=fileSize) {
-        free(content);
-        fclose(file);
-        return 0;
-    }
-    write(cl,content,headerLength+fileSize);
-    free(content);
-    fclose(file);
-    return 1;
-}
+const char  uuu[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://",
+            uuu1[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://www.neuqboard.cn",
+            uuu2[]="\r\nStrict-Transport-Security: max-age=3600; includeSubDomains\r\n\r\n";
+const char tmp[]="HTTP/1.1 200 OK\r\nContent-Length: 87\r\n\r\n"
+                 "mTofA3XyNaaO1qJseEpHjnocXewPEfbJtKwG3yE4nrA.k_dw0dolba_oKg9vg6u43B_8nH2f6EllVI7FC_J02bM";
 void* work(void* cil){
-    char* get=(char*)malloc(102400),id[13]="0";
-    int cl=(long long)cil,n=recv(cl,get,2000,0),i,j;
+    char* get=(char*)malloc(102400),*c;
+    int cl=(long long)cil,n=recv(cl,get,2000,0);
+    string a=uuu;
     if(n<=0)goto out;
-    for(i=0;i<n;i++)if(*(ll*)(get+i)==0x75656E2E65657266)break;
-    if(i>=n){
-        if(*(int*)get==542393671)sendfile(cl,"/443/pub/html/fix.html");
-        else write(cl,Head404,strlen(Head404));
-        goto out;
-    }
-    write(cl,uuu,strlen(uuu));
+    get[n]=get[n+1]=0;
+    c=strstr(get,"Host: ");
+    if(c==0)c=strstr(get,"host: ");
+    if(c){
+        int i;
+        for(i=6;c[i]&&c[i]!='\r';i++);
+        c[i]='\0';
+        c[i+1]='\0';
+        a+=c+6;
+        for(i=0;get[i]&&get[i]!=' ';i++);
+        i++;
+        for(;get[i]&&get[i]!=' ';i++)a+=get[i];
+    }else a=uuu1;
+    a+=uuu2;
+    if(strstr(get,"mTofA3XyNaaO1qJseEpHjnocXewPEfbJtKwG3yE4nrA"))
+        write(cl,tmp,strlen(tmp));
+    else 
+        write(cl,a.c_str(),a.length());
     out:
     free(get);
     close(cl);
@@ -61,6 +57,7 @@ int main(){
 	serverAddr.sin_addr.s_addr=INADDR_ANY;
 	if(bind(serverSock,(struct sockaddr*)&serverAddr,sizeof(serverAddr))==-1)return-1;
 	if(listen(serverSock,10)==-1)return-1;
+    signal(SIGPIPE,SIG_IGN);
 	pthread_t thread_id;
 	printf("Start to listen!\n");
 	while(1) {

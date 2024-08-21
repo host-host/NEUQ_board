@@ -1,5 +1,6 @@
 #include<openssl/ssl.h>
 #include<openssl/err.h>
+#include<map>
 #include<signal.h>
 #define ll long long
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
@@ -13,14 +14,14 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hico[]=  "Content-Type: image/x-icon\r\n",
             Hwebp[]= "Content-Type: image/webp\r\n",
             Htxt[]=  "Content-Type: text/plain\r\n",
-            Hoptin[]="Access-Control-Allow-Origin: https://free.neuqboard.cn\r\n"
+            Hoptin[]="Access-Control-Allow-Origin: https://chat.neuqboard.cn\r\n"
                      "Access-Control-Allow-Credentials: true\r\n",
             Hgzip[]= "Content-Encoding: gzip\r\n",
+            Hbr[]=   "Content-Encoding: br\r\n",
             Hzstd[]= "Content-Encoding: zstd\r\n";
-const char Ctoboard[]="\r\n<script>window.location.href='https://free.neuqboard.cn/board';</script>";
-std::map<string,int>logmap;
-char* mylog;
-volatile int sumthread=0;
+const char Ctoboard[]="\r\n<script>window.location.href='https://chat.neuqboard.cn';</script>";
+std::map<string,int>mlog;
+pthread_mutex_t mloglock;
 int min(int x,int y){
     return x<y?x:y;
 }
@@ -54,18 +55,27 @@ void JSON(char* p,char* a){
     if(bj==0)a[i++]='\"';
     a[i]=0;
 }
-string printlog(){
-    string a="ALL threads: "+std::to_string(sumthread)+"\nTLE ERROR:";
-    for(int i=1;i<=12;i++)a+=std::to_string(((int*)mylog)[100+i])+" ";
-    a+="\nread ERROR:";
-    for(int i=0;i<=6;i++)a+=std::to_string(((int*)mylog)[200+i])+" ";
-    a+="\n";
-    for(auto i:logmap)a+=i.first+" "+std::to_string(i.second)+"\n";
-    return a;
+void addlog(const char*a){
+    pthread_mutex_lock(&mloglock);
+    mlog[a]++;
+    pthread_mutex_unlock(&mloglock);
 }
-void signal_handler(int sig){
-	logmap["SIGPIPE"+std::to_string(sig)]++;
-    signal(SIGPIPE,signal_handler);
+void addlog(string a){
+    pthread_mutex_lock(&mloglock);
+    mlog[a]++;
+    pthread_mutex_unlock(&mloglock);
+}
+void clearlog(){
+    pthread_mutex_lock(&mloglock);
+    mlog.clear();
+    pthread_mutex_unlock(&mloglock);
+}
+string printlog(){
+    string a;
+    pthread_mutex_lock(&mloglock);
+    for(auto i:mlog)a+=i.first+":"+std::to_string(i.second)+"\n";
+    pthread_mutex_unlock(&mloglock);
+    return a;
 }
 int mycreatsock(int port,SSL_CTX** __ctx){
     struct sockaddr_in addr;
@@ -73,8 +83,8 @@ int mycreatsock(int port,SSL_CTX** __ctx){
     OpenSSL_add_ssl_algorithms();
     SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
     if (!ctx)exit(157);
-    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/free.neuqboard.cn.crt")<=0)exit(158);
-    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/free.neuqboard.cn.key",SSL_FILETYPE_PEM)<=0)exit(159);
+    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/fullchain.crt")<=0)exit(158);
+    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/private.pem",SSL_FILETYPE_PEM)<=0)exit(159);
     if (!SSL_CTX_check_private_key(ctx))exit(160);
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock<0)exit(161);
@@ -83,7 +93,8 @@ int mycreatsock(int port,SSL_CTX** __ctx){
     addr.sin_addr.s_addr=htonl(INADDR_ANY);
     if(bind(sock,(struct sockaddr*)&addr,sizeof(addr))<0)exit(162);
     if(listen(sock,1)<0)exit(163);
-    signal(SIGPIPE,signal_handler);
+    signal(SIGPIPE,SIG_IGN);
+    pthread_mutex_init(&mloglock,0);
     *__ctx=ctx;
     return sock;
 }
@@ -104,9 +115,8 @@ void mystart(int sock,void* (*work)(void*)){
             close(client);
             continue;
         }
-        sumthread++;
         pthread_create(&thread_id,0,work,(void*)ssl);
-        pthread_detach(thread_id);//need free : ssl,client,sumthread
+        pthread_detach(thread_id);
     }
     close(sock);
     SSL_CTX_free(ctx);
@@ -115,16 +125,14 @@ void mystart(int sock,void* (*work)(void*)){
 int mysslread(SSL* ssl,char* get,int maxn){
     int n=0,bj=0;
     while(1){
-        int m=SSL_read(ssl,get+n,maxn-n);//head less than 1024
+        int m=SSL_read(ssl,get+n,maxn-n);
         if(m<=0){
             int sslErr=SSL_get_error(ssl, m);
             if(sslErr==SSL_ERROR_WANT_READ){
                 if(++bj>12)break;
-                ((int*)mylog)[100+bj]++;
-                usleep((1<<bj)*1000);
+                usleep((1<<bj)*2000);
                 continue;
             }
-            ((int*)mylog)[200+sslErr]++;
             break;
         }
         get[n+=m]=bj=0;
@@ -135,12 +143,11 @@ int mysslread(SSL* ssl,char* get,int maxn){
 }
 void mysslwrite(SSL* ssl,const char*a,int n){
     if(SSL_get_shutdown(ssl))return;
-    int p=SSL_write(ssl,a,n);
-    if(p!=n)logmap[" WRITEERR "+std::to_string(n)+" "+std::to_string(p)]++;
+    SSL_write(ssl,a,n);
 }
 void mysend(SSL* ssl,const char*a,int n=0){
     if(n==0)n=strlen(a);
-    char* content=(char*)malloc(n+300);//head不会超过300
+    char* content=(char*)malloc(n+300);
     int m=sprintf(content,"%s%s%s\r\n",Hok,Hc0,Hoptin);
     memcpy(content+m,a,n);
     mysslwrite(ssl,content,m+n);
@@ -159,18 +166,19 @@ int mysendfile(SSL* ssl, const char* a){
     if(strstr(a,".css"))head=Hcss;
     if(strstr(a,".ico"))head=Hico;
     if(strstr(a,".webp"))head=Hwebp;
-    char* content=(char*)malloc(fileSize+300);
-    if(strstr(a,"/gzip/"))sprintf(content,"%s%s%s%s\r\n",Hok,Hc3600,head,Hgzip);
-    else if(strstr(a,"/zstd/"))sprintf(content,"%s%s%s%s\r\n",Hok,Hc3600,head,Hzstd);
-    else sprintf(content,"%s%s%s\r\n",Hok,Hc3600,head);
-    int headerLength=strlen(content);
-    size_t bytesRead=fread(content+headerLength,1,fileSize,file);
-    if(bytesRead!=fileSize) {
+    char* content=(char*)malloc(fileSize+350);
+    int n=sprintf(content,"%s%s%s",Hok,Hc3600,head);
+    if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
+    else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
+    else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
+    n+=sprintf(content+n,"\r\n");
+    int readn=fread(content+n,1,fileSize,file);
+    if(readn!=fileSize) {
         free(content);
         fclose(file);
         return 0;
     }
-    mysslwrite(ssl,content,headerLength+fileSize);
+    mysslwrite(ssl,content,readn+n);
     free(content);
     fclose(file);
     return 1;

@@ -42,6 +42,7 @@ void* work(void* __ssl){
     for(i=0;i<e.size();i++){
         for(j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])break;
         if(e[i].mat[j])continue;
+        addlog(e[i].mat);
         for(int len=0,j=1,k;j<n;j++){
             if(*(ll*)(get+j)==0x3D6469203A65696B)memcpy(id,get+j+8,10);
             if(*(ll*)(get+j)==0x6874676E654C2D74)len=readint(get+j);
@@ -57,7 +58,6 @@ void* work(void* __ssl){
     SSL_free(ssl);
     close(cl);
     free(get);
-    sumthread--;
     return 0;
 }
 void admin(SSL *ssl,const char* re,const char* con,int n,const char* id){
@@ -70,8 +70,8 @@ void OPTIONS(SSL *ssl,const char* re,const char* con,int n,const char* id){
     mysslwrite(ssl,tmp.c_str(),tmp.length());
 }
 int main() {
-    char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/log.dat",O_RDWR|O_APPEND|O_CREAT),0);
-    memset(mylog,0,102400);
+    // char* mylog=(char*)mmap(0,100*1024,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/log.dat",O_RDWR|O_APPEND|O_CREAT),0);
+    // memset(mylog,0,102400);
     user=(char(*)[128])mmap(0,0x5AA5D000,PROT_READ|PROT_WRITE,MAP_SHARED,open("/1000/pri/user.txt",O_RDWR|O_CREAT),0);
     for(int i=0;*user[i];i++)users[(string)user[i]]=i;
     ldata=lseek(fdata=open("/1000/pri/data.dat",O_RDWR|O_APPEND|O_CREAT),0,SEEK_END);
@@ -90,6 +90,6 @@ int main() {
 	e.push_back((point){"GET /admin",admin});
 	e.push_back((point){"OPTIONS",OPTIONS});
     srand(time(0));
-    mystart(1000,work,mylog);
+    mystart(1000,work);
     return 0;
 }

@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newMessageButton = document.getElementById('newMessage');
     const sendMessageButton = document.getElementById('sendMessage');
     function fetchBoardContent(page) {
-        fetch(`https://free.neuqboard.cn:1000/api/p=${page}`)
+        fetch(`https://chat.neuqboard.cn:1000/api/p=${page}`)
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
             return response.json();
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const content = document.getElementById('messageContent').value;
         const id = document.getElementById('messageId').value;
         const dataString = JSON.stringify(title) + '\0' + content + '\0' + id + '\0';
-        fetch('https://free.neuqboard.cn:1000/api/sendmessage', {
+        fetch('https://chat.neuqboard.cn:1000/api/sendmessage', {
             method: 'POST',
             credentials: 'include', // 允许发送cookie
             headers: {'Content-Type': 'text/plain', 'Content-Length': dataString.length},
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function fetchContent(id, contentDiv) {
-        fetch(`https://free.neuqboard.cn:1000/api/con=${id}`)
+        fetch(`https://chat.neuqboard.cn:1000/api/con=${id}`)
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
             return response.text();
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     fetchBoardContent(currentid[currentid.length-1]);
     function loaduser(){
-        fetch('https://free.neuqboard.cn:1000/api/user', {
+        fetch('https://chat.neuqboard.cn:1000/api/user', {
             method: 'GET',
             credentials: 'include' // 允许发送cookie
         })
