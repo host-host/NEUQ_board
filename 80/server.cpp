@@ -16,8 +16,8 @@ using std::string;
 const char  uuu[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://",
             uuu1[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://www.neuqboard.cn",
             uuu2[]="\r\nStrict-Transport-Security: max-age=3600; includeSubDomains\r\n\r\n";
-const char tmp[]="HTTP/1.1 200 OK\r\nContent-Length: 87\r\n\r\n"
-                 "mTofA3XyNaaO1qJseEpHjnocXewPEfbJtKwG3yE4nrA.k_dw0dolba_oKg9vg6u43B_8nH2f6EllVI7FC_J02bM";
+const char tmp[]="HTTP/1.1 200 OK\r\nContent-Length: 19\r\n\r\n"
+                 "5515092740103084062";
 void* work(void* cil){
     char* get=(char*)malloc(102400),*c;
     int cl=(long long)cil,n=recv(cl,get,2000,0);
@@ -37,7 +37,7 @@ void* work(void* cil){
         for(;get[i]&&get[i]!=' ';i++)a+=get[i];
     }else a=uuu1;
     a+=uuu2;
-    if(strstr(get,"mTofA3XyNaaO1qJseEpHjnocXewPEfbJtKwG3yE4nrA"))
+    if(strstr(get,"tencent14058446027374894916"))
         write(cl,tmp,strlen(tmp));
     else 
         write(cl,a.c_str(),a.length());

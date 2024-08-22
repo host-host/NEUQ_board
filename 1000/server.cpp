@@ -62,7 +62,7 @@ void* work(void* __ssl){
 }
 void admin(SSL *ssl,const char* re,const char* con,int n,const char* id){
     string a=printlog();
-    mysend(ssl,a.c_str(),a.length());
+    mysslwrite(ssl,a.c_str(),a.length());
 }
 void OPTIONS(SSL *ssl,const char* re,const char* con,int n,const char* id){
     string tmp="Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n";

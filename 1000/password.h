@@ -32,7 +32,7 @@ void reg(SSL *ssl,const char* re,const char* con,int n,const char* id){
         users[(std::string)c]=x;
         for(i=76;i>=72;tx/=26)c[i--]='A'+tx%26;
         memcpy(user[x],c,128);
-        mysend(ssl,"<script>alert('Success, please log in.');window.location.href='https://free.neuqboard.cn/login';</script>");
+        mysend(ssl,"<script>alert('Success, please log in.');window.location.href='https://chat.neuqboard.cn/login';</script>");
     }
 }
 int ifuser(const char*id){
@@ -64,5 +64,5 @@ void change_password(SSL *ssl,const char* re,const char* con,int n,const char* i
     memset(user[x]+36,0,36);
     memcpy(user[x]+36,con+i+21,min(35,j-(i+21)));
     for(int i=77;i<82;i++)user[x][i]=rand()%26+(rand()%2?'a':'A');
-    return mysend(ssl,"<script>alert('Success!');window.location.href='https://free.neuqboard.cn/login';</script>");
+    return mysend(ssl,"<script>alert('Success!');window.location.href='https://chat.neuqboard.cn/login';</script>");
 }

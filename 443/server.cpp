@@ -40,11 +40,12 @@ void* work(void* __ssl){
     }
     if(strstr(get,"ost: free.neuqboard.cn"))root="/443/free";
     if(strstr(get,"ost: chat.neuqboard.cn"))root="/443/chat";
+    if(strstr(get,"ost: dev.neuqboard.cn"))root="/443/dev";
     if(*(int*)get==542393671){
         if(notadmin==0){
             if(strstr(get,"GET /admin")){
                 string a=printlog();
-                mysend(ssl,a.c_str(),a.length());
+                mysslwrite(ssl,a.c_str(),a.length());
                 goto https;
             }
             if(strstr(get,"GET /reset")){

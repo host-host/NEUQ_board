@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <style>
+        body{margin:0;font-family:var(--bs-body-font-family);}
+        img,svg{vertical-align:middle}
+        .hero{display:flex;position:relative;color:#fff;font-size:1.5rem;line-height:2rem;flex-direction:column;justify-content:center;align-items:center;text-shadow:0 .1875rem .3125rem #1c1f21;height:25rem;-o-object-fit:cover;object-fit:cover;background-position-x:center;background-position-y:center;background-size:cover}
+        .main-hero-waves-area{width:100%;position:absolute;left:0;z-index:0}
+        .main-hero-waves-area{bottom:-5px}
+        .waves-area .waves-svg{width:100%;height:5rem}.waves-area 
+        .parallax>use{-webkit-animation:move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;animation:move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite}
+        .waves-area .parallax>use:first-child{-webkit-animation-delay:-2s;animation-delay:-2s;-webkit-animation-duration:7s;animation-duration:7s;fill:rgba(255,255,255,.7)}
+        .waves-area .parallax>use:nth-child(2){-webkit-animation-delay:-3s;animation-delay:-3s;-webkit-animation-duration:10s;animation-duration:10s;fill:rgba(255,255,255,.5)}
+        .waves-area .parallax>use:nth-child(3){-webkit-animation-delay:-4s;animation-delay:-4s;-webkit-animation-duration:13s;animation-duration:13s;fill:rgba(255,255,255,.3)}
+        .waves-area .parallax>use:nth-child(4){-webkit-animation-delay:-5s;animation-delay:-5s;-webkit-animation-duration:20s;animation-duration:20s;fill:#f9fafb}
+        @keyframes move-forever{0%{transform:translate3d(-90px,0,0)}to{transform:translate3d(85px,0,0)}}
+        @-webkit-keyframes move-forever{0%{transform:translate3d(-90px,0,0)}to{transform:translate3d(85px,0,0)}}
+        .custom-link-container {position: absolute;width: 100%;text-align: center;}
+        .custom-link {background-image: url('https://free.neuqboard.cn/img/pua.webp');width: 800px;height: 240px;display: inline-block;background-color: #f0f0f0;border-radius: 10px;text-decoration: none;color: black;background-size: contain;background-repeat: no-repeat;background-position: center;}
+        .custom-link2 {background-image: url('https://free.neuqboard.cn/img/puc.webp');width: 800px;height: 240px;display: inline-block;background-color: #f0f0f0;border-radius: 10px;text-decoration: none;color: black;background-size: contain;background-repeat: no-repeat;background-position: center;}
+        .custom-link3 {background-image: url('https://free.neuqboard.cn/img/purecord.webp');width: 800px;height: 240px;display: inline-block;background-color: #f0f0f0;border-radius: 10px;text-decoration: none;color: black;background-size: contain;background-repeat: no-repeat;background-position: center;}
+        .info-box {display: flex;justify-content: center;align-items: center;margin-top: 30px;}
+        .info-box:hover {transform: scale(1.1);transition: transform 0.5s ease-in-out;}
+        .info-box2 {display: flex;justify-content: center;align-items: center;margin-top: 400px;}
+        .info-box2:hover {transform: scale(1.1);transition: transform 0.5s ease-in-out;}
+        .info-box3 {display: flex;justify-content: center;align-items: center;margin-top: 770px;}
+        .info-box3:hover {transform: scale(1.1);transition: transform 0.5s ease-in-out;}
+        .navbar {overflow: hidden;background-color:rgba(20,20,20,0.1);position: fixed;top: 0;width: 100%;z-index: 1000;transition: top 0.3s;}
+        .navbar_a {float: left;display: flex;align-items: center;color: #ffffff;text-align: center;padding: 14px 16px;text-decoration: none;}
+        .navbar_a_img0 {margin-right: 8px;width: 20px;height: 20px;}
+        .navbar_a_img {margin-right: 8px;width: 20px;height: 20px;}
+        .navbar_a:hover {background-color: #ddd;color: black;}
+        body {padding-top: 0px;}
+        </style>
+    </head>
+<body>
+<div class="navbar" id="navbar">
+    <a href="https://free.neuqboard.cn/" class="navbar_a"><img src="https://free.neuqboard.cn/favicon.ico" alt="NEUQ_board" class="navbar_a_img0">NEUQ_board</a>
+    <a href="https://free.neuqboard.cn/diff" class="navbar_a">代码比对工具</a>
+    <a href="https://free.neuqboard.cn/PiDayChallenge" class="navbar_a">π Day 挑战</a>
+    <!-- <a href="#news" class="navbar_a">News</a>
+    <a href="#contact" class="navbar_a">Contact</a>
+    <a href="#about" class="navbar_a">About</a> -->
+</div>
+<div id="hero-box" class="hero" style="background-image: url(https://free.neuqboard.cn/img/puflower.webp);height:700px;">
+    <h3>NEUQ</h3>
+    <div>倾听NEUQ里的故事</div>
+    <section class="main-hero-waves-area waves-area">
+        <svg class="waves-svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <defs>
+                <path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path>
+            </defs>
+            <g class="parallax">
+                <use xlink:href="#gentle-wave" x="48" y="0"></use>
+                <use xlink:href="#gentle-wave" x="48" y="3"></use>
+                <use xlink:href="#gentle-wave" x="48" y="5"></use>
+                <use xlink:href="#gentle-wave" x="48" y="7"></use>
+            </g>
+        </svg>
+    </section>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let lastScrollTop = 0;
+        const navbar = document.getElementById('navbar');
+        const navbarLinks = document.querySelectorAll('.navbar_a');
+        window.addEventListener('scroll', function() {
+            console.log('scroll');
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop)navbar.style.top = '-50px';
+            else navbar.style.top = '0';
+            if(scrollTop>700){
+                navbar.style.backgroundColor = 'rgba(250,250,250,0.9)';
+                navbarLinks.forEach(link => link.style.color = '#000000');
+            } else {
+                navbar.style.backgroundColor = 'rgba(20,20,20,0.1)';
+                navbarLinks.forEach(link => link.style.color = '#ffffff');
+            }
+            lastScrollTop = scrollTop;
+        });
+    });
+</script>
+</body></html>

@@ -217,9 +217,15 @@ body {
     cursor: pointer;
     color: #007bff;
     text-decoration: none;
+    display: inline-block;
 }
 .item-title:hover {
     cursor: pointer;
     color: #007bff;
     text-decoration: underline;
+    display: inline-block;
+}
+.item-add {
+    color: #303030;
+    text-decoration: none;
 }

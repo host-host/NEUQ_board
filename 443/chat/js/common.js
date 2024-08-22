@@ -22,9 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(sum%2==0)itemDiv.className+='_f9';
                 itemDiv.style.marginLeft = `${item.px * 20}px`;
                 if (item.px === '0') itemDiv.style.clear = 'both';
-                const titleText = item.id < 0 ? `${item.title}` : `+ ${item.title}`;
+                const titleText =`${item.title}`;
                 newid = item.id;
-                itemDiv.innerHTML = `<strong id="s${item.id}"></strong> ${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><strong class="item-title" data-id="${item.id}" id="tit${item.id}"></strong><div class="item-content" id="content-${item.id}"></div>`;
+                if(item.id < 0)
+                itemDiv.innerHTML = `<strong id="s${item.id}"></strong> ${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><div class="item-title" data-id="${item.id}" id="tit${item.id}"></div><div class="item-content" id="content-${item.id}"></div>`;
+                else 
+                itemDiv.innerHTML = `<strong id="s${item.id}"></strong> ${formatDate(item.date)}<button class="modal-trigger" data-id="${item.id}">Reply</button><br><strong class="item-add">+ </strong><div class="item-title" data-id="${item.id}" id="tit${item.id}"></div><div class="item-content" id="content-${item.id}"></div>`;
                 boardItemsDiv.appendChild(itemDiv);
                 document.getElementById(`s${item.id}`).textContent=item.name;
                 document.getElementById(`tit${item.id}`).textContent=titleText;

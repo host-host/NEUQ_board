@@ -18,7 +18,9 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
                      "Access-Control-Allow-Credentials: true\r\n",
             Hgzip[]= "Content-Encoding: gzip\r\n",
             Hbr[]=   "Content-Encoding: br\r\n",
-            Hzstd[]= "Content-Encoding: zstd\r\n";
+            Hzstd[]= "Content-Encoding: zstd\r\n",
+            Hdown[]= "Content-Disposition: form-data\r\n",
+            Hconl[]= "Content-Length: ";
 const char Ctoboard[]="\r\n<script>window.location.href='https://chat.neuqboard.cn';</script>";
 std::map<string,int>mlog;
 pthread_mutex_t mloglock;
@@ -34,7 +36,7 @@ ll readint(const char* a){
     while('0'<=*a&&*a<='9')x=x*10+(*a++)-'0';
     return x;
 }
-void JSON(char* p,char* a){
+void JSON(const char* p,char* a){
     int i=0,bj=0;
     if(p[0]=='\"')p++;
     a[i++]='\"';
@@ -72,9 +74,17 @@ void clearlog(){
 }
 string printlog(){
     string a;
+    a=a+Hok+Hc0+Hjson+"\r\n{\r";
+    char p[2048];
+    ll all=0;
     pthread_mutex_lock(&mloglock);
-    for(auto i:mlog)a+=i.first+":"+std::to_string(i.second)+"\n";
+    for(auto i:mlog){
+        all+=i.second;
+        JSON(i.first.c_str(),p);
+        a=a+p+":"+std::to_string(i.second)+",\n";
+    }
     pthread_mutex_unlock(&mloglock);
+    a+="\"ALL access:\":"+std::to_string(all)+"\n}";
     return a;
 }
 int mycreatsock(int port,SSL_CTX** __ctx){
@@ -166,12 +176,16 @@ int mysendfile(SSL* ssl, const char* a){
     if(strstr(a,".css"))head=Hcss;
     if(strstr(a,".ico"))head=Hico;
     if(strstr(a,".webp"))head=Hwebp;
-    char* content=(char*)malloc(fileSize+350);
+    char* content=(char*)malloc(fileSize+400);
     int n=sprintf(content,"%s%s%s",Hok,Hc3600,head);
+
     if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
     else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
     else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
-    n+=sprintf(content+n,"\r\n");
+
+    if(strstr(a,"/download/"))n+=sprintf(content+n,"%s",Hdown);
+
+    n+=sprintf(content+n,"%s%d\r\n\r\n",Hconl,fileSize);
     int readn=fread(content+n,1,fileSize,file);
     if(readn!=fileSize) {
         free(content);
