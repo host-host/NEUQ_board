@@ -30,6 +30,10 @@ int min(int x,int y){
 int max(int x,int y){
     return x>y?x:y;
 }
+int ncmp(const char* a,const char* b,int n){
+    for(int i=0;i<n;i++)if(a[i]!=b[i])return 0;
+    return 1;
+}
 ll readint(const char* a){
     ll x=0;
     while(*a&&(*a<'0'||'9'<*a))a++;
@@ -62,19 +66,13 @@ void addlog(const char*a){
     mlog[a]++;
     pthread_mutex_unlock(&mloglock);
 }
-void addlog(string a){
-    pthread_mutex_lock(&mloglock);
-    mlog[a]++;
-    pthread_mutex_unlock(&mloglock);
-}
 void clearlog(){
     pthread_mutex_lock(&mloglock);
     mlog.clear();
     pthread_mutex_unlock(&mloglock);
 }
 string printlog(){
-    string a;
-    a=a+Hok+Hc0+Hjson+"\r\n{\r";
+    string a=(string)Hok+Hc0+Hjson+"\r\n{\r";
     char p[2048];
     ll all=0;
     pthread_mutex_lock(&mloglock);
@@ -84,8 +82,7 @@ string printlog(){
         a=a+p+":"+std::to_string(i.second)+",\n";
     }
     pthread_mutex_unlock(&mloglock);
-    a+="\"ALL access:\":"+std::to_string(all)+"\n}";
-    return a;
+    return a+"\"ALL access:\":"+std::to_string(all)+"\n}";
 }
 int mycreatsock(int port,SSL_CTX** __ctx){
     struct sockaddr_in addr;
@@ -162,38 +159,4 @@ void mysend(SSL* ssl,const char*a,int n=0){
     memcpy(content+m,a,n);
     mysslwrite(ssl,content,m+n);
     free(content);
-}
-int mysendfile(SSL* ssl, const char* a){
-    FILE* file=fopen(a,"rb");
-    if(!file)return 0;
-    fseek(file,0,SEEK_END);
-    int fileSize=ftell(file);
-    fseek(file,0,SEEK_SET);
-    const char* head=Htxt;
-    if(strstr(a,".html"))head=Hhtml;
-    if(strstr(a,".js"))head=Hjs;
-    if(strstr(a,".json"))head=Hjson;
-    if(strstr(a,".css"))head=Hcss;
-    if(strstr(a,".ico"))head=Hico;
-    if(strstr(a,".webp"))head=Hwebp;
-    char* content=(char*)malloc(fileSize+400);
-    int n=sprintf(content,"%s%s%s",Hok,Hc3600,head);
-
-    if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
-    else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
-    else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
-
-    if(strstr(a,"/download/"))n+=sprintf(content+n,"%s",Hdown);
-
-    n+=sprintf(content+n,"%s%d\r\n\r\n",Hconl,fileSize);
-    int readn=fread(content+n,1,fileSize,file);
-    if(readn!=fileSize) {
-        free(content);
-        fclose(file);
-        return 0;
-    }
-    mysslwrite(ssl,content,readn+n);
-    free(content);
-    fclose(file);
-    return 1;
 }

@@ -15,6 +15,36 @@ using std::string;
 #include"/443/myio.h"
 const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
 char (*user)[128];
+int mysendfile(SSL* ssl, const char* a){
+    FILE* file=fopen(a,"rb");
+    if(!file)return 0;
+    fseek(file,0,SEEK_END);
+    int fileSize=ftell(file);
+    fseek(file,0,SEEK_SET);
+    const char* head=Htxt;
+    if(strstr(a,".html"))head=Hhtml;
+    if(strstr(a,".js"))head=Hjs;
+    if(strstr(a,".json"))head=Hjson;
+    if(strstr(a,".css"))head=Hcss;
+    if(strstr(a,".ico"))head=Hico;
+    if(strstr(a,".webp"))head=Hwebp;
+    char* content=(char*)malloc(fileSize+400);
+    int n=sprintf(content,"%s%s%s",Hok,Hc3600,head);
+    if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
+    else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
+    else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
+    if(strstr(a,"/download/"))n+=sprintf(content+n,"%s",Hdown);
+    n+=sprintf(content+n,"%s%d\r\n\r\n",Hconl,fileSize);
+    if(fread(content+n,1,fileSize,file)!=fileSize) {
+        free(content);
+        fclose(file);
+        return 0;
+    }
+    mysslwrite(ssl,content,fileSize+n);
+    free(content);
+    fclose(file);
+    return 1;
+}
 void sendfile(SSL* ssl,const char* a,int notadmin,string root) {
     if(notadmin)addlog(root+a);
     if(a[0]){

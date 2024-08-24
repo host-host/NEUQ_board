@@ -19,14 +19,10 @@
     <script src="/js/chart.js"></script>
 </head>
 <body>
-<div class="navbar" id="navbar">
-    <a href="https://free.neuqboard.cn/" class="navbar_a"><img src="https://free.neuqboard.cn/favicon.ico" alt="NEUQ_board" class="navbar_a_img0">NEUQ_board</a>
-    <a href="https://free.neuqboard.cn/diff" class="navbar_a">代码比对工具</a>
-    <a href="https://free.neuqboard.cn/PiDayChallenge" class="navbar_a">π Day 挑战</a>
-    <!-- <a href="#news" class="navbar_a">News</a>
-    <a href="#contact" class="navbar_a">Contact</a>
-    <a href="#about" class="navbar_a">About</a> -->
-</div>
+    <div class="navbar" id="navbar">
+        <a href="/" class="navbar_a"><img src="/favicon.ico" alt="NEUQ_board" class="navbar_a_img0">NEUQ_board</a>
+        <a href="/PiDayChallenge" class="navbar_a">π Day 挑战</a>
+    </div>
     <h1>NIT的投资</h1>
     <div><a href="/data/record.json">JSON格式数据</a></div>
     <div class="canvas-class"><canvas id="profitChart1"></canvas></div>
@@ -69,11 +65,13 @@
                         scales: {
                             'y-axis-1':{
                                 position: 'left',
+                                suggestedMin: -6000,
+                                suggestedMax: 12000
                             },
                             'y-axis-2':{
                                 position: 'right',
                                 suggestedMin: -6000,
-                                suggestedMax: 8000
+                                suggestedMax: 12000
                             }
                         }
                     }

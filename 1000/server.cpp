@@ -30,18 +30,12 @@ SSL_CTX *ctx;
 #include"./data.h"
 void* work(void* __ssl){
     SSL* ssl=(SSL*)__ssl;
-    int cl=SSL_get_fd(ssl),n=0,i,j;
+    int cl=SSL_get_fd(ssl);
     char* get=(char*)malloc(102400),id[13]="0";
-    while(1){
-        int m=SSL_read(ssl,get+n,1024-n);//head less than 1024
-        if(m<=0)break;
-        get[n+=m]=0;
-        if(strstr(get,"\r\n\r\n"))break;
-    }
+    int n=mysslread(ssl,get,1024);
     if(n<=0)goto https;
-    for(i=0;i<e.size();i++){
-        for(j=0;e[i].mat[j];j++)if(e[i].mat[j]!=get[j])break;
-        if(e[i].mat[j])continue;
+    for(int i=0;i<e.size();i++){
+        if(!ncmp(e[i].mat,get,strlen(e[i].mat)))continue;
         addlog(e[i].mat);
         for(int len=0,j=1,k;j<n;j++){
             if(*(ll*)(get+j)==0x3D6469203A65696B)memcpy(id,get+j+8,10);
