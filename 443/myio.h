@@ -1,6 +1,5 @@
 #include<openssl/ssl.h>
 #include<openssl/err.h>
-#include<map>
 #include<signal.h>
 #define ll long long
 const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
@@ -14,16 +13,14 @@ const char  Hok[]=   "HTTP/1.1 200 OK\r\n",
             Hico[]=  "Content-Type: image/x-icon\r\n",
             Hwebp[]= "Content-Type: image/webp\r\n",
             Htxt[]=  "Content-Type: text/plain\r\n",
-            Hoptin[]="Access-Control-Allow-Origin: https://chat.neuqboard.cn\r\n"
-                     "Access-Control-Allow-Credentials: true\r\n",
             Hgzip[]= "Content-Encoding: gzip\r\n",
             Hbr[]=   "Content-Encoding: br\r\n",
             Hzstd[]= "Content-Encoding: zstd\r\n",
             Hdown[]= "Content-Disposition: form-data\r\n",
+            // Hoptin[]="Access-Control-Allow-Origin: https://chat.neuqboard.cn\r\n"
+            //          "Access-Control-Allow-Credentials: true\r\n",
             Hconl[]= "Content-Length: ";
-const char Ctoboard[]="\r\n<script>window.location.href='https://chat.neuqboard.cn';</script>";
-std::map<string,int>mlog;
-pthread_mutex_t mloglock;
+// const char Ctoboard[]="\r\n<script>window.location.href='https://chat.neuqboard.cn';</script>";
 int min(int x,int y){
     return x<y?x:y;
 }
@@ -44,98 +41,36 @@ void JSON(const char* p,char* a){
     int i=0,bj=0;
     if(p[0]=='\"')p++;
     a[i++]='\"';
-    while(*p){
-        if(*p=='\\'){
+    while(*p)if(*p=='\\'){
             char nex=*(p+1);
             if(nex=='\"'||nex=='\\'||nex=='/')a[i++]=*p++;
             else a[i++]='\\';
             a[i++]=*p++;
-            continue;
+        }else{
+            if(*p=='\"')
+                if(*(p+1))a[i++]='\\';
+                else bj=1;
+            a[i++]=*p++;
         }
-        if(*p=='\"'){
-            if(*(p+1))a[i++]='\\';
-            else bj=1;
-        }
-        a[i++]=*p++;
-    }
     if(bj==0)a[i++]='\"';
     a[i]=0;
 }
-void addlog(const char*a){
-    pthread_mutex_lock(&mloglock);
-    mlog[a]++;
-    pthread_mutex_unlock(&mloglock);
-}
-void clearlog(){
-    pthread_mutex_lock(&mloglock);
-    mlog.clear();
-    pthread_mutex_unlock(&mloglock);
-}
-string printlog(){
-    string a=(string)Hok+Hc0+Hjson+"\r\n{\r";
-    char p[2048];
-    ll all=0;
-    pthread_mutex_lock(&mloglock);
-    for(auto i:mlog){
-        all+=i.second;
-        JSON(i.first.c_str(),p);
-        a=a+p+":"+std::to_string(i.second)+",\n";
-    }
-    pthread_mutex_unlock(&mloglock);
-    return a+"\"ALL access:\":"+std::to_string(all)+"\n}";
-}
-int mycreatsock(int port,SSL_CTX** __ctx){
-    struct sockaddr_in addr;
-    SSL_load_error_strings();
-    OpenSSL_add_ssl_algorithms();
-    SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
-    if (!ctx)exit(157);
-    if(SSL_CTX_use_certificate_chain_file(ctx, "/443/pri/fullchain.crt")<=0)exit(158);
-    if(SSL_CTX_use_PrivateKey_file(ctx, "/443/pri/private.pem",SSL_FILETYPE_PEM)<=0)exit(159);
-    if (!SSL_CTX_check_private_key(ctx))exit(160);
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock<0)exit(161);
-    addr.sin_family=AF_INET;
-    addr.sin_port=htons(port);
-    addr.sin_addr.s_addr=htonl(INADDR_ANY);
-    if(bind(sock,(struct sockaddr*)&addr,sizeof(addr))<0)exit(162);
-    if(listen(sock,1)<0)exit(163);
-    signal(SIGPIPE,SIG_IGN);
-    pthread_mutex_init(&mloglock,0);
-    *__ctx=ctx;
-    return sock;
-}
-void mystart(int sock,void* (*work)(void*)){
-    SSL_CTX *ctx;
-    sock=mycreatsock(sock,&ctx);
-	pthread_t thread_id;
-    while (1) {
-        struct sockaddr_in addr;
-        uint len=sizeof(addr);
-        int client=accept(sock, (struct sockaddr*)&addr, &len);
-        if(client<0)continue;
-        struct timeval timehttps = {10,0};
-        setsockopt(client,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
-        SSL* ssl=SSL_new(ctx);
-        if(SSL_set_fd(ssl,client)<=0||SSL_accept(ssl)<=0){
-            SSL_free(ssl);
-            close(client);
-            continue;
-        }
-        pthread_create(&thread_id,0,work,(void*)ssl);
-        pthread_detach(thread_id);
-    }
-    close(sock);
-    SSL_CTX_free(ctx);
-    EVP_cleanup();
-}
-int mysslread(SSL* ssl,char* get,int maxn){
-    int n=0,bj=0;
+struct myst{
+    int cl;
+    SSL_CTX* ctx;
+    void (*work)(SSL*,char*,int);
+};
+void* mywork(void* tmp){
+    int cl=((myst*)tmp)->cl,n=0,bj=0;
+    struct timeval timehttps={5,0};
+    setsockopt(cl,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
+    SSL* ssl=SSL_new(((myst*)tmp)->ctx);
+    char* get=(char*)malloc(10240);
+    if(SSL_set_fd(ssl,cl)<=0||SSL_accept(ssl)<=0)goto https;
     while(1){
-        int m=SSL_read(ssl,get+n,maxn-n);
+        int m=SSL_read(ssl,get+n,10000-n);
         if(m<=0){
-            int sslErr=SSL_get_error(ssl, m);
-            if(sslErr==SSL_ERROR_WANT_READ){
+            if(SSL_get_error(ssl,m)==SSL_ERROR_WANT_READ){
                 if(++bj>12)break;
                 usleep((1<<bj)*2000);
                 continue;
@@ -145,8 +80,47 @@ int mysslread(SSL* ssl,char* get,int maxn){
         get[n+=m]=bj=0;
         if(strstr(get,"\r\n\r\n"))break;
     }
-    get[n]=0;
-    return n;
+    if(n)((myst*)tmp)->work(ssl,get,n);
+    https://free.neuqboard.cn
+    free(get);
+    SSL_free(ssl);
+    close(cl);
+    free(tmp);
+    return 0;
+}
+void mystart(int port,void (*work)(SSL*,char*,int)){
+    struct sockaddr_in addr;
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+    SSL_CTX* ctx=SSL_CTX_new(SSLv23_server_method());
+    if (!ctx)exit(157);
+    if(SSL_CTX_use_certificate_chain_file(ctx,"/443/pri/fullchain.crt")<=0)exit(158);
+    if(SSL_CTX_use_PrivateKey_file(ctx,"/443/pri/private.pem",SSL_FILETYPE_PEM)<=0)exit(159);
+    if(!SSL_CTX_check_private_key(ctx))exit(160);
+    int sock=socket(AF_INET, SOCK_STREAM, 0);
+    if(sock<0)exit(161);
+    addr.sin_family=AF_INET;
+    addr.sin_port=htons(port);
+    addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    if(bind(sock,(struct sockaddr*)&addr,sizeof(addr))<0)exit(162);
+    if(listen(sock,1)<0)exit(163);
+    signal(SIGPIPE,SIG_IGN);
+	pthread_t thread_id;
+    while (1) {
+        struct sockaddr_in addr;
+        uint len=sizeof(addr);
+        int client=accept(sock, (struct sockaddr*)&addr, &len);
+        if(client<0)continue;
+        myst* tmp=(myst*)malloc(sizeof(myst));
+        tmp->cl=client;
+        tmp->ctx=ctx;
+        tmp->work=work;
+        pthread_create(&thread_id,0,mywork,(void*)tmp);
+        pthread_detach(thread_id);
+    }
+    close(sock);
+    SSL_CTX_free(ctx);
+    EVP_cleanup();
 }
 void mysslwrite(SSL* ssl,const char*a,int n){
     if(SSL_get_shutdown(ssl))return;
@@ -155,7 +129,7 @@ void mysslwrite(SSL* ssl,const char*a,int n){
 void mysend(SSL* ssl,const char*a,int n=0){
     if(n==0)n=strlen(a);
     char* content=(char*)malloc(n+300);
-    int m=sprintf(content,"%s%s%s\r\n",Hok,Hc0,Hoptin);
+    int m=sprintf(content,"%s%s%s%d\r\n\r\n",Hok,Hc0,Hconl,n);
     memcpy(content+m,a,n);
     mysslwrite(ssl,content,m+n);
     free(content);

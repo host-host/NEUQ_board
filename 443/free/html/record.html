@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIT的投资</title>
     <style>
+        body{margin: 0;padding-top: 50px;}
         .canvas-class {
-          height:100vh;
-          width: min(200vh, 160vw);
+          width: max(100%,600px);
+          height: max(50vw,300px);
         }
         .navbar {overflow: hidden;background-color:rgba(20,20,20,0.1);position: fixed;top: 0;width: 100%;z-index: 1000;transition: top 0.3s;}
         .navbar_a {float: left;display: flex;align-items: center;color: #000000;text-align: center;padding: 14px 16px;text-decoration: none;}
         .navbar_a_img0 {margin-right: 8px;width: 20px;height: 20px;}
         .navbar_a_img {margin-right: 8px;width: 20px;height: 20px;}
         .navbar_a:hover {background-color: #ddd;color: black;}
-        body {padding-top: 50px;}
     </style>
     <script src="/js/chart.js"></script>
 </head>
@@ -24,27 +24,25 @@
         <a href="/PiDayChallenge" class="navbar_a">π Day 挑战</a>
     </div>
     <h1>NIT的投资</h1>
-    <div><a href="/data/record.json">JSON格式数据</a></div>
+    <div><a href="/data/rec.json">JSON格式数据</a></div>
     <div class="canvas-class"><canvas id="profitChart1"></canvas></div>
-    <div class="canvas-class"><canvas id="profitChart2"></canvas></div>
-    <div class="canvas-class"><canvas id="profitChart3"></canvas></div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/data/record.json')
+            fetch('/data/rec.json')
             .then(response => response.json())
             .then(data => {
                 const labels = [...new Set(data.map(record => record.date))];
                 const profitData = labels.map(date => {
-                    const record = data.find(record => record.date === date && record.type === '累计盈亏');
-                    return record ? record.profit : 0;
+                    const record = data.find(record => record.date === date);
+                    return record["客户权益"];
                 });
                 const principalData = labels.map(date => {
-                    const record = data.find(record => record.date === date && record.type === '本金');
-                    return record ? record.profit : 0;
+                    const record = data.find(record => record.date === date);
+                    return record["本金"];
                 });
                 const feeData = labels.map(date => {
-                    const record = data.find(record => record.date === date && record.type === '累计手续费');
-                    return record ? record.profit : 0;
+                    const record = data.find(record => record.date === date);
+                    return record["累计手续费"];
                 });
                 new Chart(document.getElementById('profitChart1').getContext('2d'), {
                     type: 'line',
@@ -52,62 +50,20 @@
                         labels: labels,
                         datasets: [
                             {
-                                label: '累计盈亏',
+                                label: '客户权益',
                                 data: profitData,
                                 borderColor: getRandomColor(),
                                 display: false,
                                 yAxisID: 'y-axis-1',
                                 pointRadius: 2
-                            }
-                        ]
-                    },
-                    options: {
-                        scales: {
-                            'y-axis-1':{
-                                position: 'left',
-                                suggestedMin: -6000,
-                                suggestedMax: 12000
                             },
-                            'y-axis-2':{
-                                position: 'right',
-                                suggestedMin: -6000,
-                                suggestedMax: 12000
-                            }
-                        }
-                    }
-                });
-                new Chart(document.getElementById('profitChart2').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
                             {
                                 label: '本金',
                                 data: principalData,
                                 borderColor: getRandomColor(),
                                 yAxisID: 'y-axis-1',
                                 pointRadius: 2
-                            }
-                        ]
-                    },
-                    options: {
-                        scales: {
-                            'y-axis-1':{
-                                position: 'left',
                             },
-                            'y-axis-2':{
-                                position: 'right',
-                                suggestedMin: 0,
-                                suggestedMax: 35000
-                            }
-                        }
-                    }
-                });
-                new Chart(document.getElementById('profitChart3').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
                             {
                                 label: '累计手续费',
                                 data: feeData,
@@ -121,13 +77,8 @@
                         scales: {
                             'y-axis-1':{
                                 position: 'left',
-                                suggestedMin: 0,
-                                suggestedMax: 3000
-                            },
-                            'y-axis-2':{
-                                position: 'right',
-                                suggestedMin: 0,
-                                suggestedMax: 3000
+                                // suggestedMin: 0,
+                                // suggestedMax: 4000
                             }
                         }
                     }

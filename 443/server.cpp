@@ -13,6 +13,7 @@
 #include<string>
 using std::string;
 #include"/443/myio.h"
+#include"/443/mylog.h"
 const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
 char (*user)[128];
 int mysendfile(SSL* ssl, const char* a){
@@ -33,7 +34,7 @@ int mysendfile(SSL* ssl, const char* a){
     if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
     else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
     else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
-    if(strstr(a,"/download/"))n+=sprintf(content+n,"%s",Hdown);
+    if(strstr(a,"/file/"))n+=sprintf(content+n,"%s",Hdown);
     n+=sprintf(content+n,"%s%d\r\n\r\n",Hconl,fileSize);
     if(fread(content+n,1,fileSize,file)!=fileSize) {
         free(content);
@@ -46,7 +47,7 @@ int mysendfile(SSL* ssl, const char* a){
     return 1;
 }
 void sendfile(SSL* ssl,const char* a,int notadmin,string root) {
-    if(notadmin)addlog(root+a);
+    if(notadmin)addlog((root+a).c_str());
     if(a[0]){
         string b=root+"/html"+a+(a[strlen(a)-1]=='/'?"index.html":".html");
         if(mysendfile(ssl,b.c_str()))return;
@@ -56,32 +57,31 @@ void sendfile(SSL* ssl,const char* a,int notadmin,string root) {
     mysslwrite(ssl,Head404,strlen(Head404));
 }
 int ifac[256];
-void* work(void* __ssl){
-    SSL* ssl=(SSL*)__ssl;
-    int cl=SSL_get_fd(ssl),n=0,i,j,notadmin=1;
-    char* get=(char*)malloc(10240),*id;
+void work(SSL* ssl,char* get,int n){
+    int i,j,notadmin=1;
+    char *id;
     string root="/443/www";
-    n=mysslread(ssl,get,2048);
-    if(n<=0)goto https;
+    if(n<=0)return;
     if((id=strstr(get,"Cookie: id="))){
         int tmp=0;
         for(i=11;i<16;i++)tmp=tmp*10+id[i]-'A';
         if(0<=tmp&&tmp<=10000&&*(ll*)(id+11+2)==*(ll*)(user[tmp]+74)&&user[tmp][127]==1)notadmin=0;
     }
-    if(strstr(get,"ost: free.neuqboard.cn"))root="/443/free";
-    if(strstr(get,"ost: chat.neuqboard.cn"))root="/443/chat";
-    if(strstr(get,"ost: dev.neuqboard.cn"))root="/443/dev";
+    if(strstr(get,": free.neuqboard.cn"))root="/443/free";
+    if(strstr(get,": chat.neuqboard.cn"))root="/443/chat";
+    if(strstr(get,": dev.neuqboard.cn"))root="/443/dev";
+    if(strstr(get,": file.neuqboard.cn"))root="/443/file";
     if(*(int*)get==542393671){
         if(notadmin==0){
             if(strstr(get,"GET /admin")){
                 string a=printlog();
                 mysslwrite(ssl,a.c_str(),a.length());
-                goto https;
+                return;
             }
             if(strstr(get,"GET /reset")){
                 clearlog();
                 mysend(ssl,"OK",2);
-                goto https;
+                return;
             }
         }
         char file[128];
@@ -93,13 +93,9 @@ void* work(void* __ssl){
         get[50]=0;
         if(notadmin)addlog(get);
     }
-    https://free.neuqboard.cn/
-    SSL_free(ssl);
-    close(cl);
-    free(get);
-    return 0;
 }
 int main() {
+    pthread_mutex_init(&mloglock,0);
     for(char i='0';i<='9';i++)ifac[i]=1;
     for(char i='A';i<='Z';i++)ifac[i]=1;
     for(char i='a';i<='z';i++)ifac[i]=1;
