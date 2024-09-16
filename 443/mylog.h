@@ -1,4 +1,6 @@
+#include<string>
 #include<map>
+using std::string;
 std::map<string,int>mlog;
 pthread_mutex_t mloglock;
 void addlog(const char*a){
@@ -12,7 +14,7 @@ void clearlog(){
     pthread_mutex_unlock(&mloglock);
 }
 string printlog(){
-    string a=(string)Hok+Hc0+Hjson+"\r\n{\r";
+    string a=(string)"{\n";
     char p[2048];
     ll all=0;
     pthread_mutex_lock(&mloglock);

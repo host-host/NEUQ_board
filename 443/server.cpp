@@ -10,11 +10,12 @@
 #include<errno.h>
 #include<pthread.h>
 #include<time.h>
-#include<string>
-using std::string;
 #include"/443/myio.h"
 #include"/443/mylog.h"
-const char Head404[]="HTTP/1.1 404 Not Found\r\n\r\n";
+
+// Hoptin[]="Access-Control-Allow-Origin: https://chat.neuqboard.cn\r\n"
+//          "Access-Control-Allow-Credentials: true\r\n",
+// const char Ctoboard[]="\r\n<script>window.location.href='https://chat.neuqboard.cn';</script>";
 char (*user)[128];
 int mysendfile(SSL* ssl, const char* a){
     FILE* file=fopen(a,"rb");
@@ -30,34 +31,38 @@ int mysendfile(SSL* ssl, const char* a){
     if(strstr(a,".ico"))head=Hico;
     if(strstr(a,".webp"))head=Hwebp;
     char* content=(char*)malloc(fileSize+400);
-    int n=sprintf(content,"%s%s%s",Hok,Hc3600,head);
-    if(strstr(a,"/gzip/"))n+=sprintf(content+n,"%s",Hgzip);
-    else if(strstr(a,"/zstd/"))n+=sprintf(content+n,"%s",Hzstd);
-    else if(strstr(a,"/br/"))n+=sprintf(content+n,"%s",Hbr);
-    if(strstr(a,"/file/"))n+=sprintf(content+n,"%s",Hdown);
-    n+=sprintf(content+n,"%s%d\r\n\r\n",Hconl,fileSize);
-    if(fread(content+n,1,fileSize,file)!=fileSize) {
+    int n=sprintf(content,"%s%s%s",Hok,Hc1h,head);
+    if(strstr(a,"/gzip/"))n+=sprintf(content+n,Hgzip);
+    else if(strstr(a,"/zstd/"))n+=sprintf(content+n,Hzstd);
+    else if(strstr(a,"/br/"))n+=sprintf(content+n,Hbr);
+    if(strstr(a,"/file/"))n+=sprintf(content+n,Hdown);
+    if(fread(content+n+1,1,fileSize,file)!=fileSize) {
         free(content);
         fclose(file);
         return 0;
     }
-    mysslwrite(ssl,content,fileSize+n);
+    mysend(ssl,content,content+n+1,fileSize);
     free(content);
     fclose(file);
     return 1;
 }
-void sendfile(SSL* ssl,const char* a,int notadmin,string root) {
+void sendfile(SSL* ssl,const char* a,int notadmin,string root,int ip) {
     if(notadmin)addlog((root+a).c_str());
     if(a[0]){
         string b=root+"/html"+a+(a[strlen(a)-1]=='/'?"index.html":".html");
-        if(mysendfile(ssl,b.c_str()))return;
+        if(mysendfile(ssl,b.c_str())){
+            char tmp[100];
+            sprintf(tmp," %d.%d.%d.%d",ip>>24&255,ip>>16&255,ip>>8&255,ip&255);
+            addlog((root+a+tmp).c_str());
+            return;
+        }
         b=root+a;
         if(mysendfile(ssl,b.c_str()))return;
     }
-    mysslwrite(ssl,Head404,strlen(Head404));
+    mysend(ssl,H404,"",0);
 }
 int ifac[256];
-void work(SSL* ssl,char* get,int n){
+void work(SSL* ssl,char* get,int n,int m,int ip){
     int i,j,notadmin=1;
     char *id;
     string root="/443/www";
@@ -75,19 +80,19 @@ void work(SSL* ssl,char* get,int n){
         if(notadmin==0){
             if(strstr(get,"GET /admin")){
                 string a=printlog();
-                mysslwrite(ssl,a.c_str(),a.length());
+                mysend(ssl,Hok Hc0 Hjson,a.c_str(),a.length());
                 return;
             }
             if(strstr(get,"GET /reset")){
                 clearlog();
-                mysend(ssl,"OK",2);
+                mysend(ssl,Hok,"OK",0);
                 return;
             }
         }
         char file[128];
         for(n=1;n<127&&((file[n]=get[n+3])!=46||file[n-1]!=46)&&ifac[(unsigned char)file[n]];n++);
         file[n]=0;
-        sendfile(ssl,file+1,notadmin,root);
+        sendfile(ssl,file+1,notadmin,root,ip);
     }else{
         for(int i=0;i<=50;i++)if(get[i]=='\n'||get[i]=='\r')get[i]=0;
         get[50]=0;
