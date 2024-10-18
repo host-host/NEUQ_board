@@ -1,20 +1,101 @@
-<!doctype html><html lang=""><head><meta charset="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><meta name="viewport" content="width=device-width,initial-scale=1"/><link rel="icon" href="/favicon.svg"/><title>LogicFlow Demo</title><script>// Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
-      // This script checks to see if a redirect is present in the query string,
-      // converts it back into the correct url and adds it to the
-      // browser's history using window.history.replaceState(...),
-      // which won't cause the browser to attempt to load the new url.
-      // When the single page app is loaded further down in this file,
-      // the correct url will be waiting in the browser's history for
-      // the single page app to route accordingly.
-      (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) {
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACM社团招新</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
         }
-      }(window.location))</script><script type="module" crossorigin src="/assets/index-a4898f52.js"></script><link rel="modulepreload" crossorigin href="/assets/vendor-132407a4.js"><link rel="stylesheet" href="/assets/vendor-c9671e2e.css"><link rel="stylesheet" href="/assets/index-10996ea8.css"></head><body><noscript>We're sorry butWe're sorry but LogicFlow Demo doesn't work properly without JavaScript enabled. doesn't work properly without JavaScript enabled. Please enable it to continue.</noscript><div id="app"></div></body></html>
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #0779e4 3px solid;
+        }
+        header a {
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 16px;
+        }
+        header h1 {
+            float: left;
+            margin: 0;
+        }
+        header ul {
+            float: right;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        header ul li {
+            display: inline;
+            padding: 0 20px 0 20px;
+        }
+        .banner {
+            padding: 20px;
+            background: #0779e4;
+            color: white;
+            text-align: center;
+        }
+        .banner h2 {
+            margin: 0;
+        }
+        .content {
+            padding: 20px;
+            background: #fff;
+        }
+        .content h3 {
+            color: #333;
+        }
+        .content p {
+            font-size: 16px;
+        }
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>ACM社团招新</h1>
+        </div>
+    </header>
+    <div class="banner">
+        <div class="container">
+            <h2>欢迎加入ACM社团！</h2>
+        </div>
+    </div>
+    <div class="content container">
+        <h3>关于我们</h3>
+        <p>热爱并潜心研究算法，致力于在xxx比赛中不断创造佳绩，登峰造极</p>
+        <p>代码改变世界，算法成就未来</p>
+        <h3>招新信息</h3>
+        <p>招新宣讲时间：2024年10月13日</p>
+        <p>招新比赛时间：2024年10月19日</p>
+        <p>加入我们的QQ群，获取更多信息：</p>
+        <p><img src="ACMclub.webp" alt="QQ群二维码" style="width: 248px; height: 313px;"></p>
+    </div>
+    <footer>
+        <p>&copy; NEUQ ACM俱乐部</p>
+    </footer>
+</body>
+</html>

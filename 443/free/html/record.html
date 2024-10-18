@@ -25,6 +25,7 @@
     </div>
     <h1>NIT的投资</h1>
     <div><a href="/data/rec.json">JSON格式数据</a></div>
+    <div class="canvas-class"><canvas id="profitChart0"></canvas></div>
     <div class="canvas-class"><canvas id="profitChart1"></canvas></div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -32,6 +33,10 @@
             .then(response => response.json())
             .then(data => {
                 const labels = [...new Set(data.map(record => record.date))];
+                const profitall = labels.map(date => {
+                    const record = data.find(record => record.date === date);
+                    return record["客户权益"]-record["本金"];
+                });
                 const profitData = labels.map(date => {
                     const record = data.find(record => record.date === date);
                     return record["客户权益"];
@@ -43,6 +48,29 @@
                 const feeData = labels.map(date => {
                     const record = data.find(record => record.date === date);
                     return record["累计手续费"];
+                });
+                new Chart(document.getElementById('profitChart0').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '总盈亏',
+                                data: profitall,
+                                borderColor: getRandomColor(),
+                                display: false,
+                                yAxisID: 'y-axis-1',
+                                pointRadius: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            'y-axis-1':{
+                                position: 'left',
+                            }
+                        }
+                    }
                 });
                 new Chart(document.getElementById('profitChart1').getContext('2d'), {
                     type: 'line',
