@@ -1,6 +1,11 @@
 #ifndef CHECK48_
 #define CHECK48_
-#define ll long long
+
+#include<map>
+#include<pthread.h>
+#include<stdlib.h>
+#include"myio.h"
+
 #define CHECK_LEN 48
 std::map<unsigned ll,int>check48_mp;
 int rand_base,rand_base1;
@@ -24,7 +29,7 @@ int check_48_(unsigned ll a){
     pthread_mutex_unlock(&check48_lock);
     return tmp>=time(0);
 }
-void check48(https_para* ssl){
+void check48(http_para* ssl){
     ll a[CHECK_LEN],s=0,n=0;
     char c[1024];
     for(int i=0;i<CHECK_LEN;i++){
@@ -46,6 +51,6 @@ void check48(https_para* ssl){
         swap(tmp,check48_mp);
     }
     pthread_mutex_unlock(&check48_lock);
-    return https_send(ssl,Hok Hc0 Htxt,c,n);
+    return http_send(ssl,Hok Hc0 Htxt,c,n);
 }
 #endif

@@ -3,8 +3,8 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-
 #define INIT __attribute((constructor))
+#define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 #define ll long long
 int min(int x,int y){
     return x<y?x:y;
@@ -51,7 +51,6 @@ void myJSON(const char* p,char* a){
     if(bj==0)a[i++]='\"';
     a[i]=0;
 }
-
 #ifdef __cplusplus
 }
 #endif

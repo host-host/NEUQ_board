@@ -16,7 +16,7 @@ using std::string;
 const char  uuu[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://",
             uuu2[]="\r\nStrict-Transport-Security: max-age=3600; includeSubDomains\r\n\r\n";
 const char tmp[]="HTTP/1.1 200 OK\r\nContent-Length: 87\r\n\r\n"
-                 "4mKgAtmnD2wis6MqNvrX5cnQC7UyD5w42lzfvyOzFu0.Kczy5K_bYrzpSL9PVDgPgC5FfwCan6tYI6Ug9lTP-z4";
+                 "tR7u6D-pogOj3NP2juY-MNeNCt2VQFMrYa800e4cLD8.k_dw0dolba_oKg9vg6u43B_8nH2f6EllVI7FC_J02bM";
 void* work(void* cil){
     char* get=(char*)malloc(102400),*c;
     int cl=(long long)cil,n=recv(cl,get,2000,0);
@@ -35,7 +35,7 @@ void* work(void* cil){
         for(;get[i]&&get[i]!=' ';i++)a+=get[i];
     }else return 0;
     a+=uuu2;
-    if(strstr(get,"qNvrX5cnQC7UyD5w42lzfvyOz"))
+    if(strstr(get,"t2VQFMrYa800e4cLD8"))
         write(cl,tmp,strlen(tmp));
     else 
         write(cl,a.c_str(),a.length());
@@ -48,13 +48,13 @@ int main(){
 	int serverSock=-1;
 	struct sockaddr_in serverAddr;
 	serverSock=socket(AF_INET, SOCK_STREAM, 0);
-	if(serverSock<0)return-1;
+	if(serverSock<0)return 1;
 	memset(&serverAddr,0,sizeof(serverAddr));
 	serverAddr.sin_family=AF_INET;
-	serverAddr.sin_port=htons(888);
+	serverAddr.sin_port=htons(80);
 	serverAddr.sin_addr.s_addr=INADDR_ANY;
-	if(bind(serverSock,(struct sockaddr*)&serverAddr,sizeof(serverAddr))==-1)return-1;
-	if(listen(serverSock,10)==-1)return-1;
+	if(bind(serverSock,(struct sockaddr*)&serverAddr,sizeof(serverAddr))==-1)return 2;
+	if(listen(serverSock,10)==-1)return 3;
     signal(SIGPIPE,SIG_IGN);
 	pthread_t thread_id;
 	printf("Start to listen!\n");

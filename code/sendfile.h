@@ -1,9 +1,13 @@
 #ifndef SENDFILE_
 #define SENDFILE_
-#ifdef __cplusplus
-extern "C"{
-#endif
 
+
+
+// #ifdef __cplusplus
+// extern "C"{
+// #endif
+// #include"log.h"
+using std::string;
 int ifac[256];
 INIT void sendfile_init(){
     for(int i='0';i<='9';i++)ifac[i]=1;
@@ -42,11 +46,11 @@ int mysendfile(https_para* ssl, const char* a){
     return 1;
 }
 void sendfile(https_para *ssl){
-    string root="/443/www";
-    if(strstr(ssl->get,": free.neuqboard.cn"))root="/443/free";
-    if(strstr(ssl->get,": chat.neuqboard.cn"))root="/443/chat";
-    if(strstr(ssl->get,": dev.neuqboard.cn"))root="/443/dev";
-    if(strstr(ssl->get,": file.neuqboard.cn"))root="/443/file";
+    string root="./res/www";
+    if(strstr(ssl->get,": free.neuqboard.cn"))root="./res/free";
+    if(strstr(ssl->get,": chat.neuqboard.cn"))root="./res/chat";
+    if(strstr(ssl->get,": dev.neuqboard.cn"))root="./res/dev";
+    if(strstr(ssl->get,": file.neuqboard.cn"))root="./res/file";
     if(bncmp(ssl->get,"GET ")==0){
         int n;
         char file[128];
@@ -55,15 +59,21 @@ void sendfile(https_para *ssl){
         const char* a=file+1;
         if(a[0]){
             string b=root+"/html"+a+(a[strlen(a)-1]=='/'?"index.html":".html");
-            if(mysendfile(ssl,b.c_str()))return;
+            if(mysendfile(ssl,b.c_str()))goto https;
             b=root+a;
-            if(mysendfile(ssl,b.c_str()))return;
+            if(mysendfile(ssl,b.c_str()))goto https;
         }
         https_send(ssl,H404,"",0);
     }
+    return;
+    https://free.neuqboard.cn
+    char tmp[60]={0};
+    memcpy(tmp,ssl->get,59);
+    for(int i=0;i<59;i++)if(tmp[i]=='\r'||tmp[i]=='\n')tmp[i]=0;
+    // addlog(tmp);
 }
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
 #endif

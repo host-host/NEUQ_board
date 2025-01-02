@@ -1,7 +1,9 @@
 #ifndef WORD_
 #define WORD_
+#include<vector>
+using std::string;
 int lastword=-1;
-#define path "/443/pri/"
+// #define path "./res/pri/"
 struct point{
     string a,b;
     int n;
@@ -10,7 +12,7 @@ std::vector<point>vv;
 #define ll long long
 string Getword(){
     if(vv.size()==0){
-        FILE*fin=fopen("/443/pri/data2.txt","r");
+        FILE*fin=fopen("./res/pri/data2.txt","r");
         if(fin==0)return "OPEN ERROR";
         int n=0;
         char c[256],c1[256];
@@ -47,7 +49,7 @@ string Setword(const char* a){
         vv[u].n--;
         if(vv[u].n>-7)vv[u].n=-7;
     }
-    FILE*fout=fopen("/443/pri/data2.txt","r");
+    FILE*fout=fopen("./res/pri/data2.txt","r");
     if(fout){
         for(int i=0;i<(int)vv.size();i++)fprintf(fout,"%s %d %s\n",vv[i].a.c_str(),vv[i].n,vv[i].b.c_str());
         fclose(fout);
@@ -55,12 +57,12 @@ string Setword(const char* a){
     }
     return "cannot save";
 }
-void getword(https_para *ssl){
+void getword(http_para *ssl){
     user_ *puser=getuser(ssl->get);
-    if(puser)return https_send(ssl,Hok Hc0 Hjson,Getword().c_str(),0);
+    if(puser&&puser->admin)return http_send(ssl,Hok Hc0 Hjson,Getword().c_str(),0);
 }
-void setword(https_para *ssl){
+void setword(http_para *ssl){
     user_ *puser=getuser(ssl->get);
-    if(puser)return https_send(ssl,Hok Hc0 Htxt,Setword(ssl->get+ssl->n).c_str(),0);
+    if(puser&&puser->admin)return http_send(ssl,Hok Hc0 Htxt,Setword(ssl->get+ssl->n).c_str(),0);
 }
 #endif

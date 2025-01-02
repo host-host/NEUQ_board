@@ -1,19 +1,25 @@
 #ifndef CHAT_
 #define CHAT_
 
-#include"./myio.h"
+#include<unistd.h>
+#include<pthread.h>
+#include<sys/types.h>
+#include<fcntl.h>
+#include<sys/mman.h>
+#include"myio.h"
+#include"user.h"
 char *data,*cont;
 int fdata,fcont;
 ll ldata,lcont;
 pthread_mutex_t chat_mutex;
 INIT void chat_init(){
     pthread_mutex_init(&chat_mutex,0);
-    ldata=lseek(fdata=open("/443/pri/data.dat",O_RDWR|O_APPEND|O_CREAT,S_IRUSR|S_IWUSR),0,SEEK_END);
-    data=(char*)mmap(0,4ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
-    lcont=lseek(fcont=open("/443/pri/cont.dat",O_RDWR|O_APPEND|O_CREAT,S_IRUSR|S_IWUSR),0,SEEK_END);
-    cont=(char*)mmap(0,20ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
+    ldata=lseek(fdata=open("./res/pri/data.dat",O_RDWR|O_APPEND|O_CREAT,S_IRUSR|S_IWUSR),0,SEEK_END);
+    data=(char*)mmap(0,1ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fdata,0);
+    lcont=lseek(fcont=open("./res/pri/cont.dat",O_RDWR|O_APPEND|O_CREAT,S_IRUSR|S_IWUSR),0,SEEK_END);
+    cont=(char*)mmap(0,1ll<<30,PROT_READ|PROT_WRITE,MAP_SHARED,fcont,0);
 }
-void getp(https_para*a){
+void getp(http_para*a){
     ll pc=readll(a->get+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
@@ -30,26 +36,26 @@ void getp(https_para*a){
     }
     if(c[n-1]=='[')c[n++]=']';
     else c[n-1]=']';
-    https_send(a,Hok Hc0 Hjson,c,n);
+    http_send(a,Hok Hc0 Hjson,c,n);
     free(c);
 }
-void getcon(https_para*a){
+void getcon(http_para*a){
     ll pc=readll(a->get+7);
     if(pc<=0||pc>lcont-8)return;
     ll pd=*(ll*)(cont+pc);
     if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return;
-    https_send(a,Hok Hc0 Htxt,cont+pc+8,0);
+    http_send(a,Hok Hc0 Htxt,cont+pc+8,0);
 }
-void sendmessage(https_para*b){
+void sendmessage(http_para*b){
     char* con=b->get+b->n;
     user_* puser=getuser(b->get);
-    if(!puser)return https_send(b,Hok Hc0 Htxt,"Please log in first.",0);
+    if(!puser)return http_send(b,Hok Hc0 Htxt,"Please log in first.",0);
     int ltitle=strlen(con),lcon=strlen(con+ltitle+1),lu=strlen(puser->name);
-    if(ltitle>200||ltitle==0)return https_send(b,Hok Hc0 Htxt,"The title is too long.",0);
+    if(ltitle>200||ltitle==0)return http_send(b,Hok Hc0 Htxt,"The title is too long.",0);
     ll pc=readll(con+ltitle+lcon+2);
-    if(pc<=0||pc>lcont-8)return https_send(b,Hok Hc0 Htxt,"ERROR: Something wrong.Code VQ19.",0);
+    if(pc<=0||pc>lcont-8)return http_send(b,Hok Hc0 Htxt,"ERROR: Something wrong.Code VQ19.",0);
     ll pd=*(ll*)(cont+pc);
-    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return https_send(b,Hok Hc0 Htxt,"ERROR: Something wrong.Code OV82.",0);
+    if(pd<=0||pd>ldata-8||abs(*(ll*)(data+pd))!=pc)return http_send(b,Hok Hc0 Htxt,"ERROR: Something wrong.Code OV82.",0);
     ll fpd=pd,lpd=pd,tmp;
     while(*(int*)(data+fpd+28))fpd=*(ll*)(data+fpd+8);
     while((tmp=*(ll*)(data+lpd+16))&&*(int*)(data+tmp+28))lpd=tmp;
@@ -83,6 +89,6 @@ void sendmessage(https_para*b){
     lcont+=lcon+9;
     ldata+=34+lu+ltitle;
     pthread_mutex_unlock(&chat_mutex);
-    https_send(b,Hok Hc0 Htxt,"ok",0);
+    http_send(b,Hok Hc0 Htxt,"ok",0);
 }
 #endif

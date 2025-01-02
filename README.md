@@ -8,6 +8,6 @@ A:会!
 
 NEUQ_board有新域名啦！
 
-free.neuqboard.cn
+https://neuqboard.cn
 
 欢迎大家来访问！

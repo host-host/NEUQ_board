@@ -1,6 +1,15 @@
 #ifndef NDB_
 #define NDB_
-#include"./myio.h"
+
+
+#include<unistd.h>
+#include<sys/types.h>
+#include<fcntl.h>
+#include<sys/mman.h>
+#include<stdlib.h>
+#include<string.h>
+#include"myio.h"
+
 #ifdef __cplusplus
 extern "C"{
 #endif
