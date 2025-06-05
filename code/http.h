@@ -69,9 +69,9 @@ void* http_w(http_para* a){
     int n=0;
     struct timeval timehttps={10,0};
     setsockopt(a->cl,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
-    a->get=(char*)malloc(102400);
+    a->get=(char*)malloc(2*1024*1024);
     while(1){
-        int m=read(a->cl,a->get+n,100000-n);
+        int m=read(a->cl,a->get+n,2048000-n);
         if(m<=0)break;
         a->get[n+m]=0;
         char* t2=strstr(a->get+max(0,n-8),"\r\n\r\n");
@@ -80,7 +80,7 @@ void* http_w(http_para* a){
             int N=t2-a->get+4,M=0;
             char *t3=strstr(a->get,"\r\nContent-Length:");
             if(t3)M=readll(t3+15);
-            if(N+M<100000)while(n<N+M){
+            if(N+M<2048000)while(n<N+M){
                     int m=read(a->cl,a->get+n,N+M-n);
                 // LOG("%s %d",a->get+N,n-N);
                     if(m<=0)break;
@@ -97,8 +97,8 @@ void* http_w(http_para* a){
             }
         }
     }
-    free(a->get);
-    close(a->cl);
+    if(a->get)free(a->get);
+    if(a->cl)close(a->cl);
     free(a);
     return 0;
 }
@@ -110,7 +110,7 @@ int http_start(struct http *a,int port){
     addr.sin_port=htons(port);
     addr.sin_addr.s_addr=htonl(INADDR_ANY);
     if(bind(sock,(struct sockaddr*)&addr,sizeof(addr))<0)return 162;
-    if(listen(sock,1)<0)return 163;
+    if(listen(sock,5)<0)return 163;
 	pthread_t thread_id;
     while(1) {
         struct sockaddr_in addr;

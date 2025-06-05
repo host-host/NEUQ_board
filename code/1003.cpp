@@ -1,19 +1,12 @@
-#ifndef GPTAPI_
-#define GPTAPI_
+/*
 
-#include <stdio.h>
-#include <string.h>
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <curl/curl.h>
+g++ -O2 -Wall -o 1003 ./code/1003.cpp -lssl -lcrypto -lcurl -Wall
+*/
+#include"http.h"
+#include<iostream>
 #include<set>
 #include<vector>
-#include"http.h"
-#include"user.h"
+#include <curl/curl.h>
 using namespace std;
 set<string>map_apiuse;
 struct gpt_point{
@@ -24,6 +17,16 @@ struct gpt_point{
 vector<gpt_point>v_gpt;
 INIT void gptapi_init(){
     curl_global_init(CURL_GLOBAL_DEFAULT);//curl_global_cleanup();
+}
+size_t write_callback(void *ptr, size_t size, size_t nmemb, char *data) {
+    http_para *a=(http_para *)data;
+    if(a->m==0){
+        a->m=1;
+        const char* tmp=Hok "Content-Type: text/event-stream\r\n" Hc0 "\r\n";
+        if(write(a->cl,tmp,strlen(tmp)));
+    }
+    if(write(a->cl,ptr,size*nmemb));
+    return size*nmemb;
 }
 void gpt_read(FILE*fin,char*c){
     int i=0;
@@ -63,19 +66,14 @@ void gpt_api_read(){
     fclose(fin);
     swap(v,v_gpt);
 }
-size_t write_callback(void *ptr, size_t size, size_t nmemb, char *data) {
-    http_para *a=(http_para *)data;
-    if(a->m==0){
-        a->m=1;
-        const char* tmp=Hok "Content-Type: text/event-stream\r\n" Hc0 "\r\n";
-        if(write(a->cl,tmp,strlen(tmp)));
+void gptapi1003(http_para *a){
+    
+    for(int i=0;i<a->n+a->m;i++){
+        printf("%c",a->get[i]);
     }
-    if(write(a->cl,ptr,size*nmemb));
-    return size*nmemb;
-}
-void gptapi(http_para *a){
-    string name="";
-    for(char* c=a->get+a->n+10;*c&&*c!='\"';c++)name+=*c;
+    printf("\n");
+
+    string name="deepseek-v3-250324";
     gpt_api_read();
     for(const gpt_point &i:v_gpt){
         int bj=0;
@@ -109,13 +107,11 @@ void gptapi(http_para *a){
         }
     }
     return http_send(a,Hok Hc0 "Content-Type: text/event-stream\r\n","data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，没有该模型\"}}]}\r\n\r\ndata: [DONE]",0);
-}
-void gptapis(http_para *a){
-    gpt_api_read();
-    string ret="[";
-    for(const gpt_point &i:v_gpt)for(const string &j:i.name)ret+="\""+j+"\",";
-    ret[ret.length()-1]=']';
-    http_send(a,Hok Hc0,ret.c_str(),0);
-}
 
-#endif
+}
+int main() {
+    http a;
+    http_init(&a);
+    http_add(&a,"",gptapi1003);
+    return http_start(&a,1003);
+}

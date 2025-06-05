@@ -104,7 +104,7 @@ void* ndb_create(struct ndb* a,const char* b,int flag){
 	memset(newc,0,a->namelen);
 	memcpy(newc,b,min(a->namelen,strlen(b)));
 	ll p0,p1,p2,p,child=0;
-	https://free.neuqboard.cn
+	https://neuqboard.cn
 	p2=ndb_w(a,newc,*(ll*)(a->a+(p1=ndb_w(a,newc,*(ll*)(a->a+(p0=ndb_w(a,newc,0))+8)))+8));
 	if(ncmp(a->a+p2+16,newc,a->namelen)==0){
         ll ch=*(ll*)(a->a+p2+8);
@@ -143,7 +143,7 @@ void* ndb_create(struct ndb* a,const char* b,int flag){
 void* ndb_next(struct ndb* a,char* newc){
 	char ans[a->namelen];
 	ll child,p0,p1,p2,p;
-	https://free.neuqboard.cn
+	https://neuqboard.cn
 	p2=ndb_w(a,newc,*(ll*)(a->a+(p1=ndb_w(a,newc,*(ll*)(a->a+(p0=ndb_w(a,newc,0))+8)))+8));
     if(!(p=*(ll*)(a->a+p2))){
         if(!(p=*(ll*)(a->a+p1))){
