@@ -2,8 +2,8 @@
 #define USER_
 #include<string>
 #include<math.h>
-#include"http.h"
-#include"ndb.h"
+#include"lib/http.h"
+#include"lib/ndb.h"
 #define USER_TOHOME "<script>window.location.href='/';</script>"
 #include"check48.h"
 ndb user/*ll->user_*/,name2id/*char[24]->ll*/;

@@ -1,5 +1,7 @@
 #ifndef MYIO_
 #define MYIO_
+#include<stdio.h>
+#include<stdlib.h>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -50,6 +52,41 @@ void myJSON(const char* p,char* a){
     }
     if(bj==0)a[i++]='\"';
     a[i]=0;
+}
+char* readfile(const char* filename) {
+    FILE* fp = fopen(filename, "r");
+    if (!fp)return 0;
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    char* buffer = (char*)malloc(fileSize + 1);
+    if (!buffer) {
+        fclose(fp);
+        return NULL;
+    }
+    size_t bytesRead = fread(buffer, 1, fileSize, fp);
+    if ((long )bytesRead != fileSize) {
+        free(buffer);
+        fclose(fp);
+        return NULL;
+    }
+    buffer[fileSize] = '\0';
+    fclose(fp);
+    return buffer;
+}
+int writefile(const char* filename, const char* data, int n) {
+    FILE* fp = fopen(filename, "w");
+    if (!fp) {
+        return 1;
+    }
+    size_t bytesWritten = fwrite(data, 1, n, fp);
+    if (bytesWritten != (size_t)n) {
+        fclose(fp);
+        return 1;
+    }
+
+    fclose(fp);
+    return 0; // 成功
 }
 #ifdef __cplusplus
 }

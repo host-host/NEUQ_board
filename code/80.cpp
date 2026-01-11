@@ -17,7 +17,7 @@ using std::string;
 const char  uuu[]="HTTP/1.1 301 Moved Permanently\r\nLocation: https://",
             uuu2[]="\r\nStrict-Transport-Security: max-age=3600; includeSubDomains\r\n\r\n";
 const char tmp[]="HTTP/1.1 200 OK\r\nContent-Length: 87\r\n\r\n"
-                 "-CyUmulGjy6OJhLk5vdI0fG4FX1HKMHwT7SGOuWxwik.VYQdW7iY2dCMaAifdxfKIE67muwn2lZ78vm8iWyjV0Q";
+                 "1y4FrpykCwVhyR914RhjjMmd_qlUgGweJAwqG9Lb54I.VYQdW7iY2dCMaAifdxfKIE67muwn2lZ78vm8iWyjV0Q";
 void* work(void* cil){
     char* get=(char*)malloc(102400),*c;
     int cl=(long long)cil,n=recv(cl,get,2000,0);
@@ -36,10 +36,11 @@ void* work(void* cil){
         for(;get[i]&&get[i]!=' ';i++)a+=get[i];
     }else return 0;
     a+=uuu2;
-    if(strstr(get,"HKMHwT7SGOuWxwik"))
-        write(cl,tmp,strlen(tmp));
-    else 
-        write(cl,a.c_str(),a.length());
+    if(strstr(get,"ykCwVhyR914RhjjMmd_")){
+        if(write(cl,tmp,strlen(tmp)));
+    }else {
+        if(write(cl,a.c_str(),a.length()));
+    }
     out:
     free(get);
     close(cl);
