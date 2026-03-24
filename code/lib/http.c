@@ -9,6 +9,7 @@ extern "C"{
 
 #include<signal.h>
 #include<sys/socket.h>
+#include<sys/time.h>
 #include<netinet/in.h>
 #include<stdlib.h>
 #include<string.h>
@@ -107,7 +108,7 @@ int http_start(struct http *a,int port){
 	pthread_t thread_id;
     while(1) {
         struct sockaddr_in addr;
-        uint len=sizeof(addr);
+        unsigned int len=sizeof(addr);
         int client=accept(sock,(struct sockaddr*)&addr,&len);
         if(client<0)continue;
         http_para *tmp=(http_para*)malloc(sizeof(http_para));
@@ -130,11 +131,11 @@ void http_send(http_para *a,const char* head,const char* content,int n){
 }
 
 
-struct https{
+typedef struct {
     int plen,ctxlen;
     void* p;//char*,fun
     void* ctx;//char*,SSL_CTX*
-};
+}https;
 typedef struct{
     int cl;
     https* f;
@@ -147,7 +148,7 @@ int https_change_ssl_ctx_by_servername(SSL *ssl,int *ad,void *arg){
     return SSL_TLSEXT_ERR_OK;///////////////////////
 	const char *servername=SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     if(servername==NULL)return SSL_TLSEXT_ERR_ALERT_FATAL;
-    struct https *a=(struct https *)arg;
+    https *a=(https *)arg;
     if(strstr(servername,*(char**)a->ctx))return SSL_TLSEXT_ERR_OK;
     for(int i=1;i<a->ctxlen;i++)if(strstr(servername,*(char**)((ll)a->ctx+i*16))){
             SSL_set_SSL_CTX(ssl,*(SSL_CTX**)((ll)a->ctx+i*16+8));
@@ -155,12 +156,12 @@ int https_change_ssl_ctx_by_servername(SSL *ssl,int *ad,void *arg){
         }
 	return SSL_TLSEXT_ERR_ALERT_FATAL;
 }
-void https_init(struct https *a){
+void https_init(https *a){
     a->plen=a->ctxlen=0;
     a->p=malloc(16*16);
     a->ctx=malloc(16*16);
 }
-int https_add_web(struct https *a,const char* servername,const char* FILE_fullchain,const char* FILE_private){
+int https_add_web(https *a,const char* servername,const char* FILE_fullchain,const char* FILE_private){
     if((a->ctxlen&(-a->ctxlen))==a->ctxlen&&a->ctxlen>=16){
         void* tmp=malloc(a->ctxlen*2*16);
         memcpy(tmp,a->ctx,a->ctxlen*16);
@@ -176,7 +177,7 @@ int https_add_web(struct https *a,const char* servername,const char* FILE_fullch
     a->ctxlen++;
     return 0;
 }
-void https_add(struct https *a,const char*name,https_work fun){
+void https_add(https *a,const char*name,https_work fun){
     if((a->plen&(-a->plen))==a->plen&&a->plen>=16){
         void* tmp=malloc(a->plen*2*16);
         memcpy(tmp,a->p,a->plen*16);
@@ -241,7 +242,7 @@ void* https_w(https_para* a){
     free(a);
     return 0;
 }
-int https_start(struct https *a,int port){
+int https_start(https *a,int port){
     SSL_CTX* ctx=*(SSL_CTX**)((ll)a->ctx+8);
     if(a->ctxlen<1)return 1;
     SSL_CTX_set_tlsext_servername_callback(ctx,https_change_ssl_ctx_by_servername);
@@ -257,7 +258,7 @@ int https_start(struct https *a,int port){
 	pthread_t thread_id;
     while(1) {
         struct sockaddr_in addr;
-        uint len=sizeof(addr);
+        unsigned int len=sizeof(addr);
         int client=accept(sock,(struct sockaddr*)&addr,&len);
         if(client<0)continue;
         https_para *tmp=(https_para*)malloc(sizeof(https_para));

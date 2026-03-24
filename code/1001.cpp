@@ -1,10 +1,8 @@
-/*
-g++ ./code/1001.cpp -o 1001 -O2 -lssl -lcrypto -lcurl -lnit -Wall 
-*/
-
 #include"lib/http.h"
 #include"user.h"
 #include"chat.h"
+#include"word.h"
+#include"gptapi.h"
 void other(http_para* a){
     LOG("%s\n",a->get);
 }
@@ -20,6 +18,10 @@ int main() {
     http_add(&a,"GET /api/user ",apiuser);
     http_add(&a,"POST /api/change_password ",change_password);
     http_add(&a,"GET /api/check48 ",check48);
+    http_add(&a,"POST /api/getword ",getword);
+    http_add(&a,"POST /api/setword ",setword);
+    http_add(&a,"POST /api/gpt2 ",gptapi2);
+    http_add(&a,"POST /api/gpts2 ",gptapis2);
     // http_add(&a,"",other);
     return http_start(&a,1001);
 }
