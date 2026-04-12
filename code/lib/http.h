@@ -32,7 +32,7 @@ extern "C"{
 
 struct http{
     int plen;
-    void* p;
+    void* p;//char*,fun
 };
 typedef struct{
     int cl;
@@ -41,21 +41,17 @@ typedef struct{
     int n,m,ip,port;
 }http_para;
 typedef void(*http_work)(http_para*);
-__attribute((constructor)) void http_INIT(){
-    signal(SIGPIPE,SIG_IGN);
-    SSL_load_error_strings();
-    OpenSSL_add_ssl_algorithms();// EVP_cleanup();
-}
+void http_INIT();
 void http_init(struct http *a);
 void http_add(struct http *a,const char*name,http_work fun);
 int http_start(struct http *a,int port);
 void http_send(http_para *a,const char* head,const char* content,int n);
 
-struct https{
+typedef struct {
     int plen,ctxlen;
     void* p;//char*,fun
     void* ctx;//char*,SSL_CTX*
-};
+}https;
 typedef struct{
     int cl;
     https* f;
@@ -64,10 +60,10 @@ typedef struct{
     int n,m,ip,port;
 }https_para;
 typedef void(*https_work)(https_para*);
-void https_init(struct https *a);
-int https_add_web(struct https *a,const char* servername,const char* FILE_fullchain,const char* FILE_private);
-void https_add(struct https *a,const char*name,https_work fun);
-int https_start(struct https *a,int port);
+void https_init(https *a);
+int https_add_web(https *a,const char* servername,const char* FILE_fullchain,const char* FILE_private);
+void https_add(https *a,const char*name,https_work fun);
+int https_start(https *a,int port);
 void https_send(https_para *a,const char* head,const char* content,int n);
 
 #ifdef __cplusplus

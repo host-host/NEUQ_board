@@ -1,13 +1,4 @@
-#ifndef HTTPS_
-#define HTTPS_
-
-#include<openssl/ssl.h>
-
-#ifdef __cplusplus
-extern "C"{
-#endif
-
-#include<signal.h>
+#include"http.h"
 #include<sys/socket.h>
 #include<sys/time.h>
 #include<netinet/in.h>
@@ -34,17 +25,11 @@ static inline ll readll(const char* a){
 	return x;
 }
 
-struct http{
-    int plen;
-    void* p;//char*,fun
-};
-typedef struct{
-    int cl;
-    struct http* f;
-    char* get;
-    int n,m,ip,port;
-}http_para;
-typedef void(*http_work)(http_para*);
+__attribute((constructor)) void http_INIT(){
+    signal(SIGPIPE,SIG_IGN);
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();// EVP_cleanup();
+}
 void http_init(struct http *a){
     a->plen=0;
     a->p=malloc(16*16);
@@ -130,20 +115,6 @@ void http_send(http_para *a,const char* head,const char* content,int n){
     free(con);
 }
 
-
-typedef struct {
-    int plen,ctxlen;
-    void* p;//char*,fun
-    void* ctx;//char*,SSL_CTX*
-}https;
-typedef struct{
-    int cl;
-    https* f;
-    SSL* ssl;
-    char* get;
-    int n,m,ip,port;
-}https_para;
-typedef void(*https_work)(https_para*);
 int https_change_ssl_ctx_by_servername(SSL *ssl,int *ad,void *arg){
     return SSL_TLSEXT_ERR_OK;///////////////////////
 	const char *servername=SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
@@ -283,8 +254,3 @@ void https_send(https_para *a,const char* head,const char* content,int n){
     if(!SSL_get_shutdown(a->ssl))SSL_write(a->ssl,con,m+n);
     free(con);
 }
-
-#ifdef __cplusplus
-}
-#endif
-#endif

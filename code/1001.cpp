@@ -1,8 +1,11 @@
 #include"lib/http.h"
-#include"user.h"
-#include"chat.h"
-#include"word.h"
-#include"gptapi.h"
+#include"lib/user.h"
+#include"lib/chat.h"
+#include"lib/check48.h"
+#include"lib/gptapi.h"
+// #include"lib/word.h"
+#include"lib/gptapi.h"
+#define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 void other(http_para* a){
     LOG("%s\n",a->get);
 }
@@ -18,8 +21,8 @@ int main() {
     http_add(&a,"GET /api/user ",apiuser);
     http_add(&a,"POST /api/change_password ",change_password);
     http_add(&a,"GET /api/check48 ",check48);
-    http_add(&a,"POST /api/getword ",getword);
-    http_add(&a,"POST /api/setword ",setword);
+    // http_add(&a,"POST /api/getword ",getword);
+    // http_add(&a,"POST /api/setword ",setword);
     http_add(&a,"POST /api/gpt2 ",gptapi2);
     http_add(&a,"POST /api/gpts2 ",gptapis2);
     // http_add(&a,"",other);
