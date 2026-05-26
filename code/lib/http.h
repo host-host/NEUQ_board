@@ -38,7 +38,7 @@ typedef struct{
     int cl;
     struct http* f;
     char* get;
-    int n,m,ip,port;
+    int n,m,ip,port;//get~get+n是消息头，get+n~get+n+m是消息内容
 }http_para;
 typedef void(*http_work)(http_para*);
 void http_INIT();

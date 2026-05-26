@@ -27,8 +27,7 @@ static inline int min(int x,int y){
 user_* getuser(const char* get){
 	char* tmpp=(char*)strstr(get,"ookie: id=");
 	if(tmpp){
-		user_* p1=(user_*)ndb_create(&user,tmpp+10,0);
-		// if(p1)LOG("%s",p1->cookie_rand);/
+		user_* p1=(user_*)ndb_create_binary(&user,tmpp+10,0);
 		if(p1&&memcmp(tmpp+10+8,p1->cookie_rand,8)==0&&time(0)<p1->time)return p1;
 	}
     return 0;
@@ -39,8 +38,8 @@ void login(http_para* ssl){
     memcpy(c,name,min(23,strlen(name)));
     ll* p;
 	user_* p1;
-	if(!(p=(ll*)ndb_create(&name2id,c,0)))return http_send(ssl,Hok Hhtml Hc0,"User does not exist!",0);
-	if(!(p1=(user_*)ndb_create(&user,(char*)p,0)))return http_send(ssl,Hok Htxt Hc0,"server error! D4F",0);
+	if(!(p=(ll*)ndb_create_binary(&name2id,c,0)))return http_send(ssl,Hok Hhtml Hc0,"User does not exist!",0);
+	if(!(p1=(user_*)ndb_create_binary(&user,(char*)p,0)))return http_send(ssl,Hok Htxt Hc0,"server error! D4F",0);
 	if(memcmp(pwd,p1->pwd,strlen(p1->pwd)))return http_send(ssl,Hok Hhtml Hc0,"Password Error!",0);
     char tmp[]="Set-Cookie: id=1234567812345678; Max-Age=604800; Path=/; Secure; HttpOnly\r\n";
     memcpy(tmp+15,p,8);
@@ -84,16 +83,16 @@ void reg(http_para* ssl){
 	memcpy(a.pwd,pwd,min(strlen(pwd),23));
 	memcpy(a.email,email,min(strlen(email),79));
 	memcpy(a.phone,phone,min(strlen(phone),19));
-	if((p=(ll*)ndb_create(&name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
-	if(!(p=(ll*)ndb_create(&name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
+	if((p=(ll*)ndb_create_binary(&name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
+	if(!(p=(ll*)ndb_create_binary(&name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
 	while(1){
 		char tmp[8]={0};
 		for(int i=0;i<8;i++)tmp[i]=rand()%26+(rand()%2?'a':'A');
 		*p=*(ll*)tmp;
-		if(!ndb_create(&user,(char*)p,0))break;
+		if(!ndb_create_binary(&user,(char*)p,0))break;
 	}
 	user_* p1;
-	if(!(p1=(user_*)ndb_create(&user,(char*)p,sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
+	if(!(p1=(user_*)ndb_create_binary(&user,(char*)p,sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
 	memcpy(p1,&a,sizeof(user_));
 	http_send(ssl,Hok Hhtml Hc0,"OK",0);
 }

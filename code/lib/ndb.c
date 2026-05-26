@@ -100,7 +100,7 @@ static ll ndb_newcontent(struct ndb* a,ll nlen,int flag){
     *(a->lock-2)=0;
     return nchild;
 }
-void* ndb_create(struct ndb* a,const char* newc,int flag){
+void* ndb_create_binary(struct ndb* a,const char* newc,int flag){
 	if(flag<0)return 0;
 	ll p0,p1,p2,p,child=1;
 	for(int i=0;i<a->namelen;i++)if(newc[i])child=0;
@@ -148,6 +148,12 @@ void* ndb_create(struct ndb* a,const char* newc,int flag){
 	if(!(p=ndb_c(a,p2,p1,p0,newc,child)))return 0;
 	if(p==-1)goto https;
 	return a->a+child;
+}
+void* ndb_create(struct ndb* a,const char* newc,int flag){
+	char c[64]={0};
+	int tmp=strlen(newc);
+	memcpy(c,newc,tmp<a->namelen?tmp:a->namelen);
+	return ndb_create_binary(a,c,flag);
 }
 void* ndb_next(struct ndb* a,char* newc){
 	char ans[a->namelen];

@@ -30,6 +30,10 @@ void* ndb_create(ndb* a,const char* name,int flag);
  * 返回指针，为0表示创建失败或者未找到
  * 注意：若已有内容且内容原长度不等于flag，可能会迁移数据地址导致之前该内容返回的地址指针失效
  */
+void* ndb_create_binary(ndb* a,const char* name,int flag);
+/**
+ * name为长度namelen的二进制id，其他完全同ndb_create
+ */
 void* ndb_next(ndb* a,char* name);
 /**
  * 用该函数可以遍历数据库或者查找下一个节点，遍历数据库使用方法如下

@@ -1,0 +1,150 @@
+接口文档：
+
+GET /api/p=
+待补充
+
+GET /api/con=
+待补充
+
+POST /api/sendmessage
+待补充
+
+POST /api/login
+待补充
+
+POST /api/register
+待补充
+
+GET /api/logout
+待补充
+
+GET /api/user
+待补充
+
+POST /api/change_password
+待补充
+
+GET /api/check48
+待补充
+
+POST /api/getword
+待补充
+
+POST /api/setword
+待补充
+
+POST /api/gpt2
+请求值：类型json
+请求示例
+{"model":"deepseek-ai/DeepSeek-V3.1","stream":true,"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"hello"}],"stream_options":{"include_usage":true},"ida":0,"enable_thinking":true}
+解释：
+该请求表示使用/api/gpts2接口得到的模型分类中下标第0个（"ida":0）分类下的模型名为"deepseek-ai/DeepSeek-V3.1"的模型，
+除了model，messages，ida这三个是自己构造，剩下的部分有默认格式，默认格式为{"stream": true,"stream_options": {"include_usage": true},"enable_thinking":true}
+返回值：EventStream流示响应
+返回示例1：
+data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":" today","reasoning_content":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":"?","reasoning_content":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":"","reasoning_content":null},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":11,"completion_tokens":45,"total_tokens":56,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":35},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":11}}
+
+data: [DONE]
+返回示例2：
+"data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，模型不可用\"}}]}\r\n\r\ndata: [DONE]"
+解释：如果是示例1的正常响应情况，返回值不做任何修改，直接转发的api上游的返回值
+
+
+POST /api/gpts2
+请求值：无
+返回值：类型json，表示有哪些ai
+返回示例：
+[{
+"parallel":	10,
+"model":	["deepseek-ai/DeepSeek-R1-0528-Turbo", "deepseek-ai/DeepSeek-V3.1", "deepseek-ai/DeepSeek-V3.2-Exp", "zai-org/GLM-4.5", "openai/gpt-oss-20b", "Qwen/Qwen3-32B", "Qwen/Qwen3-30B-A3B", "Qwen/QwQ-32B", "google/gemma-3-27b-it", "google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/Llama-4-Scout-17B-16E-Instruct"],
+"available":	false
+},{
+"parallel":	5,
+"model":	["gemini-2.5-flash", "gpt-5.2"],
+"available":	false,
+"public": true,
+"custom":	[{
+"model":	"gpt-5.2",
+"stream":	true,
+"stream_options":	{
+    "include_usage":	true
+},
+"reasoning_effort":	"high"
+}]
+}]
+解释：
+model表示这一个分类下有哪些模型名字可以调用，
+available表示该分类是否可用
+public表示使用该分类是否需要管理员权限
+custom[model]表示使用该分类的model模型时，不使用默认消息格式，改为custom[model]里的消息格式
+默认消息格式是：{"stream": true,"stream_options": {"include_usage": true},"enable_thinking":true}
+
+
+POST /api/gpt_gotid
+请求值：格式同/api/gpt2的请求格式,如果是连续对话,包含一个"id",其值为上一个对话的id
+返回值：一个字符串id，若以Error开头表示出现错误，否则其长度不超过32，表示该请求被缓存在了id中，可继续请求/api/gpt_askid
+
+
+POST /api/gpt_askid
+请求值：一个字符串，表示id
+返回值：同/api/gpt2
+解释：调用该接口的时候后端会自动将刚刚缓存的请求转发api上游服务器，然后返回上游服务器的返回值
+
+
+POST /api/gpt_idname
+请求值：一个字符串，表示id
+返回值：返回该id对应的请求的概述
+
+
+POST /api/gpt_changename
+请求值：json格式
+请求示例：
+{"id":"12345","name":"New Chat"}
+返回值：字符串“ok”或者“Error:*”
+解释：更改该id对应的请求的概述
+
+
+POST /api/gpt_idcontent
+请求值：一个字符串，表示id
+返回值：类型json，返回该id对应的请求的历史消息记录
+返回示例：
+{
+    "publish":false,
+    "owner":"Jack",
+    "createtime":12345,
+    "other":"",
+    "content":[
+        {"role":"system","content":"You are a helpful assistant."},
+        {"role":"user","content":"hello"},
+        {"role":"assistant","content":"Hello! How can I assist you today?"}
+    ]
+}
+解释：
+publish表示该对话是否公开
+owner表示该对话是谁创建的
+other留空,为将来保留
+createtime是Unix时间戳
+
+
+POST /api/gpt_getuserhistory
+请求值：无
+返回值：类型json，一个数组，里面是id，表示我的历史记录
+
+
+
+POST /api/gpt_deletehistory
+请求值：一个字符串，表示id
+返回值：字符串“ok”或者“error_*”
+解释：不会从数据库中删除记录
+
+
+POST /api/gpt_share
+请求值：json格式
+返回值：字符串“ok”或者“Error:*”
+请求示例：
+{"id":"12345","publish":true}
+解释，通过此接口可以共享编号为id的对话给别人，publish只能设置为true，false功能未实现

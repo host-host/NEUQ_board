@@ -207,6 +207,7 @@ struct cppJSON{
         if (a)cJSON_DeleteItemFromObject(a,x);
     }
     bool has(const char* key) const {
+        if(!a)return 0;
         return cJSON_GetObjectItem(a, key)!=0;
     }
     cppJSON child()const{
@@ -223,6 +224,9 @@ struct cppJSON{
     }
     bool operator!() const {
         return a==0;
+    }
+    explicit operator bool() const noexcept {
+        return a != nullptr;
     }
     // void debug(){
     //     printf("--------%llx ",(long long)a);

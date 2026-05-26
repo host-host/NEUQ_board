@@ -23,17 +23,17 @@ pthread_mutex_t chat_mutex;
 INIT void chat_init(){
     ndb_init(&chatn,"./res/pri/chat.dat",16,1ll<<34);
     ll tmp=0;
-    ndb_create(&chatn,(char*)&tmp,64);
+    ndb_create_binary(&chatn,(char*)&tmp,64);
 }
 void getcon(http_para*a){
     ll pc=readll(a->get+7);
-    chat_a*p=(chat_a*)ndb_create(&chatn,(char*)&pc,0);
+    chat_a*p=(chat_a*)ndb_create_binary(&chatn,(char*)&pc,0);
     if(!p)return;
     http_send(a,Hok Hc0 Htxt,p->content+strlen(p->content),0);
 }
 void getp(http_para*a){
     ll pc=readll(a->get+7);
-    chat_a*p=(chat_a*)ndb_create(&chatn,(char*)&pc,0);
+    chat_a*p=(chat_a*)ndb_create_binary(&chatn,(char*)&pc,0);
     if(!p)return;
     int s=0;
     char *c=(char*)malloc(10*1024*1024);
@@ -43,7 +43,7 @@ void getp(http_para*a){
         ll nex=*(ll*)p->next;
         s++;
         if(s>150||(s>50&&p->deep==0))break;
-        if(!(p=(chat_a*)ndb_create(&chatn,p->next,0)))break;
+        if(!(p=(chat_a*)ndb_create_binary(&chatn,p->next,0)))break;
         myJSON(p->content,bug1);
         myJSON(p->content+strlen(p->content),bug2);
         n+=sprintf(c+n,"{\"id\":\"%lld\",\"date\":\"%lld\",\"px\":\"%d\",\"name\":%s,\"title\":%s},",nex,p->time,p->deep,bug1,bug2);
@@ -61,8 +61,8 @@ void sendmessage(http_para*b){
     if(ltitle>200||ltitle==0)return http_send(b,Hok Hc0 Htxt,"The title is too long.",0);
     if(lcon>1024*20)return http_send(b,Hok Hc0 Htxt,"The content is too long.",0);
     ll id=abs((ll)rand()*rand()*rand()*rand())*(lcon?1:-1);
-    while(ndb_create(&chatn,(char*)&id,0))id=abs((ll)rand()*rand()*rand()*rand())*(lcon?1:-1);
-    chat_a*p=(chat_a*)ndb_create(&chatn,(char*)&id,64+ltitle+lcon);
+    while(ndb_create_binary(&chatn,(char*)&id,0))id=abs((ll)rand()*rand()*rand()*rand())*(lcon?1:-1);
+    chat_a*p=(chat_a*)ndb_create_binary(&chatn,(char*)&id,64+ltitle+lcon);
     if(!p)return http_send(b,Hok Hc0 Htxt,"ERROR: Something wrong.Code VQ119.",0);
     ll pc=readll(con+ltitle+lcon+2);
     p->time=time(0);
@@ -71,7 +71,7 @@ void sendmessage(http_para*b){
     memcpy(p->content,con,ltitle+1);
     memcpy(p->content+ltitle+1,con+ltitle+1,lcon+1);
     pthread_mutex_lock(&chat_mutex);
-    chat_a* parent=(chat_a*)ndb_create(&chatn,(char*)&pc,0);
+    chat_a* parent=(chat_a*)ndb_create_binary(&chatn,(char*)&pc,0);
     if (!parent) {
         pthread_mutex_unlock(&chat_mutex);
         return http_send(b, Hok Hc0 Htxt, "ERROR: Parent node not found or Database error.", 0);
@@ -88,7 +88,7 @@ void sendmessage(http_para*b){
         
         *(ll*)head->next = id;
         if (first_id) {
-            chat_a* first = (chat_a*)ndb_create(&chatn, (char*)&first_id, 0);
+            chat_a* first = (chat_a*)ndb_create_binary(&chatn, (char*)&first_id, 0);
             if (first) *(ll*)first->prev = id;
         }
     } else {
@@ -100,7 +100,7 @@ void sendmessage(http_para*b){
         chat_a* fpd = parent;
         while (fpd->deep > 0) {
             fpd_id = *(ll*)fpd->prev;
-            fpd = (chat_a*)ndb_create(&chatn, (char*)&fpd_id, 0);
+            fpd = (chat_a*)ndb_create_binary(&chatn, (char*)&fpd_id, 0);
         }
 
         // 2. 寻找话题的尾节点 (lpd - Last Node of Thread)
@@ -109,7 +109,7 @@ void sendmessage(http_para*b){
         chat_a* lpd = parent;
         ll tmp_id;
         while ((tmp_id = *(ll*)lpd->next)) {
-            chat_a* tmp = (chat_a*)ndb_create(&chatn, (char*)&tmp_id, 0);
+            chat_a* tmp = (chat_a*)ndb_create_binary(&chatn, (char*)&tmp_id, 0);
             if (!tmp || tmp->deep == 0) break; // 遇到了下一个话题的根，说明当前话题结束
             lpd = tmp;
             lpd_id = tmp_id;
@@ -131,7 +131,7 @@ void sendmessage(http_para*b){
             
             *(ll*)p->next = next_thread_id;
             if (next_thread_id) {
-                chat_a* nex = (chat_a*)ndb_create(&chatn, (char*)&next_thread_id, 0);
+                chat_a* nex = (chat_a*)ndb_create_binary(&chatn, (char*)&next_thread_id, 0);
                 if (nex) *(ll*)nex->prev = id;
             }
         } else {
@@ -142,11 +142,11 @@ void sendmessage(http_para*b){
             ll next_block_id = *(ll*)lpd->next; // 这是下一个话题的开头
             
             if (prev_block_id) {
-                chat_a* pr = (chat_a*)ndb_create(&chatn, (char*)&prev_block_id, 0);
+                chat_a* pr = (chat_a*)ndb_create_binary(&chatn, (char*)&prev_block_id, 0);
                 if (pr) *(ll*)pr->next = next_block_id;
             }
             if (next_block_id) {
-                chat_a* nx = (chat_a*)ndb_create(&chatn, (char*)&next_block_id, 0);
+                chat_a* nx = (chat_a*)ndb_create_binary(&chatn, (char*)&next_block_id, 0);
                 if (nx) *(ll*)nx->prev = prev_block_id;
             }
             
@@ -160,7 +160,7 @@ void sendmessage(http_para*b){
             
             *(ll*)p->next = first_id; // p 后面接原来的第一名
             if (first_id) {
-                chat_a* first = (chat_a*)ndb_create(&chatn, (char*)&first_id, 0);
+                chat_a* first = (chat_a*)ndb_create_binary(&chatn, (char*)&first_id, 0);
                 if (first) *(ll*)first->prev = id; 
             }
         }

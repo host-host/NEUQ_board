@@ -67,7 +67,7 @@ void gptapi2(http_para *a){
     cppJSON now=json[ida];
     int maxparallel=now["parallel"].valuedouble();
     if(maxparallel==0)maxparallel=1;
-    LOG("%d",admin);
+    // LOG("%d",admin);
     if(now.has("available")&&now["available"]==false)return http_send(a,Hok Hc0 Htxt,"data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，模型不可用\"}}]}\r\n\r\ndata: [DONE]",0);
     if(admin==0&&!(now["public"]==true))return http_send(a,Hok Hc0 Htxt,"data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，没有权限\"}}]}\r\n\r\ndata: [DONE]",0);
     for(cppJSON p=now["model"].child();p.a;p=p.next()){

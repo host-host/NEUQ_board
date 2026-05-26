@@ -10,7 +10,11 @@ OBJS = $(patsubst code/lib/%.c, build/%.o, $(SRC_C)) \
 
 LIB_HDRS = $(wildcard lib/*.h)
 
-all: 80 1001
+SRC_MAIN = $(wildcard code/*.cpp)
+
+BINS = $(patsubst code/%.cpp, build/%, $(SRC_MAIN))
+
+all: $(BINS)
 
 build:
 	@mkdir -p build
@@ -21,13 +25,12 @@ build/%.o: code/lib/%.c | build
 build/%.o: code/lib/%.cpp | build
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-80: code/80.cpp | build
-	$(CXX) $< -o $@ $(CFLAGS)
-
-1001: code/1001.cpp $(OBJS) $(LIB_HDRS) | build
+build/%: code/%.cpp $(OBJS) $(LIB_HDRS) | build
 	$(CXX) $(filter-out $(LIB_HDRS), $^) -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	rm -rf build 80 1001
+	rm -rf build
+
+.PRECIOUS: build/%.o
 
 .PHONY: all clean
