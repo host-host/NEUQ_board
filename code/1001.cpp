@@ -21,6 +21,8 @@ int main() {
     http_add(&a,"GET /api/logout ",logout);
     http_add(&a,"POST /api/logout ",logout);
     http_add(&a,"GET /api/user ",apiuser);
+    http_add(&a,"POST /api/uploads_file ",uploads_file);
+    http_add(&a,"POST /api/download_file ",download_file);
     http_add(&a,"POST /api/change_password ",change_password);
     http_add(&a,"GET /api/check48 ",check48);
     // http_add(&a,"POST /api/getword ",getword);

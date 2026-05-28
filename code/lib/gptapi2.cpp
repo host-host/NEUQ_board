@@ -287,15 +287,17 @@ void gpt_idname(http_para *a) {
             if(!puser||strcmp(con->owner,puser->name)!=0)valid=false;
         }
     if(valid==false)return http_send(a,Hok Hc0 Htxt,"Error: Invalid ID or Permission Denied", 0);
-    if(con->name[0])return http_send(a,Hok Hc0 Htxt,con->name,0);
-    cppJSON msgs(con->content);
-    std::string title = "New Chat";
-    for(cppJSON c=msgs.child(); c; c=c.next())
-        if (c.has("role") && string(c["role"].valuestring()) == "user" && c.has("content")) {
-            title = c["content"].valuestring();
-            break;
-        }
-    title=utf8_substr(title,25);
+    std::string title="New Chat";
+    if(con->name[0])title=con->name;
+    else{
+        cppJSON msgs(con->content);
+        for(cppJSON c=msgs.child(); c; c=c.next())
+            if (c.has("role") && string(c["role"].valuestring()) == "user" && c.has("content")) {
+                title = c["content"].valuestring();
+                break;
+            }
+        title=utf8_substr(title,25);
+    }
     cppJSON ret("{}");
     ret.insert("title",title);
     ret.insert("owner",con->owner);
@@ -363,12 +365,11 @@ void gpt_deletehistory(http_para *a) {
 void gpt_share(http_para *a) {
     user_* puser=getuser(a->get);
     if(!puser)return http_send(a, Hok Hc0 Htxt, "Error: Please log in first.", 0);
-    cppJSON au(a->get + a->n);
-    if (!au || !au.has("id"))return http_send(a, Hok Hc0 Htxt, "Error: JSON parse failed or missing 'id'.", 0);
-    std::string id = au["id"].valuestring();
-    gpt_content* con = (gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
-    if (!con)return http_send(a, Hok Hc0 Htxt, "Error: Conversation not found.", 0);
-    if (strcmp(con->owner, puser->name) != 0)return http_send(a, Hok Hc0 Htxt, "Error: Permission denied, you are not the owner.", 0);
+    cppJSON au(a->get+a->n);
+    if(!au.has("id"))return http_send(a, Hok Hc0 Htxt, "Error: JSON parse failed.", 0);
+    std::string id=au["id"].valuestring();
+    gpt_content* con=(gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
+    if (!con||strcmp(con->owner, puser->name) != 0)return http_send(a, Hok Hc0 Htxt, "Error: Permission denied or conversation not found.", 0);
     con->publish = true;
     http_send(a, Hok Hc0 Htxt, "ok", 0);
 }

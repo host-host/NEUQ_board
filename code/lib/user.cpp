@@ -2,6 +2,7 @@
 #include<string>
 #include"user.h"
 #include"ndb.h"
+#include"cppJSON.h"
 #define USER_TOHOME "<script>window.location.href='/';</script>"
 #define ll long long
 #include"check48.h"
@@ -113,4 +114,65 @@ void change_password(http_para* ssl){
     memcpy(puser->pwd,npwd,min(23,strlen(npwd)));
 	for(int i=0;i<8;i++)puser->cookie_rand[i]=rand()%26+'A';
 	return http_send(ssl,Hok Hc0 Htxt,"OK",0);
+}
+static std::string generate_file_id() {
+    char buf[17] = {0};
+    for(int i = 0; i < 16; i++) {
+        int v = rand() % 36;
+        buf[i] = v < 10 ? '0' + v : 'a' + v - 10;
+    }
+    return std::string(buf);
+}
+void uploads_file(http_para* ssl) {
+    user_* puser=getuser(ssl->get);
+    if(!puser)return http_send(ssl, Hok Hc0 Hjson,"{\"error\":\"Not_Logged_In\"}", 0);
+    char* file_data=ssl->get+ssl->n;
+    int file_size=ssl->m;
+    if(file_size<=0)return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Empty_File\"}", 0);
+    std::string file_id = generate_file_id();
+    std::string full_path = "/web/res/uploads/" + file_id;
+    FILE* fp = fopen(full_path.c_str(), "wb");
+    if (!fp)return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Server_Write_Error\"}", 0);
+    fwrite(file_data, 1, file_size, fp);
+    fclose(fp);
+    std::string res = "{\"file_id\":\"" + file_id + "\"}";
+    http_send(ssl, Hok Hc0 Hjson, res.c_str(), 0);
+}
+void download_file(http_para* ssl) {
+    char* json_str = ssl->get + ssl->n;
+    cppJSON json(json_str);
+    if(!json.has("file_id"))return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Invalid_Request\"}", 0);
+    std::string file_id = json["file_id"].valuestring();
+    if (file_id.empty() || file_id.length() > 64) {
+        return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Invalid_File_ID\"}", 0);
+    }
+    for (char c : file_id) {
+        if (!isalnum(c)) {
+            return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Access_Denied\"}", 0);
+        }
+    }
+
+    std::string full_path = "/web/res/uploads/" + file_id;
+    FILE* fp = fopen(full_path.c_str(), "rb");
+    if (!fp) {
+        return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"File_Not_Found\"}", 0);
+    }
+
+    // 获取文件大小
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(file_size);
+    if (!buffer) {
+        fclose(fp);
+        return http_send(ssl, Hok Hc0 Hjson, "{\"error\":\"Out_Of_Memory\"}", 0);
+    }
+
+    size_t read_bytes = fread(buffer, 1, file_size, fp);
+    fclose(fp);
+
+    // 以二进制流形式发送回前端
+    http_send(ssl, Hok Hc0 "Content-Type: application/octet-stream\r\n", buffer, read_bytes);
+    free(buffer);
 }

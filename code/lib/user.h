@@ -16,6 +16,8 @@ void login(http_para* ssl);
 void reg(http_para* ssl);
 void logout(http_para *ssl);
 void apiuser(http_para* ssl);
+void uploads_file(http_para* ssl);
+void download_file(http_para* ssl);
 void change_password(http_para* ssl);
 
 #ifdef __cplusplus

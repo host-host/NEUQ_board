@@ -21,6 +21,20 @@ GET /api/logout
 GET /api/user
 待补充
 
+POST /api/uploads_file
+请求值：文件二进制内容
+返回值：json格式
+返回示例1：
+{"file_id":"12345"}
+返回示例2：
+{"error":"Not_Logged_In"}
+
+
+POST /api/download_file
+请求值：json格式
+请求示例：{"file_id":"12345"}
+返回值：文件二进制内容
+
 POST /api/change_password
 待补充
 
