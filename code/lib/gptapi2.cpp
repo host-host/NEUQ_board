@@ -62,10 +62,14 @@ void gpt_gotid(http_para *a) {
     }
     bool is_new=false;//只有当是同一个用户，并且历史消息一致的时候判定为不是新对话
     cppJSON msgs=au["messages"];
+    string oldname="";
     if(id.empty())is_new=true;
     else {
         gpt_content* old_con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0);
         if(old_con){
+            oldname=old_con->name;
+            if(oldname.length()<=55)oldname=oldname+" (copy)";
+            else oldname=utf8_substr(oldname,50)+"... (copy)";
             if(strcmp(old_con->owner,puser->name)!=0)is_new=true;
             else if(old_con->isusing)return http_send(a, Hok Hc0 Htxt, "Error: 当前对话正在生成回复，请稍后再试", 0);
             cppJSON old_msgs(old_con->content);
@@ -86,7 +90,21 @@ void gpt_gotid(http_para *a) {
         con->isusing=false;
         strcpy(con->owner,puser->name);
         con->createtime=time(0);
+        // if(oldname.empty()){
+        //     oldname="New Chat";
+        //     for(cppJSON c=msgs.child(); c; c=c.next())
+        //         if (c.has("role") && string(c["role"].valuestring()) == "user" && c.has("content")) {
+        //             if(c["content"].a->valuestring)oldname = c["content"].valuestring();
+        //             else for(cppJSON p=c["content"].child();p;p=p.next())if(p["type"]=="text"){
+        //                         oldname=p["text"].valuestring();
+        //                         break;
+        //                     }
+        //             break;
+        //         }
+        //     oldname=utf8_substr(oldname,25);
+        // }
         memset(con->name, 0, sizeof(con->name));
+        strcpy(con->name,oldname.c_str());
         memset(con->other, 0, sizeof(con->other));
         strcpy(con->content,"[]");
         gpt_userhistory* uh = (gpt_userhistory*)ndb_create(&gpt_user,puser->name,0);
@@ -157,6 +175,11 @@ static string extract_assistant_content(const string& sse_data) {
         }
     }
     return full_content;
+}
+static size_t title_write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
+    std::string* s = (std::string*)userdata;
+    s->append((char*)ptr, size * nmemb);
+    return size * nmemb;
 }
 void gpt_askid(http_para *a) {
     user_* puser = getuser(a->get);
@@ -262,8 +285,10 @@ void gpt_askid(http_para *a) {
     pthread_mutex_lock(&mutex_api_is_using);
     api_is_using[auth_token]--;
     pthread_mutex_unlock(&mutex_api_is_using);
+    char *gotname=0;
+    string assistant_reply;
     if (res == CURLE_OK) {
-        string assistant_reply = extract_assistant_content(wd.response_accumulator);
+        assistant_reply = extract_assistant_content(wd.response_accumulator);
         cppJSON msgs = au["messages"];
         if (msgs && cJSON_IsArray(msgs.a)) {
             cppJSON reply_node("{}");
@@ -271,15 +296,60 @@ void gpt_askid(http_para *a) {
             reply_node.insert("content", assistant_reply.c_str());
             msgs.push_back(std::move(reply_node));
             string final_content=msgs.stringify_Unformatted();
-            if((con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),sizeof(gpt_content)+final_content.length()+10)))
+            if((con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),sizeof(gpt_content)+final_content.length()+10))){
                 strcpy(con->content, final_content.c_str());
+                gotname=con->name;
+            }
         }
     }
     if((con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0)))con->isusing=0;
+    if(gotname&&gotname[0]==0){
+        cppJSON first_group=json[0];
+        string title_model = first_group["model"][0].valuestring();
+        string title_auth = first_group["Authorization"][0].valuestring();
+        string title_url = first_group["url"].valuestring();
+        string prompt = "将以下回复的内容取一个简短的标题：\n" + assistant_reply;
+        cppJSON title_req("{}");
+        title_req.insert("model", title_model.c_str());
+        title_req.insert("stream", false);
+        cppJSON msgs_arr("[]");
+        cppJSON user_msg("{}");
+        user_msg.insert("role", "user");
+        user_msg.insert("content", prompt.c_str());
+        msgs_arr.push_back(std::move(user_msg));
+        title_req.insert("messages", msgs_arr);
+        string title_post_data = title_req.stringify_Unformatted();
+        string title_response;
+        CURL *title_curl = curl_easy_init();
+        if (title_curl) {
+            struct curl_slist *t_headers = NULL;
+            t_headers = curl_slist_append(t_headers, "Content-Type: application/json");
+            string auth_header_str = "Authorization: " + title_auth;
+            t_headers = curl_slist_append(t_headers, auth_header_str.c_str());
+            
+            curl_easy_setopt(title_curl, CURLOPT_URL, title_url.c_str());
+            curl_easy_setopt(title_curl, CURLOPT_HTTPHEADER, t_headers);
+            curl_easy_setopt(title_curl, CURLOPT_POSTFIELDS, title_post_data.c_str());
+            curl_easy_setopt(title_curl, CURLOPT_WRITEFUNCTION, title_write_callback);
+            curl_easy_setopt(title_curl, CURLOPT_WRITEDATA, &title_response);
+            curl_easy_setopt(title_curl, CURLOPT_CONNECTTIMEOUT, 15L);
+            curl_easy_setopt(title_curl, CURLOPT_TIMEOUT, 30L);
+            CURLcode t_res = curl_easy_perform(title_curl);
+            curl_slist_free_all(t_headers);
+            curl_easy_cleanup(title_curl);
+            if (t_res == CURLE_OK) {
+                cppJSON resp_json(title_response.c_str());
+                string temp=resp_json["choices"][0]["message"]["content"].valuestring();
+                if(temp.length()>50)temp=utf8_substr(temp,45)+"...";
+                strcpy(gotname,temp.c_str());
+                // LOG("%s\n",title_response.c_str());
+                // LOG("%s\n",temp.c_str());
+            }
+        }
+    }
 }
 void gpt_idname(http_para *a) {
-    std::string id=a->get+a->n;
-    gpt_content* con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0);
+    gpt_content* con=(gpt_content*)ndb_create(&gpt_con,a->get+a->n,0);
     bool valid=true;
     if(!con)valid=false;
     else if(con->publish!=true){
@@ -287,19 +357,8 @@ void gpt_idname(http_para *a) {
             if(!puser||strcmp(con->owner,puser->name)!=0)valid=false;
         }
     if(valid==false)return http_send(a,Hok Hc0 Htxt,"Error: Invalid ID or Permission Denied", 0);
-    std::string title="New Chat";
-    if(con->name[0])title=con->name;
-    else{
-        cppJSON msgs(con->content);
-        for(cppJSON c=msgs.child(); c; c=c.next())
-            if (c.has("role") && string(c["role"].valuestring()) == "user" && c.has("content")) {
-                title = c["content"].valuestring();
-                break;
-            }
-        title=utf8_substr(title,25);
-    }
     cppJSON ret("{}");
-    ret.insert("title",title);
+    ret.insert("title",con->name[0]?con->name:"New Chat");
     ret.insert("owner",con->owner);
     http_send(a, Hok Hc0 Htxt, ret.stringify_Unformatted().c_str(), 0);
 }
