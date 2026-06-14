@@ -90,19 +90,6 @@ void gpt_gotid(http_para *a) {
         con->isusing=false;
         strcpy(con->owner,puser->name);
         con->createtime=time(0);
-        // if(oldname.empty()){
-        //     oldname="New Chat";
-        //     for(cppJSON c=msgs.child(); c; c=c.next())
-        //         if (c.has("role") && string(c["role"].valuestring()) == "user" && c.has("content")) {
-        //             if(c["content"].a->valuestring)oldname = c["content"].valuestring();
-        //             else for(cppJSON p=c["content"].child();p;p=p.next())if(p["type"]=="text"){
-        //                         oldname=p["text"].valuestring();
-        //                         break;
-        //                     }
-        //             break;
-        //         }
-        //     oldname=utf8_substr(oldname,25);
-        // }
         memset(con->name, 0, sizeof(con->name));
         strcpy(con->name,oldname.c_str());
         memset(con->other, 0, sizeof(con->other));
@@ -340,6 +327,8 @@ void gpt_askid(http_para *a) {
             if (t_res == CURLE_OK) {
                 cppJSON resp_json(title_response.c_str());
                 string temp=resp_json["choices"][0]["message"]["content"].valuestring();
+                int n=temp.length();
+                if(n>4&&temp[0]=='*'&&temp[1]=='*'&&temp[n-1]=='*'&&temp[n-2]=='*')temp=temp.substr(2,n-4);
                 if(temp.length()>50)temp=utf8_substr(temp,45)+"...";
                 strcpy(gotname,temp.c_str());
                 // LOG("%s\n",title_response.c_str());
@@ -429,6 +418,7 @@ void gpt_share(http_para *a) {
     std::string id=au["id"].valuestring();
     gpt_content* con=(gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
     if (!con||strcmp(con->owner, puser->name) != 0)return http_send(a, Hok Hc0 Htxt, "Error: Permission denied or conversation not found.", 0);
+    if (con->isusing) return http_send(a, Hok Hc0 Htxt, "Error: 当前对话正在生成回复，请稍后再试", 0);
     con->publish = true;
     http_send(a, Hok Hc0 Htxt, "ok", 0);
 }

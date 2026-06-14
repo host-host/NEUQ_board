@@ -1,8 +1,8 @@
 #ifndef HTTP_H
 #define HTTP_H
 
-#include<openssl/ssl.h>
 #include<signal.h>
+#include<netinet/in.h>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -33,6 +33,8 @@ extern "C"{
 struct http{
     int plen;
     void* p;//char*,fun
+    volatile int stop;//置1后http_start不再接受新连接
+    volatile int active;//当前活跃连接数
 };
 typedef struct{
     int cl;
@@ -44,27 +46,9 @@ typedef void(*http_work)(http_para*);
 void http_INIT();
 void http_init(struct http *a);
 void http_add(struct http *a,const char*name,http_work fun);
-int http_start(struct http *a,int port);
+int http_start(struct http *a,unsigned int addr,int port);
+void http_stop(struct http *a);
 void http_send(http_para *a,const char* head,const char* content,int n);
-
-typedef struct {
-    int plen,ctxlen;
-    void* p;//char*,fun
-    void* ctx;//char*,SSL_CTX*
-}https;
-typedef struct{
-    int cl;
-    https* f;
-    SSL* ssl;
-    char* get;
-    int n,m,ip,port;
-}https_para;
-typedef void(*https_work)(https_para*);
-void https_init(https *a);
-int https_add_web(https *a,const char* servername,const char* FILE_fullchain,const char* FILE_private);
-void https_add(https *a,const char*name,https_work fun);
-int https_start(https *a,int port);
-void https_send(https_para *a,const char* head,const char* content,int n);
 
 #ifdef __cplusplus
 }

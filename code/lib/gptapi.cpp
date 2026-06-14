@@ -20,13 +20,14 @@
 using namespace std;
 #define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 pthread_mutex_t mutex_api_is_using;
+static size_t header_callback(char *buffer, size_t size, size_t nitems, void *data) {
+    http_para *a=(http_para *)data;
+    size_t len=size*nitems;
+    if(write(a->cl,buffer,len));
+    return len;
+}
 static size_t write_callback(void *ptr, size_t size, size_t nmemb, char *data) {
     http_para *a=(http_para *)data;
-    if(a->m==0){
-        a->m=1;
-        const char* tmp=Hok "Content-Type: text/event-stream\r\n" Hc0 "\r\n";
-        if(write(a->cl,tmp,strlen(tmp)));
-    }
     if(write(a->cl,ptr,size*nmemb));
     return size*nmemb;
 }
@@ -95,6 +96,11 @@ void gptapi2(http_para *a){
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, debug1.c_str());
                     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
                     curl_easy_setopt(curl, CURLOPT_WRITEDATA, a);
+                    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
+                    curl_easy_setopt(curl, CURLOPT_HEADERDATA, a);
+                    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+                    curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
+                    curl_easy_setopt(curl, CURLOPT_HTTP_CONTENT_DECODING, 0L);
                     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 60L);
                     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1200L);
                     a->m=0;

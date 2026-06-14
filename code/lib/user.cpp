@@ -102,8 +102,11 @@ void logout(http_para *ssl){
 }
 void apiuser(http_para* ssl){
     user_* puser=getuser(ssl->get);
-	if(puser)return http_send(ssl,Hok Hc0,puser->name,0);
-	else return http_send(ssl,Hok Hc0,"Not_Logged_In",0);
+	if(puser){
+		std::string res=(std::string)"{\"name\":\""+puser->name+"\",\"admin\":"+(puser->admin?"true}":"false}");
+		return http_send(ssl,Hok Hc0 Hjson,res.c_str(),0);
+	}
+	else return http_send(ssl,Hok Hc0 Hjson,"{\"name\":null}",0);
 }
 void change_password(http_para* ssl){
     user_* puser=getuser(ssl->get);

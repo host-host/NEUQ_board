@@ -1,14 +1,5 @@
 接口文档：
 
-GET /api/p=
-待补充
-
-GET /api/con=
-待补充
-
-POST /api/sendmessage
-待补充
-
 POST /api/login
 待补充
 
@@ -19,7 +10,14 @@ GET /api/logout
 待补充
 
 GET /api/user
-待补充
+请求值：无（通过 Cookie 中的 id 识别登录用户）
+返回值：json格式
+返回示例1：
+{"name":"yourname","admin":true}
+返回示例2：
+{"name":"yourname","admin":false}
+返回示例3：
+{"name":null}
 
 POST /api/uploads_file
 请求值：文件二进制内容
@@ -47,6 +45,9 @@ POST /api/getword
 POST /api/setword
 待补充
 
+POST /api/stop
+待补充
+
 POST /api/gpt2
 请求值：类型json
 请求示例
@@ -65,8 +66,7 @@ data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chu
 data: [DONE]
 返回示例2：
 "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，模型不可用\"}}]}\r\n\r\ndata: [DONE]"
-解释：如果是示例1的正常响应情况，返回值不做任何修改，直接转发的api上游的返回值
-
+解释：无状态的透传代理，校验 ida/model 权限后删掉ida，把请求体原样转发给该模型分组的上游，再把 SSE 流原样返回
 
 POST /api/gpts2
 请求值：无
@@ -94,6 +94,7 @@ POST /api/gpts2
 model表示这一个分类下有哪些模型名字可以调用，
 available表示该分类是否可用
 public表示使用该分类是否需要管理员权限
+onlypaint为true表示该分类不是正常对话的模型，是绘图的模型
 custom[model]表示使用该分类的model模型时，不使用默认消息格式，改为custom[model]里的消息格式
 默认消息格式是：{"stream": true,"stream_options": {"include_usage": true},"enable_thinking":true}
 
@@ -111,7 +112,8 @@ POST /api/gpt_askid
 
 POST /api/gpt_idname
 请求值：一个字符串，表示id
-返回值：返回该id对应的请求的概述
+解释：返回该id对应的请求的概述
+返回示例：{"title":"小内存服务器VS Code远程优化四方案","owner":"NewInTown"}
 
 
 POST /api/gpt_changename
