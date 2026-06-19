@@ -1,15 +1,20 @@
 #include<math.h>
 #include<string>
 #include"user.h"
-#include"ndb.h"
+#include"ndb2.h"
 #include"cppJSON.h"
 #define USER_TOHOME "<script>window.location.href='/';</script>"
 #define ll long long
 #include"check48.h"
-ndb user/*ll->user_*/,name2id/*char[24]->ll*/;
+ndb2 user/*id(8B字符串)->user_*/,name2id/*char[24]->id(8B字符串)*/;
 __attribute((constructor)) void user_init(){
-	ndb_init(&user,"/web/res/pri/user.dat",8,0x100000000);
-	ndb_init(&name2id,"/web/res/pri/name2id.dat",24,0x10000000);//id:8
+	user=ndb2_init("/web/res/pri/user.ndb2");
+	name2id=ndb2_init("/web/res/pri/name2id.ndb2");//id:8
+}
+static inline const char* idkey(const void* id8,char* buf9){
+	memcpy(buf9,id8,8);
+	buf9[8]=0;
+	return buf9;
 }
 inline char* read_user(ll* a,char* b){
 	while(*b&&(*b<'0'||*b>'9')&&*b!='-')b++;
@@ -28,7 +33,8 @@ static inline int min(int x,int y){
 user_* getuser(const char* get){
 	char* tmpp=(char*)strstr(get,"ookie: id=");
 	if(tmpp){
-		user_* p1=(user_*)ndb_create_binary(&user,tmpp+10,0);
+		char kb[9];
+		user_* p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),0);
 		if(p1&&memcmp(tmpp+10+8,p1->cookie_rand,8)==0&&time(0)<p1->time)return p1;
 	}
     return 0;
@@ -39,8 +45,9 @@ void login(http_para* ssl){
     memcpy(c,name,min(23,strlen(name)));
     ll* p;
 	user_* p1;
-	if(!(p=(ll*)ndb_create_binary(&name2id,c,0)))return http_send(ssl,Hok Hhtml Hc0,"User does not exist!",0);
-	if(!(p1=(user_*)ndb_create_binary(&user,(char*)p,0)))return http_send(ssl,Hok Htxt Hc0,"server error! D4F",0);
+	if(!(p=(ll*)ndb2_got(name2id,c,0)))return http_send(ssl,Hok Hhtml Hc0,"User does not exist!",0);
+	char kb[9];
+	if(!(p1=(user_*)ndb2_got(user,idkey(p,kb),0)))return http_send(ssl,Hok Htxt Hc0,"server error! D4F",0);
 	if(memcmp(pwd,p1->pwd,strlen(p1->pwd)))return http_send(ssl,Hok Hhtml Hc0,"Password Error!",0);
     char tmp[]="Set-Cookie: id=1234567812345678; Max-Age=604800; Path=/; Secure; HttpOnly\r\n";
     memcpy(tmp+15,p,8);
@@ -84,16 +91,17 @@ void reg(http_para* ssl){
 	memcpy(a.pwd,pwd,min(strlen(pwd),23));
 	memcpy(a.email,email,min(strlen(email),79));
 	memcpy(a.phone,phone,min(strlen(phone),19));
-	if((p=(ll*)ndb_create_binary(&name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
-	if(!(p=(ll*)ndb_create_binary(&name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
+	if((p=(ll*)ndb2_got(name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
+	if(!(p=(ll*)ndb2_got(name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
+	char kb[9];
 	while(1){
 		char tmp[8]={0};
 		for(int i=0;i<8;i++)tmp[i]=rand()%26+(rand()%2?'a':'A');
 		*p=*(ll*)tmp;
-		if(!ndb_create_binary(&user,(char*)p,0))break;
+		if(!ndb2_got(user,idkey(p,kb),0))break;
 	}
 	user_* p1;
-	if(!(p1=(user_*)ndb_create_binary(&user,(char*)p,sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
+	if(!(p1=(user_*)ndb2_got(user,idkey(p,kb),sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
 	memcpy(p1,&a,sizeof(user_));
 	http_send(ssl,Hok Hhtml Hc0,"OK",0);
 }

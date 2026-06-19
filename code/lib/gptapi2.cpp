@@ -1,6 +1,6 @@
 #include "gptapi2.h"
 #include "user.h"
-#include "ndb.h"
+#include "ndb2.h"
 #include "cppJSON.h"
 #include "gptapi.h"
 #include <map>
@@ -14,8 +14,8 @@
 using namespace std;
 #define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 #define ll long long
-ndb gpt_con;  // content_id->gpt_content
-ndb gpt_user; // char[24]->gpt_userhistory
+ndb2 gpt_con;  // content_id->gpt_content
+ndb2 gpt_user; // char[24]->gpt_userhistory
 extern map<string, int> api_is_using;
 extern pthread_mutex_t mutex_api_is_using;
 struct cached_req {
@@ -27,8 +27,8 @@ map<string, cached_req> request_cache;
 pthread_mutex_t request_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
 __attribute((constructor)) void gptapi2_init() {
 	curl_global_init(CURL_GLOBAL_DEFAULT);
-    ndb_init(&gpt_con, "/web/res/pri/gpt_content.dat", 32, 0x1000000000);
-    ndb_init(&gpt_user, "/web/res/pri/gpt_userhistory.dat", 24, 0x100000000);
+    gpt_con=ndb2_init("/web/res/pri/gpt_content.ndb2");
+    gpt_user=ndb2_init("/web/res/pri/gpt_userhistory.ndb2");
 }
 static std::string generate_new_id() {
     char buf[32]={0};
@@ -65,7 +65,7 @@ void gpt_gotid(http_para *a) {
     string oldname="";
     if(id.empty())is_new=true;
     else {
-        gpt_content* old_con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0);
+        gpt_content* old_con=(gpt_content*)ndb2_got(gpt_con,id.c_str(),0);
         if(old_con){
             oldname=old_con->name;
             if(oldname.length()<=55)oldname=oldname+" (copy)";
@@ -84,7 +84,7 @@ void gpt_gotid(http_para *a) {
     }
     if(is_new==true)id=generate_new_id();
     if(is_new){
-        gpt_content* con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),sizeof(gpt_content)+10);
+        gpt_content* con=(gpt_content*)ndb2_got(gpt_con,id.c_str(),sizeof(gpt_content)+10);
         if(!con)return http_send(a, Hok Hc0 Htxt, "Error: gpt_con database error", 0);
         con->publish=false;
         con->isusing=false;
@@ -94,10 +94,10 @@ void gpt_gotid(http_para *a) {
         strcpy(con->name,oldname.c_str());
         memset(con->other, 0, sizeof(con->other));
         strcpy(con->content,"[]");
-        gpt_userhistory* uh = (gpt_userhistory*)ndb_create(&gpt_user,puser->name,0);
+        gpt_userhistory* uh = (gpt_userhistory*)ndb2_got(gpt_user,puser->name,0);
         int N=uh?uh->n:0;
         ll new_size=sizeof(gpt_userhistory)+(N+1)*sizeof(content_id);
-        uh=(gpt_userhistory*)ndb_create(&gpt_user,puser->name,new_size);
+        uh=(gpt_userhistory*)ndb2_got(gpt_user,puser->name,new_size);
         if(uh) {
             if(N==0)strcpy(uh->user,puser->name);
             strcpy(uh->content[N].a,id.c_str());
@@ -184,7 +184,7 @@ void gpt_askid(http_para *a) {
     pthread_mutex_unlock(&request_cache_mutex);
     if (!found) return http_send(a, Hok Hc0 Htxt, "Error: Invalid ID or request expired.", 0);
     if (req.owner != puser->name) return http_send(a, Hok Hc0 Htxt, "Error: Permission Denied.", 0);
-    gpt_content* con = (gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
+    gpt_content* con = (gpt_content*)ndb2_got(gpt_con, id.c_str(), 0);
     if (!con) return http_send(a, Hok Hc0 Htxt, "Error: gpt_con database error", 0);
     if (con->isusing) return http_send(a, Hok Hc0 Htxt, "Error: 当前对话正在生成回复，请稍后再试", 0);
     con->isusing = true;
@@ -283,13 +283,13 @@ void gpt_askid(http_para *a) {
             reply_node.insert("content", assistant_reply.c_str());
             msgs.push_back(std::move(reply_node));
             string final_content=msgs.stringify_Unformatted();
-            if((con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),sizeof(gpt_content)+final_content.length()+10))){
+            if((con=(gpt_content*)ndb2_got(gpt_con,id.c_str(),sizeof(gpt_content)+final_content.length()+10))){
                 strcpy(con->content, final_content.c_str());
                 gotname=con->name;
             }
         }
     }
-    if((con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0)))con->isusing=0;
+    if((con=(gpt_content*)ndb2_got(gpt_con,id.c_str(),0)))con->isusing=0;
     if(gotname&&gotname[0]==0){
         cppJSON first_group=json[0];
         string title_model = first_group["model"][0].valuestring();
@@ -338,7 +338,7 @@ void gpt_askid(http_para *a) {
     }
 }
 void gpt_idname(http_para *a) {
-    gpt_content* con=(gpt_content*)ndb_create(&gpt_con,a->get+a->n,0);
+    gpt_content* con=(gpt_content*)ndb2_got(gpt_con,a->get+a->n,0);
     bool valid=true;
     if(!con)valid=false;
     else if(con->publish!=true){
@@ -359,7 +359,7 @@ void gpt_changename(http_para *a) {
     std::string id = au["id"].valuestring();
     std::string new_name = au["name"].valuestring();
     if(new_name.length() >= 64)return http_send(a, Hok Hc0 Htxt, "Error: Name too long (max 63 chars).", 0);
-    gpt_content* con = (gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
+    gpt_content* con = (gpt_content*)ndb2_got(gpt_con, id.c_str(), 0);
     if(!con||strcmp(con->owner, puser->name) != 0)return http_send(a, Hok Hc0 Htxt, "Error: Permission denied or Conversation not found.", 0);
     memset(con->name, 0, sizeof(con->name));
     strcpy(con->name, new_name.c_str());
@@ -367,7 +367,7 @@ void gpt_changename(http_para *a) {
 }
 void gpt_idcontent(http_para *a) {
     std::string id=a->get+a->n;
-    gpt_content* con=(gpt_content*)ndb_create(&gpt_con,id.c_str(),0);
+    gpt_content* con=(gpt_content*)ndb2_got(gpt_con,id.c_str(),0);
     bool valid=true;
     if(!con)valid=false;
     else if(con->publish!=true){
@@ -390,7 +390,7 @@ void gpt_idcontent(http_para *a) {
 void gpt_getuserhistory(http_para *a) {
     user_* puser=getuser(a->get);
     if(!puser)return http_send(a, Hok Hc0 Htxt, "Error: Please log in first.",0);
-    gpt_userhistory* uh=(gpt_userhistory*)ndb_create(&gpt_user, puser->name,0);
+    gpt_userhistory* uh=(gpt_userhistory*)ndb2_got(gpt_user, puser->name,0);
     cppJSON arr("[]");
     if(uh)for(int i=0; i<uh->n; i++)arr.push_back(uh->content[i].a);
     http_send(a, Hok Hjson Hc0, arr.stringify_Unformatted().c_str(),0);
@@ -399,7 +399,7 @@ void gpt_deletehistory(http_para *a) {
     std::string id=a->get+a->n;
     user_* puser=getuser(a->get);
     if(!puser)return http_send(a, Hok Hc0 Htxt, "error_not_logged_in",0);
-    gpt_userhistory* uh=(gpt_userhistory*)ndb_create(&gpt_user,puser->name,0);
+    gpt_userhistory* uh=(gpt_userhistory*)ndb2_got(gpt_user,puser->name,0);
     if(uh) {
         for(int i=0; i<uh->n; i++)if(strcmp(uh->content[i].a, id.c_str())==0) {
                 for(int j=i+1;j<uh->n;j++)uh->content[j-1]=uh->content[j];
@@ -416,7 +416,7 @@ void gpt_share(http_para *a) {
     cppJSON au(a->get+a->n);
     if(!au.has("id"))return http_send(a, Hok Hc0 Htxt, "Error: JSON parse failed.", 0);
     std::string id=au["id"].valuestring();
-    gpt_content* con=(gpt_content*)ndb_create(&gpt_con, id.c_str(), 0);
+    gpt_content* con=(gpt_content*)ndb2_got(gpt_con, id.c_str(), 0);
     if (!con||strcmp(con->owner, puser->name) != 0)return http_send(a, Hok Hc0 Htxt, "Error: Permission denied or conversation not found.", 0);
     if (con->isusing) return http_send(a, Hok Hc0 Htxt, "Error: 当前对话正在生成回复，请稍后再试", 0);
     con->publish = true;

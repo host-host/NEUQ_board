@@ -1,6 +1,7 @@
 #include<map>
 #include<pthread.h>
 #include<stdlib.h>
+#include<cstdio>
 #include"check48.h"
 #define ll long long
 #define CHECK_LEN 48
