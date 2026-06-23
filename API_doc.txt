@@ -45,8 +45,31 @@ POST /api/getword
 POST /api/setword
 待补充
 
+POST /api/chat_list
+请求示例：{"id":"1"}
+返回示例：
+[{"id":"123","date":1779346747,"px":0,"name":"yourname","title":"帖子标题","empty":true},{"id":"124","date":1779346800,"px":1,"name":"someone","title":"回复标题"}]
+返回解释：
+px 话题内层级深度，0 表示话题根。
+empty 表示是否有内容
+
+
+POST /api/chat_content
+请求示例：{"id":"123"}
+返回示例：{"status":"ok","content":"这里是正文内容"}
+
+
+POST /api/chat_send
+请求示例：{"parentId":"1","title":"新帖标题","content":"这里是正文内容"}
+解释：
+返回示例1：{"status":"ok"}
+返回示例2：{"status":"error","message":"Please log in first."}
+
+
 POST /api/stop
-待补充
+安全的关闭服务，仅允许本地访问
+用法：curl http://127.0.0.1:1001/api/stop
+
 
 POST /api/gpt2
 请求值：类型json

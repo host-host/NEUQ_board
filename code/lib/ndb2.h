@@ -1,5 +1,5 @@
 /**
- * ndb数据库为key-value的nosql数据库，支持不同key的并发读写
+ * ndb数据库为key-value数据库，支持不同key的并发读写，以及相同key的并发读
  * key为\0结尾的非空字符串，不超过47B
  * value不超过100MB
  * 数据库总大小不超过128GB

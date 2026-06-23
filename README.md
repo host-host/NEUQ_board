@@ -4,7 +4,7 @@
 
 ## 构建
 
-依赖：`gcc` / `g++`、`make`，以及 libcurl 开发库。
+本项目由makefile构建，依赖：`gcc` / `g++`、`make`，以及 libcurl 开发库。
 > 注意：需要x86 cpu和linux系统。
 
 ```bash

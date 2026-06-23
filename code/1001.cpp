@@ -1,6 +1,6 @@
 #include"lib/http.h"
 #include"lib/user.h"
-// #include"lib/chat.h"
+#include"lib/chat.h"
 #include"lib/check48.h"
 #include"lib/gptapi.h"
 // #include"lib/word.h"
@@ -22,9 +22,9 @@ void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
 int main() {
     http a;
     http_init(&a);
-    // http_add(&a,"GET /api/p=",getp);
-    // http_add(&a,"GET /api/con=",getcon);
-    // http_add(&a,"POST /api/sendmessage",sendmessage);
+    http_add(&a,"POST /api/chat_list ",chat_list);
+    http_add(&a,"POST /api/chat_content ",chat_content);
+    http_add(&a,"POST /api/chat_send ",chat_send);
     http_add(&a,"POST /api/login ",login);
     http_add(&a,"POST /api/register ",reg);
     http_add(&a,"GET /api/logout ",logout);

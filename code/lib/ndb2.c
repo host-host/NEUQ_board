@@ -198,7 +198,7 @@ void ndb2_free(ndb2 handle){
 }
 void* ndb2_next(ndb2 handle,char* key){
     ndb* a=(ndb*)handle;
-    ll p[10],succ,content;
+    ll p[10],succ,content=0;
     char outname[48];
     out:
     p[9]=p2p(0)->child;
