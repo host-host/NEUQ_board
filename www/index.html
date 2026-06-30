@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEUQ_board</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#f5f7fa;
+  --card:#ffffff;
+  --card-hover:#ffffff;
+  --text:#1a2230;
+  --muted:#5a6675;
+  --accent:#4361ee;
+  --accent2:#7b4dff;
+  --border:rgba(20,30,50,.10);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ===== navbar ===== */
+.navbar{
+  position:fixed;top:0;left:0;width:100%;z-index:1000;
+  display:flex;align-items:center;
+  padding:14px 28px;
+  backdrop-filter:blur(10px);
+  background:rgba(14,17,22,0);
+  border-bottom:1px solid transparent;
+  transition:background .3s,border-color .3s,padding .3s;
+}
+.navbar.scrolled{
+  background:rgba(255,255,255,.85);
+  border-bottom:1px solid var(--border);
+  padding:10px 28px;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  color:#fff;text-decoration:none;
+  font-weight:700;font-size:1.1rem;letter-spacing:.5px;
+  transition:color .3s;
+}
+.navbar.scrolled .brand{color:var(--text)}
+.brand img{width:26px;height:26px;border-radius:6px}
+.nav-links{margin-left:auto;display:flex;gap:8px}
+.nav-links a{
+  color:rgba(255,255,255,.85);text-decoration:none;
+  font-size:.92rem;padding:8px 14px;border-radius:8px;
+  transition:color .2s,background .2s;
+}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.15)}
+.navbar.scrolled .nav-links a{color:var(--muted)}
+.navbar.scrolled .nav-links a:hover{color:var(--text);background:rgba(20,30,50,.06)}
+
+/* ===== hero ===== */
+.hero{
+  position:relative;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:0 20px;
+  background:url('/img/puflower.webp') center/cover no-repeat;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(20,28,45,.28) 0%,rgba(20,28,45,0) 30%,rgba(20,28,45,0) 100%);
+}
+.hero-inner{position:relative;z-index:1;animation:fadeUp 1s ease both}
+.hero-logo{
+  width:84px;height:84px;border-radius:20px;
+  box-shadow:0 12px 40px rgba(0,0,0,.45);
+  margin-bottom:24px;
+}
+.hero h1{
+  /* font-size:clamp(2.4rem,7vw,4.2rem); */
+  /* font-weight:800;letter-spacing:1px; */
+  background:linear-gradient(120deg,#fff,#bcd0ff);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.hero p{
+  margin-top:14px;
+  font-size:clamp(1rem,2.5vw,1.35rem);
+  color:rgba(230,237,243,.85);
+  font-weight:300;letter-spacing:2px;
+}
+.scroll-hint{
+  position:absolute;bottom:6rem;left:50%;transform:translateX(-50%);
+  z-index:2;color:rgba(255,255,255,.7);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  font-size:.8rem;letter-spacing:1px;
+  animation:bob 2s ease-in-out infinite;
+}
+.scroll-hint svg{width:22px;height:22px}
+
+/* ===== animated waves (hero bottom) ===== */
+.waves-area{width:100%;position:absolute;left:0;bottom:0;z-index:1;font-size:0;line-height:0}
+.waves-svg{display:block;width:100%;height:5rem;min-height:60px}
+.parallax>use{animation:move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite}
+.parallax>use:nth-child(1){animation-delay:-2s;animation-duration:7s;fill:rgba(245,247,250,.7)}
+.parallax>use:nth-child(2){animation-delay:-3s;animation-duration:10s;fill:rgba(245,247,250,.5)}
+.parallax>use:nth-child(3){animation-delay:-4s;animation-duration:13s;fill:rgba(245,247,250,.3)}
+.parallax>use:nth-child(4){animation-delay:-5s;animation-duration:20s;fill:var(--bg)}
+@keyframes move-forever{0%{transform:translate3d(-90px,0,0)}100%{transform:translate3d(85px,0,0)}}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+
+/* ===== entries section ===== */
+.section{padding:90px 20px 40px;max-width:1100px;margin:0 auto}
+.section-head{text-align:center;margin-bottom:54px}
+.section-head h2{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:700}
+.section-head span{display:block;margin-top:10px;color:var(--muted);font-size:1rem;font-weight:300}
+
+.cards{
+  display:grid;gap:24px;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+}
+.card{
+  position:relative;
+  display:flex;flex-direction:column;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:32px 28px;
+  text-decoration:none;color:inherit;
+  overflow:hidden;
+  box-shadow:0 4px 16px rgba(20,30,50,.06);
+  transition:transform .3s cubic-bezier(.2,.7,.3,1),border-color .3s,background .3s,box-shadow .3s;
+  opacity:0;transform:translateY(28px);
+}
+.card.in{opacity:1;transform:none}
+.card:hover{
+  transform:translateY(-6px);
+  background:var(--card-hover);
+  border-color:var(--accent);
+  box-shadow:0 18px 44px rgba(67,97,238,.18);
+}
+.card::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(600px circle at var(--mx,50%) var(--my,0%),rgba(67,97,238,.10),transparent 40%);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.card:hover::after{opacity:1}
+.card-icon{
+  width:56px;height:56px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  margin-bottom:22px;
+}
+.card-icon svg{width:28px;height:28px;stroke:#fff}
+.card h3{font-size:1.4rem;font-weight:700;margin-bottom:10px}
+.card p{color:var(--muted);font-size:.95rem;flex:1}
+.card-go{
+  margin-top:20px;display:inline-flex;align-items:center;gap:6px;
+  color:var(--accent);font-size:.92rem;font-weight:600;
+}
+.card-go svg{width:16px;height:16px;transition:transform .25s}
+.card:hover .card-go svg{transform:translateX(4px)}
+
+/* ===== footer ===== */
+footer{
+  margin-top:70px;padding:34px 20px;
+  text-align:center;border-top:1px solid var(--border);
+  color:var(--muted);font-size:.88rem;
+}
+footer a{color:var(--muted);text-decoration:none;transition:color .2s}
+footer a:hover{color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+  <a href="/" class="brand"><img src="/favicon.ico" alt="NEUQ_board"></a>
+  <div class="nav-links">
+    <a href="/chat">留言社区</a>
+    <a href="/gpt">AI 助手</a>
+    <a href="/html/diff.html">代码比对</a>
+    <a href="/PiDayChallenge">π Day</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-inner">
+    <h1>NEUQ_board</h1>
+  </div>
+  <a href="#entries" class="scroll-hint" aria-label="向下滚动">
+    <span>探索</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+  </a>
+  <div class="waves-area">
+    <svg class="waves-svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+      <defs>
+        <path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path>
+      </defs>
+      <g class="parallax">
+        <use xlink:href="#gentle-wave" x="48" y="0"></use>
+        <use xlink:href="#gentle-wave" x="48" y="3"></use>
+        <use xlink:href="#gentle-wave" x="48" y="5"></use>
+        <use xlink:href="#gentle-wave" x="48" y="7"></use>
+      </g>
+    </svg>
+  </div>
+</header>
+
+<main class="section" id="entries">
+  <div class="section-head">
+    <h2>功能入口</h2>
+    <span>选择一个工具开始</span>
+  </div>
+  <div class="cards">
+
+    <a class="card" href="/chat">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+        </svg>
+      </div>
+      <h3>留言社区</h3>
+      <p>树状回复留言板。支持发帖、回帖与回复置顶。</p>
+      <span class="card-go">进入社区
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </span>
+    </a>
+
+    <a class="card" href="/gpt">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      </div>
+      <h3>AI 助手</h3>
+      <p>多模型对话，支持文件、图片解析与历史记录，随时与 AI 协作。</p>
+      <span class="card-go">立即使用
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </span>
+    </a>
+
+    <a class="card" href="/html/diff.html">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      </div>
+      <h3>代码比对工具</h3>
+      <p>逐行高亮两份代码或文本的差异，快速定位改动，便于审查与排错。</p>
+      <span class="card-go">打开工具
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </span>
+    </a>
+
+    <a class="card" href="/PiDayChallenge">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 8h8M10 8v8m4-8c0 4 0 6 1 8"></path></svg>
+      </div>
+      <h3>π Day 挑战</h3>
+      <p>你能到3.14吗? </p>
+      <span class="card-go">接受挑战
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </span>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">渝ICP备2024037193号</a>
+</footer>
+
+<script>
+// navbar background on scroll
+const navbar=document.getElementById('navbar');
+addEventListener('scroll',()=>{navbar.classList.toggle('scrolled',scrollY>60)},{passive:true});
+
+// reveal cards on enter
+const io=new IntersectionObserver((es)=>{
+  es.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('in'),i*120);io.unobserve(e.target)}});
+},{threshold:.2});
+document.querySelectorAll('.card').forEach(c=>io.observe(c));
+
+// pointer-follow glow on cards
+document.querySelectorAll('.card').forEach(card=>{
+  card.addEventListener('pointermove',e=>{
+    const r=card.getBoundingClientRect();
+    card.style.setProperty('--mx',(e.clientX-r.left)+'px');
+    card.style.setProperty('--my',(e.clientY-r.top)+'px');
+  });
+});
+</script>
+
+</body></html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>期货行情与预测可视化</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #1a1a1a; color: #eee; }
+        #chart-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="chart-container"></div>
+
+    <script>
+        const chartDom = document.getElementById('chart-container');
+        const myChart = echarts.init(chartDom, 'dark');
+
+        // --- 1. 模拟生成数据 ---
+        function generateMockData() {
+            const dataCount = 6 * 3600 * 4; // 6小时，每秒4个点，约8.6万点
+            const startTime = new Date('2023-10-27 09:00:00').getTime();
+            
+            let mainData = [];
+            let lastPrice = 5000;
+
+            for (let i = 0; i < dataCount; i++) {
+                const time = startTime + i * 250; // 每250ms一个点
+                lastPrice += (Math.random() - 0.5) * 2;
+                
+                mainData.push({
+                    time: time,
+                    a1: lastPrice + 0.5,      // 卖1
+                    b1: lastPrice - 0.5,      // 买1
+                    pred: lastPrice + (Math.random() - 0.5) * 1 // 预测值
+                });
+            }
+
+            // 模拟1000次交易数据
+            let tradeData = [];
+            for (let i = 0; i < 1000; i++) {
+                const randomIndex = Math.floor(Math.random() * dataCount);
+                const side = Math.random() > 0.5 ? 'buy' : 'sell';
+                const basePoint = mainData[randomIndex];
+                tradeData.push({
+                    value: [basePoint.time, side === 'buy' ? basePoint.b1 : basePoint.a1],
+                    side: side,
+                    symbolSize: Math.random() * 10 + 5
+                });
+            }
+
+            return { mainData, tradeData };
+        }
+
+        const { mainData, tradeData } = generateMockData();
+
+        // --- 2. 配置图表 ---
+        const option = {
+            title: { text: '期货行情预测与交易分布', left: 10 },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'cross' }
+            },
+            legend: {
+                data: ['卖1价', '买1价', '预测值', '买入成交', '卖出成交'],
+                top: 30
+            },
+            grid: { left: '3%', right: '3%', bottom: '80px', containLabel: true },
+            xAxis: {
+                type: 'time',
+                splitLine: { show: false }
+            },
+            yAxis: {
+                type: 'value',
+                scale: true, // 自动聚焦价格区间
+                splitLine: { lineStyle: { color: '#333' } }
+            },
+            // 数据缩放控制器 (非常重要)
+            dataZoom: [
+                { type: 'inside', start: 0, end: 5 }, // 默认只看前5%的数据
+                { type: 'slider', start: 0, end: 5 }
+            ],
+            series: [
+                {
+                    name: '卖1价',
+                    type: 'line',
+                    symbol: 'none',
+                    data: mainData.map(item => [item.time, item.a1]),
+                    lineStyle: { width: 1, color: '#ff4d4f' },
+                    sampling: 'lttb' // 关键：大数量级采用下采样策略
+                },
+                {
+                    name: '买1价',
+                    type: 'line',
+                    symbol: 'none',
+                    data: mainData.map(item => [item.time, item.b1]),
+                    lineStyle: { width: 1, color: '#52c41a' },
+                    sampling: 'lttb'
+                },
+                {
+                    name: '预测值',
+                    type: 'line',
+                    symbol: 'none',
+                    data: mainData.map(item => [item.time, item.pred]),
+                    lineStyle: { width: 1, type: 'dashed', color: '#1890ff' },
+                    sampling: 'lttb'
+                },
+                {
+                    name: '买入成交',
+                    type: 'scatter',
+                    data: tradeData.filter(d => d.side === 'buy').map(d => d.value),
+                    itemStyle: { color: '#fadb14', opacity: 0.8 },
+                    symbolSize: 8
+                },
+                {
+                    name: '卖出成交',
+                    type: 'scatter',
+                    data: tradeData.filter(d => d.side === 'sell').map(d => d.value),
+                    itemStyle: { color: '#eb2f96', opacity: 0.8 },
+                    symbolSize: 8
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+
+        // 响应式
+        window.onresize = () => myChart.resize();
+    </script>
+</body>
+</html>

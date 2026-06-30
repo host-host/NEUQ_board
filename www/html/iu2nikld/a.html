@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>期货回测工具</title>
+    <style>
+.container { padding: 20px; }
+.condition-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+textarea { width: 100%; height: 200px; margin-top: 10px; resize: vertical;}
+button{padding: 5px 10px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>期货回测工具</h3>
+        <div><input type="file" id="fileInput" accept=".txt"></div>
+        <div class="condition-box">
+            <h4>开仓条件</h4>
+            <textarea id="open" style="font-size:x-large;"></textarea>
+        </div>
+        <div class="condition-box">
+            <h4>平仓条件</h4>
+            <textarea id="close" style="font-size:x-large;"></textarea>
+        </div>
+        <button onclick="startBacktest()">开始计算</button>
+        <textarea id="output" readonly style="font-size:x-large;"></textarea>
+    </div>
+
+    <script src="https://neuqboard.cn/html/iunikls/script1.js"></script>
+</body>
+</html>

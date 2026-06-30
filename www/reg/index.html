@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Page</title>
+    <style>
+        /* @font-face {
+            font-family: zt;
+            src: url('/zt.woff2');
+        }
+        *{
+            font-family: zt;
+        } */
+        @keyframes rotate_pacman_half_up {0% {-webkit-transform: rotate(270deg);transform: rotate(270deg);}50% {-webkit-transform: rotate(360deg);transform: rotate(360deg);}100% {-webkit-transform: rotate(270deg);transform: rotate(270deg);}}
+        @keyframes rotate_pacman_half_down {0% {-webkit-transform: rotate(90deg);transform: rotate(90deg);}50% {-webkit-transform: rotate(0deg);transform: rotate(0deg);}100% {-webkit-transform: rotate(90deg);transform: rotate(90deg);}}
+        @keyframes pacman-balls {75% {opacity: 0.7;}100% {-webkit-transform: translate(-100px, -6.25px);transform: translate(-100px, -6.25px);}}
+        .loader {z-index: 100;position: fixed;left: 50%;top: 50%;margin-left: -29px;}
+        .pacman {position: relative;}
+        .pacman>div:nth-child(2) {animation: pacman-balls 1s 0s infinite linear;animation: pacman-balls 1s 0s infinite linear;}
+        .pacman>div:nth-child(3) {animation: pacman-balls 1s 0.33s infinite linear;animation: pacman-balls 1s 0.33s infinite linear;}
+        .pacman>div:nth-child(4) {animation: pacman-balls 1s 0.66s infinite linear;animation: pacman-balls 1s 0.66s infinite linear;}
+        .pacman>div:nth-child(5) {animation: pacman-balls 1s 0.99s infinite linear;animation: pacman-balls 1s 0.99s infinite linear;}
+        .pacman>div:first-of-type {width: 0px;height: 0px;border: 25px solid #ede324;border-right-color: transparent;border-radius: 25px;animation: rotate_pacman_half_up 0.5s 0s infinite;animation: rotate_pacman_half_up 0.5s 0s infinite;}
+        .pacman>div:nth-child(2) {width: 0px;height: 0px;border: 25px solid #ede324;border-right-color: transparent;border-radius: 25px;animation: rotate_pacman_half_down 0.5s 0s infinite;animation: rotate_pacman_half_down 0.5s 0s infinite;margin-top: -50px;}
+        .pacman>div:nth-child(3),.pacman>div:nth-child(4),.pacman>div:nth-child(5),.pacman>div:nth-child(6) {background-color: #ede324;border-radius: 100%;margin: 2px;width: 10px;height: 10px;position: absolute;-webkit-transform: translate(0, -6.25px);-ms-transform: translate(0, -6.25px);transform: translate(0, -6.25px);top: 25px;left: 100px;}
+        body {
+            
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        h3.text-center {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .form-control:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 100px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .mt-3 {
+            margin-top: 15px;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .inputGroup {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 1em 0 1em 0;
+  /* max-width: 190px; */
+  width: 90%;
+  position: relative;
+}
+
+.inputGroup input {
+  font-size: 100%;
+  padding: 0.8em;
+  outline: none;
+  border: 2px solid rgb(200, 200, 200);
+  background-color: transparent;
+  border-radius: 100px;
+  width: 100%;
+}
+
+.inputGroup label {
+  top:0px;
+  font-size: 100%;
+  position: absolute;
+  left: 0;
+  padding: 0.8em;
+  margin-left: 0.5em;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  color: rgb(100, 100, 100);
+}
+
+.inputGroup :is(input:focus, input:not(:placeholder-shown) ,input:-webkit-autofill)~label{
+  transform: translateY(-50%) scale(.9);
+  margin: 0em;
+  margin-left: 1.3em;
+  padding: 0.4em;
+  background-color: #fff;
+}
+
+.inputGroup :is(input:focus) {
+  border-color: rgb(150, 150, 200); 
+}
+    </style>
+</head>
+<body>
+    <div style="position: relative;height: 100%;display: none;" id="loaderr">
+        <div class="loader">
+            <div class="pacman"><div></div><div></div><div></div><div></div><div></div></div></div></div>
+        </div>
+    </div>
+    <div class="container">
+        <h3 class="text-center">Create Your Account</h3>
+        <form id="form_register" method="post" action="/api/register">
+            
+            <div class="inputGroup">
+                <input type="text" required="" autocomplete="off" id="username" placeholder=" ">
+                <label for="name">Name</label>
+            </div><div class="inputGroup">
+                <input type="password" required="" autocomplete="off" id="pwd"  placeholder=" ">
+                <label for="Password">Password</label>
+            </div><div class="inputGroup">
+                <input type="password" required="" autocomplete="off" id="confirmPassword"  placeholder=" ">
+                <label for="Confirm Password">Confirm Password</label>
+            </div><div class="inputGroup">
+                <input type="email" required="" autocomplete="off" id="email" placeholder=" ">
+                <label for="Email">Email</label>
+            </div><div class="inputGroup">
+                <input type="tel" required="" autocomplete="off" id="phone"  placeholder=" ">
+                <label for="Phone">Phone</label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="submitButton">Submit</button>
+            <div class="text-center mt-3">
+                <a href="/login">Already have an account? Sign in</a>
+            </div>
+        </form>
+    </div>
+</body>
+
+<script>
+    const href=window.location.href;
+    const ind = href.indexOf('?');
+document.getElementById('form_register').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    var username=document.getElementById('username').value;
+    var password = document.getElementById('pwd').value;
+    var confirmPassword = document.getElementById('confirmPassword').value;
+    var email=document.getElementById('email').value;
+    var phone=document.getElementById('phone').value;
+    if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+    }
+    document.getElementById("loaderr").style.display="block";
+    const submitButton = document.getElementById('submitButton');
+    submitButton.disabled = true;
+    setTimeout(async () => {
+        // const now = Date.now();
+        const fetchDataResult = await fetchData();
+        // const fetchDataR1 = await fetchData();
+        // console.log(Date.now()-now);
+        var tmp=username+'\0'+password+'\0'+email+'\0'+phone+'\0'+fetchDataResult;
+        const response = await fetch(event.target.action, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain', 'Content-Length': tmp.length},
+            body: tmp
+        });
+        tmp=await response.text();
+        if(tmp=='OK'){
+            alert("Success! Please log in");
+            window.location.href="/login";//+href.slice(ind,href.length);
+        } else {
+            alert(tmp);
+            document.getElementById("loaderr").style.display="none";
+            submitButton.disabled = false;
+        }
+    }, 0);
+});
+async function fetchData() {
+try {
+    const response = await fetch('/api/check48');
+    const data = await response.text();
+    const lines = data.split('\n');
+    const [n, m] = lines[0].split(' ').map(BigInt);
+    const a = lines[1].split(' ').map(BigInt);
+    const c1 = new BigInt64Array(1 << 24);
+    const c2 = new BigInt64Array(1 << 24);
+    const c11 = new BigInt64Array(1 << 12);
+    const c12 = new BigInt64Array(1 << 12);
+    const c21 = new BigInt64Array(1 << 12);
+    const c22 = new BigInt64Array(1 << 12);
+    for (let i = 0; i < (1 << 12); i++)
+        for (let j = 0; j < 12; j++)
+            if (i >> j & 1) {
+                c11[i] += a[j];
+                c12[i] += a[j + 12];
+                c21[i] += a[j + 24];
+                c22[i] += a[j + 36];
+            }
+    for (let i = 0; i < (1 << 12); i++)
+        for (let j = 0; j < (1 << 12); j++) {
+            c1[i << 12 | j] = c11[i] + c12[j];
+            c2[i << 12 | j] = c21[i] + c22[j];
+        }
+    c1.sort();
+    c2.sort();
+    let x, y;
+    for (let i = 0, j = (1 << 24) - 1; i < (1 << 24); i++) {
+        while (j && c1[i] + c2[j - 1] >= m) j--;
+        if (c1[i] + c2[j] === m) {
+            x = c1[i];
+            y = c2[j];
+            break;
+        }
+    }
+    for (let a = 0; a < (1 << 12); a++)
+        for (let b = 0; b < (1 << 12); b++)
+            if (c11[a] + c12[b] === x)
+                for (let c = 0; c < (1 << 12); c++)
+                    for (let d = 0; d < (1 << 12); d++)
+                        if (c21[c] + c22[d] === y) {
+                            tmp=a + (b << 12) +(c*(1<<24))+(d*68719476736);
+                            return data+tmp.toString();
+                        }
+    return 0;
+} catch (error) {
+    console.error('Error fetching data:', error);
+}
+}
+</script>
+</html>

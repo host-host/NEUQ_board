@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时语音翻译</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #607D8B;
+            --background-color: #f5f7fa;
+            --text-color: #263238;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            font-size: 2.5rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--secondary-color);
+        }
+
+        select {
+            padding: 0.8rem;
+            border: 2px solid #CFD8DC;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-image: linear-gradient(135deg, var(--primary-color), #1976D2);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #B0BEC5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #translation {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 2px solid #CFD8DC;
+            min-height: 150px;
+            max-height: 500px;
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #translation p {
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .pending {
+            background: #E3F2FD !important;
+            font-style: italic;
+            border-left-color: #90CAF9 !important;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+                margin: 1rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            select {
+                width: 100%;
+            }
+
+            button {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>实时语音翻译</h1>
+    
+    <div class="controls">
+        <label for="languageSelect">输出语言:</label>
+        <select id="languageSelect">
+            <option value="default">默认</option>
+            <option value="zh">中文</option>
+            <option value="en">英文</option>
+        </select>
+        <button id="startBtn">▶️ 开始录音</button>
+        <button id="stopBtn" disabled>⏹️ 停止录音</button>
+    </div>
+
+    <div id="translation"></div>
+
+    <script>
+        let mediaRecorder;
+        let audioStream;
+        let clientId;
+
+        // 录音控制
+        document.getElementById('startBtn').onclick = async () => {
+            clientId = Math.random().toString(36).substring(2);
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                let mimeType;
+                if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = 'audio/webm';
+                } else {
+                    throw new Error('No supported MIME type found for MediaRecorder.');
+                }
+                // 创建 MediaRecorder 实例
+                mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+                // mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
+
+                // 收集音频数据
+                mediaRecorder.ondataavailable = async (event) => {
+                    const audioBlob = event.data;
+                    try {
+                        const response = await fetch('/api1002/video', {
+                            method: 'POST',
+                            body: createFormData(audioBlob, clientId)
+                        });
+
+                        const result = await response.json();
+                        if (result.translations) {
+                            const translationDiv = document.getElementById('translation');
+                            // 删除 lasttime 后的翻译
+                            const children = Array.from(translationDiv.children);
+                            children.forEach(child => {
+                                const startTime = parseFloat(child.dataset.start);
+                                if (startTime >= result.lasttime) translationDiv.removeChild(child);
+                                else child.classList.remove('pending');
+                            });
+
+                            // 增加新返回的翻译
+                            result.translations.forEach(translation => {
+                                const p = document.createElement('p');
+                                p.textContent = `${translation.start.toFixed(2)}: ${translation.text}`;
+                                p.dataset.start = translation.start;
+                                if (translation.start + 0.02 >= result.newlasttime) {
+                                    p.classList.add('pending');
+                                } else p.classList.remove('pending');
+                                translationDiv.appendChild(p);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('翻译失败:', error);
+                    }
+                };
+                mediaRecorder.start(500);
+                toggleButtons(true);
+            } catch (error) {
+                console.error('无法访问麦克风:', error);
+            }
+        };
+        document.getElementById('stopBtn').onclick = () => {
+            mediaRecorder.stop();
+            audioStream.getTracks().forEach(track => track.stop());
+            toggleButtons(false);
+        };
+
+        function toggleButtons(recording) {
+            document.getElementById('startBtn').disabled = recording;
+            document.getElementById('stopBtn').disabled = !recording;
+        }
+
+        function createFormData(blob, id) {
+            const formData = new FormData();
+            formData.append('audio', blob, 'recording.webm');
+            formData.append('id', id);
+            const language = document.getElementById('languageSelect').value;
+            // 将选择的信息添加到表单数据中
+            formData.append('model', 'large-v3');
+            formData.append('language', language);
+            return formData;
+        }
+    </script>
+</body>
+
+</html>

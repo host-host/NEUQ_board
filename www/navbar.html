@@ -1,0 +1,136 @@
+<style>
+html,body{
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+/* Header 样式 */
+.navbar-header {
+  z-index: 1000;
+  transition: top 0.3s ease, transform 0.3s ease;
+  background: linear-gradient(90deg, rgba(197, 222, 241, 0.5), rgba(105, 175, 222, 0.5));
+  position: fixed;
+  top:0%;
+  width: 100%;
+}
+
+/* 导航栏 */
+.navbar {
+  display: flex;
+  top: 0;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 2px auto;
+  padding: 0 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  width: 180px;
+  height: 36px;
+  margin-right: 10px;
+}
+
+.logo a {
+  color: #fff;
+  font-size: 24px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* 右侧菜单 */
+.right-menu {
+  display: flex;
+  list-style: none;
+}
+
+.right-menu li {
+  /* margin-left: 20px; */
+  position: relative;
+}
+
+.right-menu a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 按钮悬停效果 */
+.right-menu a:hover {
+  background-color: #007bff;
+}
+
+/* 下拉菜单样式 */
+.dropdown {
+  position: relative;
+}
+
+.dropbtn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #ffffff;
+  min-width: 150px;
+  border-radius: 4px;
+  z-index: 100;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content a {
+  z-index: 100;
+  padding: 10px 15px;
+  font-size: 14px;
+  color: #000;
+  display: block;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-content a:hover {
+  background-color: #f2f2f2;
+  text-decoration:underline;
+}
+</style>
+
+  <header id="navbar" class="navbar-header">
+    <nav class="navbar">
+      <!-- Logo 区域 -->
+      <div class="logo">
+        <a href="/">
+            <img id="logo-img" src="/newintown.png" alt="newintown logo" class="logo-img">
+        </a>
+      </div>
+      <!-- 右侧菜单区域 -->
+      <ul class="right-menu">
+        <li><a href="/login" id="drop">登录</a></li>
+        <!-- 下拉菜单 -->
+        <li class="dropdown">
+          <a class="dropbtn" id="username" style="display: none;"></a>
+          <div class="dropdown-content">
+            <a href="/profile">修改密码</a>
+            <a href="/api/logout">注销</a>
+          </div>
+        </li>
+      </ul>
+    </nav>
+  </header>

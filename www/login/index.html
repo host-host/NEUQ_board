@@ -1,0 +1,197 @@
+<!DOCTYPE html>  
+<html lang="zh">
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Login Page</title>  
+    <style>
+        /* @font-face {
+            font-family: zt;
+            src: url('/zt.woff2');
+        }
+        *{
+            font-family: zt;
+        } */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+
+        h3.text-center {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .form-control:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
+        }
+
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 100px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            display: block;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+.inputGroup {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 1em 0 1em 0;
+  /* max-width: 190px; */
+  width: 90%;
+  position: relative;
+}
+
+.inputGroup input {
+  font-size: 100%;
+  padding: 0.8em;
+  outline: none;
+  border: 2px solid rgb(200, 200, 200);
+  background-color: transparent;
+  border-radius: 100px;
+  width: 100%;
+}
+
+.inputGroup label {
+  top:0px;
+  font-size: 100%;
+  position: absolute;
+  left: 0;
+  padding: 0.8em;
+  margin-left: 0.5em;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  color: rgb(100, 100, 100);
+}
+
+.inputGroup :is(input:focus, input:not(:placeholder-shown) ,input:-webkit-autofill)~label{
+  transform: translateY(-50%) scale(.9);
+  margin: 0em;
+  margin-left: 1.3em;
+  padding: 0.4em;
+  background-color: #fff;
+}
+
+.inputGroup :is(input:focus) {
+  border-color: rgb(150, 150, 200); 
+}
+    </style>
+</head>  
+<body>
+    <div class="container">
+        <h3 class="text-center">Authorization Required</h3>  
+        <form id="form_login" method="post" action="/api/login">  
+            <div class="inputGroup">
+              <input type="text" required="" autocomplete="off" id="username"  placeholder=" ">
+              <label for="name">Name</label>
+          </div>
+          <div class="inputGroup">
+            <input type="password" required="" autocomplete="off" id="pwd"  placeholder=" ">
+            <label for="Password">Password</label>
+        </div>
+            <!-- <label for="uid">Username</label>  
+            <input type="text" class="form-control" id="username" name="uid" placeholder="Username" required>  
+            <label for="pwd">Password</label>
+            <input type="password" class="form-control" id="pwd" name="pwd" placeholder="Password" required>   -->
+            <button type="submit" class="btn" id="submitButton">Sign in</button>  
+            <a href="/reg" id="signup">Sign up</a>
+        </form>
+    </div>
+</body>
+<script>
+//     function work1(){
+//         const inputs = document.querySelectorAll(".inputGroup input");
+
+//         inputs.forEach((input) => {
+//             console.log(input,input.value);
+//         });
+//         setTimeout(() => {work1();
+//         }, 300);
+//     }
+// window.addEventListener("load", () => {work1()});
+const href=window.location.href;
+const ind = href.indexOf('?');
+if(ind!==-1)document.getElementById('signup').href="/reg"+href.slice(ind,href.length);
+document.getElementById('form_login').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    var username=document.getElementById('username').value;
+    var password = document.getElementById('pwd').value;
+    const submitButton = document.getElementById('submitButton');
+    submitButton.disabled = true;
+    setTimeout(async () => {
+        var tmp=username+'\0'+password;
+        const response = await fetch(event.target.action, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain', 'Content-Length': tmp.length},
+            body: tmp
+        });
+        tmp=await response.text();
+        if(tmp=='OK'){
+            if(ind!==-1)window.location.href=href.slice(ind+1,href.length);
+            else window.location.href="/";
+        } else {
+            alert(tmp);
+            submitButton.disabled = false;
+        }
+    }, 0);
+});
+</script>
+</html>

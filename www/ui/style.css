@@ -1,0 +1,591 @@
+
+  /*theme-switch*/
+.theme-switch {
+    --toggle-size: 20px;
+    /* the size is adjusted using font-size,
+       this is not transform scale,
+       so you can choose any size */
+    --container-width: 5.625em;
+    --container-height: 2.5em;
+    --container-radius: 6.25em;
+    /* radius 0 - minecraft mode :) */
+    --container-light-bg: #3D7EAE;
+    --container-night-bg: #1D1F2C;
+    --circle-container-diameter: 3.375em;
+    --sun-moon-diameter: 2.125em;
+    --sun-bg: #ECCA2F;
+    --moon-bg: #C4C9D1;
+    --spot-color: #959DB1;
+    --circle-container-offset: calc((var(--circle-container-diameter) - var(--container-height)) / 2 * -1);
+    --stars-color: #fff;
+    --clouds-color: #F3FDFF;
+    --back-clouds-color: #AACADF;
+    --transition: .5s cubic-bezier(0, -0.02, 0.4, 1.25);
+    --circle-transition: .3s cubic-bezier(0, -0.02, 0.35, 1.17);
+  }
+  
+  .theme-switch, .theme-switch *, .theme-switch *::before, .theme-switch *::after {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-size: var(--toggle-size);
+  }
+  
+  .theme-switch__container {
+    width: var(--container-width);
+    height: var(--container-height);
+    background-color: var(--container-light-bg);
+    border-radius: var(--container-radius);
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
+    box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
+    -webkit-transition: var(--transition);
+    -o-transition: var(--transition);
+    transition: var(--transition);
+    position: relative;
+  }
+  
+  .theme-switch__container::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    -webkit-box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
+    box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
+    border-radius: var(--container-radius)
+  }
+  
+  .theme-switch__checkbox {
+    display: none;
+  }
+  
+  .theme-switch__circle-container {
+    width: var(--circle-container-diameter);
+    height: var(--circle-container-diameter);
+    background-color: rgba(255, 255, 255, 0.1);
+    position: absolute;
+    left: var(--circle-container-offset);
+    top: var(--circle-container-offset);
+    border-radius: var(--container-radius);
+    -webkit-box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-transition: var(--circle-transition);
+    -o-transition: var(--circle-transition);
+    transition: var(--circle-transition);
+    pointer-events: none;
+  }
+  
+  .theme-switch__sun-moon-container {
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+    width: var(--sun-moon-diameter);
+    height: var(--sun-moon-diameter);
+    margin: auto;
+    border-radius: var(--container-radius);
+    background-color: var(--sun-bg);
+    -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
+    box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
+    -webkit-filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
+    overflow: hidden;
+    -webkit-transition: var(--transition);
+    -o-transition: var(--transition);
+    transition: var(--transition);
+  }
+  
+  .theme-switch__moon {
+    -webkit-transform: translateX(100%);
+    -ms-transform: translateX(100%);
+    transform: translateX(100%);
+    width: 100%;
+    height: 100%;
+    background-color: var(--moon-bg);
+    border-radius: inherit;
+    -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
+    box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
+    -webkit-transition: var(--transition);
+    -o-transition: var(--transition);
+    transition: var(--transition);
+    position: relative;
+  }
+  
+  .theme-switch__spot {
+    position: absolute;
+    top: 0.75em;
+    left: 0.312em;
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: var(--container-radius);
+    background-color: var(--spot-color);
+    -webkit-box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
+    box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
+  }
+  
+  .theme-switch__spot:nth-of-type(2) {
+    width: 0.375em;
+    height: 0.375em;
+    top: 0.937em;
+    left: 1.375em;
+  }
+  
+  .theme-switch__spot:nth-last-of-type(3) {
+    width: 0.25em;
+    height: 0.25em;
+    top: 0.312em;
+    left: 0.812em;
+  }
+  
+  .theme-switch__clouds {
+    width: 1.25em;
+    height: 1.25em;
+    background-color: var(--clouds-color);
+    border-radius: var(--container-radius);
+    position: absolute;
+    bottom: -0.625em;
+    left: 0.312em;
+    -webkit-box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
+    box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
+    -webkit-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
+    -o-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
+    transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
+  }
+  
+  .theme-switch__stars-container {
+    position: absolute;
+    color: var(--stars-color);
+    top: -100%;
+    left: 0.312em;
+    width: 2.75em;
+    height: auto;
+    -webkit-transition: var(--transition);
+    -o-transition: var(--transition);
+    transition: var(--transition);
+  }
+  
+  /* actions */
+  
+  .theme-switch__checkbox:checked + .theme-switch__container {
+    background-color: var(--container-night-bg);
+  }
+  
+  .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container {
+    left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter));
+  }
+  
+  .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container:hover {
+    left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter) - 0.187em)
+  }
+  
+  .theme-switch__circle-container:hover {
+    left: calc(var(--circle-container-offset) + 0.187em);
+  }
+  
+  .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__moon {
+    -webkit-transform: translate(0);
+    -ms-transform: translate(0);
+    transform: translate(0);
+  }
+  
+  .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__clouds {
+    bottom: -4.062em;
+  }
+  
+  .theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container {
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+  }
+  
+
+  /* love-heart */
+  .love-heart:before,#switch {
+    display: none;
+   }
+   
+   .love-heart, .love-heart::after {
+    border-color: hsl(231deg 28% 86%);
+    border: 1px solid;
+    border-top-left-radius: 100px;
+    border-top-right-radius: 100px;
+    width: 10px;
+    height: 8px;
+    border-bottom: 0
+   }
+   
+   .round {
+    position: absolute;
+    z-index: 1;
+    width: 8px;
+    height: 8px;
+    background: hsl(0deg 0% 100%);
+    box-shadow: rgb(0 0 0 / 24%) 0px 0px 4px 0px;
+    border-radius: 100%;
+    left: 0px;
+    bottom: -1px;
+    transition: all .5s ease;
+    animation: check-animation2 .5s forwards;
+   }
+   
+   input:checked + label .round {
+    transform: translate(0px, 0px);
+    animation: check-animation .5s forwards;
+    background-color: hsl(0deg 0% 100%);
+   }
+   
+   @keyframes check-animation {
+    0% {
+     transform: translate(0px, 0px);
+    }
+   
+    50% {
+     transform: translate(0px, 7px);
+    }
+   
+    100% {
+     transform: translate(7px, 7px);
+    }
+   }
+   
+   @keyframes check-animation2 {
+    0% {
+     transform: translate(7px, 7px);
+    }
+   
+    50% {
+     transform: translate(0px, 7px);
+    }
+   
+    100% {
+     transform: translate(0px, 0px);
+    }
+   }
+   
+   .love-heart {
+    box-sizing: border-box;
+    position: relative;
+    transform: rotate(-45deg) translate(-50%, -33px) scale(4);
+    display: block;
+    border-color: hsl(231deg 28% 86%);
+    cursor: pointer;
+    top: 0;
+   }
+   
+   input:checked + .love-heart, input:checked + .love-heart::after, input:checked + .love-heart .bottom {
+    border-color: hsl(347deg 81% 61%);
+    box-shadow: inset 6px -5px 0px 2px hsl(347deg 99% 72%);
+   }
+   
+   .love-heart::after, .love-heart .bottom {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    border-color: hsl(231deg 28% 86%);
+   }
+   
+   .love-heart::after {
+    right: -9px;
+    transform: rotate(90deg);
+    top: 7px;
+   }
+   
+   .love-heart .bottom {
+    width: 11px;
+    height: 11px;
+    border-left: 1px solid;
+    border-bottom: 1px solid;
+    border-color: hsl(231deg 28% 86%);
+    left: -1px;
+    top: 5px;
+    /* border-radius: 0px 0px 0px 5px; */
+   }
+   
+  /* switch-t */
+  /* The switch - the box around the slider */
+.switch-t {
+    font-size: 17px;
+    position: relative;
+    display: inline-block;
+    width: 1.2em;
+    height: 3.3em;
+  }
+  
+  /* Hide default HTML checkbox */
+  .switch-t .chk {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* The slider */
+  .slider-t {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 5px;
+  }
+  
+  .slider-t:before {
+    position: absolute;
+    content: "";
+    height: .5em;
+    width: 2.4em;
+    border-radius: 5px;
+    left: -0.6em;
+    top: 0.2em;
+    background-color: white;
+    box-shadow: 0 6px 7px rgba(0,0,0,0.3);
+    transition: .4s;
+  }
+  
+  .slider-t:before, .slider-t:after {
+    content: "";
+    display: block;
+  }
+  
+  .slider-t:after {
+    background: linear-gradient(transparent 50%, rgba(255, 255, 255, 0.15) 0) 0 50% / 50% 100%,
+          repeating-linear-gradient(90deg,rgb(255, 255, 255) 0,rgb(255, 255, 255),rgb(255, 255, 255) 20%,rgb(255, 255, 255) 20%,rgb(255, 255, 255) 40%) 0 50% / 50% 100%,
+          radial-gradient(circle at 50% 50%,rgb(255, 255, 255) 25%, transparent 26%);
+    background-repeat: no-repeat;
+    border: 0.25em solid transparent;
+    border-left: 0.4em solid #ffffff;
+    border-right: 0 solid transparent;
+    transition: border-left-color 0.1s 0.3s ease-out, transform 0.3s ease-out;
+    transform: translateX(-22.5%) rotate(90deg);
+    transform-origin: 25% 50%;
+    position: relative;
+    top: 0.5em;
+    left: 0.55em;
+    width: 2em;
+    height: 1em;
+    box-sizing: border-box;
+  }
+  
+  .chk-t:checked + .slider-t {
+    background-color: limegreen;
+  }
+  
+  .chk-t:focus + .slider-t {
+    box-shadow: 0 0 1px limegreen;
+  }
+  
+  .chk-t:checked + .slider-t:before {
+    transform: translateY(2.3em);
+  }
+  
+  .chk-t:checked + .slider-t:after {
+    transform: rotateZ(90deg) rotateY(180deg) translateY(0.45em) translateX(-1.4em);
+  }
+  /* switch-tl */
+
+  /* The switch - the box around the slider */
+.switch-tl {
+    font-size: 11px;
+    position: relative;
+    display: inline-block;
+    width: 3.5em;
+    height: 1em;
+   }
+   
+   /* Hide default HTML checkbox */
+   .switch-tl input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+   }
+   
+   /* The slider */
+   .slider-tl {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border: 2px solid #000;
+    transition: .4s;
+    border-radius: 1px;
+   }
+   
+   .slider-tl:before {
+    position: absolute;
+    content: "";
+    height: 1.3em;
+    width: 1.2em;
+    border-radius: 2px;
+    left: 0.2em;
+    bottom: 0.3em;
+    background-color: #fff;
+    border: 2px solid #000;
+    transition: 0.1s;
+   }
+   
+   .input-tl:checked + .slider-tl {
+    background-color: #000;
+   }
+   
+   .input-tl:focus + .slider-tl {
+    box-shadow: 0 0 1px #2196F3;
+   }
+   
+   .input-tl:checked + .slider-tl:before {
+    transform: translateX(1.3em);
+   }
+
+   /* switch-nor */
+   .switch-nor {
+    --button-width: 3.5em;
+    --button-height: 2em;
+    --toggle-diameter: 1.5em;
+    --button-toggle-offset: calc((var(--button-height) - var(--toggle-diameter)) / 2);
+    --toggle-shadow-offset: 10px;
+    --toggle-wider: 3em;
+    --color-grey: #cccccc;
+    --color-green: #4296f4;
+   }
+   
+   .slider-nor {
+    display: inline-block;
+    width: var(--button-width);
+    height: var(--button-height);
+    background-color: var(--color-grey);
+    border-radius: calc(var(--button-height) / 2);
+    position: relative;
+    transition: 0.3s all ease-in-out;
+   }
+   
+   .slider-nor::after {
+    content: "";
+    display: inline-block;
+    width: var(--toggle-diameter);
+    height: var(--toggle-diameter);
+    background-color: #fff;
+    border-radius: calc(var(--toggle-diameter) / 2);
+    position: absolute;
+    top: var(--button-toggle-offset);
+    transform: translateX(var(--button-toggle-offset));
+    box-shadow: var(--toggle-shadow-offset) 0 calc(var(--toggle-shadow-offset) * 4) rgba(0, 0, 0, 0.1);
+    transition: 0.3s all ease-in-out;
+   }
+   
+   .switch-nor input[type="checkbox"]:checked + .slider-nor {
+    background-color: var(--color-green);
+   }
+   
+   .switch-nor input[type="checkbox"]:checked + .slider-nor::after {
+    transform: translateX(calc(var(--button-width) - var(--toggle-diameter) - var(--button-toggle-offset)));
+    box-shadow: calc(var(--toggle-shadow-offset) * -1) 0 calc(var(--toggle-shadow-offset) * 4) rgba(0, 0, 0, 0.1);
+   }
+   
+   .switch-nor input[type="checkbox"] {
+    display: none;
+   }
+   
+   .switch-nor input[type="checkbox"]:active + .slider-nor::after {
+    width: var(--toggle-wider);
+   }
+   
+   .switch-nor input[type="checkbox"]:checked:active + .slider-nor::after {
+    transform: translateX(calc(var(--button-width) - var(--toggle-wider) - var(--button-toggle-offset)));
+   }
+   
+   /* switch-sap  */
+   /* The switch-sap - the box around the slider-sap */
+.switch-sap {
+    font-size: 17px;
+    position: relative;
+    display: inline-block;
+    width: 3.5em;
+    height: 2em;
+    transform-style: preserve-3d;
+    perspective: 500px;
+    animation: toggle__animation 3s infinite;
+  }
+  
+  .switch-sap::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    filter: blur(20px);
+    z-index: -1;
+    border-radius: 50px;
+    background-color: #d8ff99;
+    background-image: radial-gradient(at 21% 46%, hsla(183,65%,60%,1) 0px, transparent 50%),
+  radial-gradient(at 23% 25%, hsla(359,74%,70%,1) 0px, transparent 50%),
+  radial-gradient(at 20% 1%, hsla(267,83%,75%,1) 0px, transparent 50%),
+  radial-gradient(at 86% 87%, hsla(204,69%,68%,1) 0px, transparent 50%),
+  radial-gradient(at 99% 41%, hsla(171,72%,77%,1) 0px, transparent 50%),
+  radial-gradient(at 55% 24%, hsla(138,60%,62%,1) 0px, transparent 50%);
+  }
+  
+  /* Hide default HTML checkbox */
+  .switch-sap input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* The slider-sap */
+  .slider-sap {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #fdfefedc;
+    transition: .4s;
+    border-radius: 30px;
+  }
+  
+  .slider-sap:before {
+    position: absolute;
+    content: "";
+    height: 1.4em;
+    width: 1.4em;
+    left: 0.3em;
+    bottom: 0.35em;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: rgba(0, 0, 0, 0.17) 0px -10px 10px 0px inset,
+       rgba(0, 0, 0, 0.09) 0px -1px 15px -8px;
+    background-color: #ff99fd;
+    background-image: radial-gradient(at 81% 39%, hsla(327,79%,79%,1) 0px, transparent 50%),
+    radial-gradient(at 11% 72%, hsla(264,64%,79%,1) 0px, transparent 50%),
+    radial-gradient(at 23% 20%, hsla(75,98%,71%,1) 0px, transparent 50%);
+  }
+  
+  .input__check-sap:checked + .slider-sap {
+    background-color: #17202A;
+  }
+  
+  .input__check-sap:checked + .slider-sap:before {
+    transform: translateX(1.5em);
+  }
+  
+  @keyframes toggle__animation {
+    0%, 100% {
+      transform: translateY(-10px) rotateX(15deg) rotateY(-20deg);
+    }
+  
+    50% {
+      transform: translateY(0px) rotateX(15deg) rotateY(-20deg);
+    }
+  }

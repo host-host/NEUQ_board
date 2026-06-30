@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Change Password</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f2f2f2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+
+    .container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        box-sizing: border-box;
+    }
+
+    h3.text-center {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
+    }
+
+    .btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 100px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        width: 100%;
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+    }
+
+    .btn:hover {
+        background-color: #0056b3;
+    }
+
+    .error {
+        color: red;
+        font-size: 0.875rem;
+        margin-bottom: 15px;
+    }
+
+    a {
+        display: block;
+        text-align: center;
+        margin-top: 10px;
+        color: #007bff;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    .inputGroup {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 1em 0 1em 0;
+  /* max-width: 190px; */
+  width: 90%;
+  position: relative;
+}
+
+.inputGroup input {
+  font-size: 100%;
+  padding: 0.8em;
+  outline: none;
+  border: 2px solid rgb(200, 200, 200);
+  background-color: transparent;
+  border-radius: 100px;
+  width: 100%;
+}
+
+.inputGroup label {
+  top:0px;
+  font-size: 100%;
+  position: absolute;
+  left: 0;
+  padding: 0.8em;
+  margin-left: 0.5em;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  color: rgb(100, 100, 100);
+}
+
+.inputGroup :is(input:focus, input:not(:placeholder-shown) ,input:-webkit-autofill)~label{
+  transform: translateY(-50%) scale(.9);
+  margin: 0em;
+  margin-left: 1.3em;
+  padding: 0.4em;
+  background-color: #fff;
+}
+
+.inputGroup :is(input:focus) {
+  border-color: rgb(150, 150, 200); 
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <h3 class="text-center">Change Your Password</h3>
+        <form id="form_change_password" method="post" action="/api/change_password">
+            <div class="inputGroup">
+                <input type="password" required="" autocomplete="off" id="current_pwd"  placeholder=" ">
+                <label for="Password">Current Password</label>
+            </div>
+            <div class="inputGroup">
+                <input type="password" required="" autocomplete="off" id="new_pwd"  placeholder=" ">
+                <label for="Password">New Password</label>
+            </div>
+            <div class="inputGroup">
+                <input type="password" required="" autocomplete="off" id="confirm_pwd"  placeholder=" ">
+                <label for="Password">Confirm New Password</label>
+            </div>
+
+            <!-- <label for="current_pwd">Current Password</label>
+            <input type="password" class="form-control" id="current_pwd" name="current_pwd" placeholder="Current Password" required>
+            
+            <label for="new_pwd">New Password</label>
+            <input type="password" class="form-control" id="new_pwd" name="new_pwd" placeholder="New Password" required>
+            
+            <label for="confirm_pwd">Confirm New Password</label>
+            <input type="password" class="form-control" id="confirm_pwd" name="confirm_pwd" placeholder="Confirm New Password" required>
+             -->
+            <div id="error-message" class="error"></div>
+            <button type="submit" class="btn" id="submitButton">Change Password</button>
+        </form>
+    </div>
+
+</body>
+<script>
+document.getElementById('form_change_password').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    var password = document.getElementById('current_pwd').value;
+    var pwd = document.getElementById('new_pwd').value;
+    var confirm_pwd = document.getElementById('confirm_pwd').value;
+    if (pwd !== confirm_pwd) {
+        alert('Passwords do not match!');
+        return;
+    }
+    const submitButton = document.getElementById('submitButton');
+    submitButton.disabled = true;
+    setTimeout(async () => {
+        var tmp=password+'\0'+pwd;
+        const response = await fetch(event.target.action, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain', 'Content-Length': tmp.length},
+            body: tmp
+        });
+        tmp=await response.text();
+        if(tmp=='OK'){
+            alert("Success!");
+            window.location.href="/login";
+        } else {
+            alert(tmp);
+            submitButton.disabled = false;
+        }
+    }, 0);
+});
+</script>
+</html>

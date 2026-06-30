@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 绘图</title>
+    <script src="/cdn/cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 模型选择弹窗 -->
+    <div id="selectionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="document.getElementById('selectionModal').style.display='none'">&times;</span>
+            <h3 class="modal-title">绘图模型</h3>
+            <div id="paintModelsContainer"></div>
+            <h3 class="modal-title" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:15px;">其他可用模型</h3>
+            <p class="modal-hint">以下为对话模型，仅当其支持图片输出时才能用于绘图。</p>
+            <div id="otherModelsContainer"></div>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <!-- 左侧控制面板 -->
+        <aside class="sidebar-aside" id="sidebarPanel">
+            <div class="sidebar-logo">
+                <a href="/gptimage"><img src="/newintown.png" alt="logo" class="sidebar-logo-img"></a>
+                <span class="logo-text">AI 绘图工作台</span>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">模型</label>
+                <button class="model-select-btn" id="selectButton" onclick="document.getElementById('selectionModal').style.display='block'">载入中...</button>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">模式</label>
+                <div class="mode-switch">
+                    <button class="mode-btn active" id="modeCreate" onclick="setMode('create')">创建图片</button>
+                    <button class="mode-btn" id="modeEdit" onclick="setMode('edit')">修改图片</button>
+                </div>
+            </div>
+
+            <!-- 修改模式：源图片上传 -->
+            <div class="control-group" id="sourceImageGroup" style="display:none;">
+                <label class="control-label">源图片（可多张）</label>
+                <input type="file" id="fileInput" style="display:none;" accept=".png,.jpg,.jpeg,.gif,.webp" multiple onchange="handleFileSelect(this)">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    选择图片
+                </button>
+                <div class="source-thumbs" id="sourceThumbs"></div>
+            </div>
+
+            <div class="control-group prompt-group">
+                <label class="control-label">提示词</label>
+                <textarea id="promptInput" class="prompt-input" placeholder="描述你想要的画面，例如：一只戴着宇航头盔的橘猫，赛博朋克风格，霓虹灯光" spellcheck="false"></textarea>
+            </div>
+
+            <button class="generate-btn" id="generateBtn" onclick="generate()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"></path></svg>
+                <span id="generateBtnText">开始生成</span>
+            </button>
+
+            <div class="sidebar-footer">
+                <a href="/login" id="loginLink" class="login-link">登录</a>
+                <div id="userContainer" style="display:none;" class="user-container">
+                    <span id="username" class="user-name"></span>
+                    <a href="#" onclick="handleLogout(event)" class="logout-link">注销</a>
+                </div>
+            </div>
+        </aside>
+
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- 主区：结果画廊 -->
+        <main class="gallery-main">
+            <div class="gallery-header">
+                <button class="sidebar-toggle-btn" onclick="toggleSidebar()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <span class="gallery-title">绘图结果</span>
+                <button class="clear-btn" onclick="clearGallery()" title="清空结果">清空</button>
+            </div>
+            <div class="gallery-viewport">
+                <div class="gallery" id="gallery">
+                    <div class="welcome-box" id="welcomeBox">
+                        <div class="welcome-icon">🎨</div>
+                        <h2>AI 绘图工作台</h2>
+                        <p>在左侧输入提示词即可<strong>创建图片</strong>；切换到<strong>修改图片</strong>模式并上传源图，可对图片进行二次编辑。</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>期货回测工具</title>
+    <link rel="stylesheet" href="https://neuqboard.cn/html/iu2nikld/style.css">
+</head>
+<body>
+    <div class="container">
+        <h3>期货回测工具</h3>
+        <div><input type="file" id="fileInput" accept=".txt"></div>
+        <div class="condition-box">
+            <h4>开仓条件（看x分钟的图）</h4>
+            <div id="openConditions"></div>
+            <button onclick="addCondition('open')">+ 添加条件</button>
+            <div>
+                开仓方向：
+                <select id="direction" class="select1">
+                    <option value="long">开多</option>
+                    <option value="short">开空</option>
+                </select>
+            </div>
+            <h4>交易时间</h4>
+            <input id="time1"></input>
+        </div>
+        <div class="condition-box">
+            <h4>平仓条件</h4>
+            <div id="closeConditions"></div>
+            <button onclick="addCondition('close')">+ 添加条件</button>
+            <h4>立即平仓时间</h4>
+            <input id="mustclose"></input>
+            <h4>交易时间 </h4>
+            <input id="time2"></input>
+        </div>
+        <button onclick="startBacktest()">开始计算</button>
+        <textarea id="output" readonly style="font-size:x-large;"></textarea>
+    </div>
+
+    <script src="https://neuqboard.cn/html/iu2nikld/script6.js"></script>
+</body>
+</html>
