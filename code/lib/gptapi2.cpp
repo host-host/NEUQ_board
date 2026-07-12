@@ -3,6 +3,7 @@
 #include "ndb2.h"
 #include "cppJSON.h"
 #include "gptapi.h"
+#include "gptapi_responses.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -244,38 +245,40 @@ void gpt_askid(http_para *a) {
     }
     string api_url = now["url"].valuestring();
     string auth_header = "Authorization: " + auth_token;
-    string post_data = au.stringify_Unformatted();
-    askid_write_data wd;
-    wd.a = a;
+    string format = now.has("format") ? now["format"].valuestring() : "completions";
+    string assistant_reply;
+    bool request_ok = false;
     a->m = 0;
-    CURL *curl = curl_easy_init();
-    if (!curl) {
-        pthread_mutex_lock(&mutex_api_is_using);
-        api_is_using[auth_token]--;
-        pthread_mutex_unlock(&mutex_api_is_using);
-        con->isusing = false;
-        return http_send(a, Hok Hc0 Htxt, "Error: curl_easy_init failed", 0);
+    if (format == "responses") {
+        request_ok = gpt_responses_request(a, api_url, auth_token, au, assistant_reply);
+    } else {
+        string post_data = au.stringify_Unformatted();
+        askid_write_data wd;
+        wd.a = a;
+        CURL *curl = curl_easy_init();
+        if (curl) {
+            curl_easy_setopt(curl, CURLOPT_URL, api_url.c_str());
+            struct curl_slist *headers = NULL;
+            headers = curl_slist_append(headers, "Content-Type: application/json");
+            headers = curl_slist_append(headers, auth_header.c_str());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, askid_write_callback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &wd);
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 60L);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1200L);
+            CURLcode res = curl_easy_perform(curl);
+            request_ok = (res == CURLE_OK);
+            curl_slist_free_all(headers);
+            curl_easy_cleanup(curl);
+            if (request_ok) assistant_reply = extract_assistant_content(wd.response_accumulator);
+        }
     }
-    curl_easy_setopt(curl, CURLOPT_URL, api_url.c_str());
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, auth_header.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, askid_write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &wd);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 60L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1200L);
-    CURLcode res = curl_easy_perform(curl);
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
     pthread_mutex_lock(&mutex_api_is_using);
     api_is_using[auth_token]--;
     pthread_mutex_unlock(&mutex_api_is_using);
     char *gotname=0;
-    string assistant_reply;
-    if (res == CURLE_OK) {
-        assistant_reply = extract_assistant_content(wd.response_accumulator);
+    if (request_ok) {
         cppJSON msgs = au["messages"];
         if (msgs && cJSON_IsArray(msgs.a)) {
             cppJSON reply_node("{}");
@@ -305,35 +308,42 @@ void gpt_askid(http_para *a) {
         user_msg.insert("content", prompt.c_str());
         msgs_arr.push_back(std::move(user_msg));
         title_req.insert("messages", msgs_arr);
-        string title_post_data = title_req.stringify_Unformatted();
         string title_response;
-        CURL *title_curl = curl_easy_init();
-        if (title_curl) {
-            struct curl_slist *t_headers = NULL;
-            t_headers = curl_slist_append(t_headers, "Content-Type: application/json");
-            string auth_header_str = "Authorization: " + title_auth;
-            t_headers = curl_slist_append(t_headers, auth_header_str.c_str());
-            
-            curl_easy_setopt(title_curl, CURLOPT_URL, title_url.c_str());
-            curl_easy_setopt(title_curl, CURLOPT_HTTPHEADER, t_headers);
-            curl_easy_setopt(title_curl, CURLOPT_POSTFIELDS, title_post_data.c_str());
-            curl_easy_setopt(title_curl, CURLOPT_WRITEFUNCTION, title_write_callback);
-            curl_easy_setopt(title_curl, CURLOPT_WRITEDATA, &title_response);
-            curl_easy_setopt(title_curl, CURLOPT_CONNECTTIMEOUT, 15L);
-            curl_easy_setopt(title_curl, CURLOPT_TIMEOUT, 30L);
-            CURLcode t_res = curl_easy_perform(title_curl);
-            curl_slist_free_all(t_headers);
-            curl_easy_cleanup(title_curl);
-            if (t_res == CURLE_OK) {
-                cppJSON resp_json(title_response.c_str());
-                string temp=resp_json["choices"][0]["message"]["content"].valuestring();
-                int n=temp.length();
-                if(n>4&&temp[0]=='*'&&temp[1]=='*'&&temp[n-1]=='*'&&temp[n-2]=='*')temp=temp.substr(2,n-4);
-                if(temp.length()>50)temp=utf8_substr(temp,45)+"...";
-                strcpy(gotname,temp.c_str());
-                // LOG("%s\n",title_response.c_str());
-                // LOG("%s\n",temp.c_str());
+        string temp;
+        bool title_responses = first_group.has("format") && first_group["format"] == "responses";
+        bool title_ok = false;
+        if (title_responses) {
+            title_ok = gpt_responses_title(title_url, title_auth, title_req, temp);
+        } else {
+            string title_post_data = title_req.stringify_Unformatted();
+            CURL *title_curl = curl_easy_init();
+            if (title_curl) {
+                struct curl_slist *t_headers = NULL;
+                t_headers = curl_slist_append(t_headers, "Content-Type: application/json");
+                string auth_header_str = "Authorization: " + title_auth;
+                t_headers = curl_slist_append(t_headers, auth_header_str.c_str());
+                curl_easy_setopt(title_curl, CURLOPT_URL, title_url.c_str());
+                curl_easy_setopt(title_curl, CURLOPT_HTTPHEADER, t_headers);
+                curl_easy_setopt(title_curl, CURLOPT_POSTFIELDS, title_post_data.c_str());
+                curl_easy_setopt(title_curl, CURLOPT_WRITEFUNCTION, title_write_callback);
+                curl_easy_setopt(title_curl, CURLOPT_WRITEDATA, &title_response);
+                curl_easy_setopt(title_curl, CURLOPT_CONNECTTIMEOUT, 15L);
+                curl_easy_setopt(title_curl, CURLOPT_TIMEOUT, 30L);
+                CURLcode t_res = curl_easy_perform(title_curl);
+                title_ok = (t_res == CURLE_OK);
+                curl_slist_free_all(t_headers);
+                curl_easy_cleanup(title_curl);
+                if (title_ok) {
+                    cppJSON resp_json(title_response.c_str());
+                    temp=resp_json["choices"][0]["message"]["content"].valuestring();
+                }
             }
+        }
+        if (title_ok) {
+            int n=temp.length();
+            if(n>4&&temp[0]=='*'&&temp[1]=='*'&&temp[n-1]=='*'&&temp[n-2]=='*')temp=temp.substr(2,n-4);
+            if(temp.length()>50)temp=utf8_substr(temp,45)+"...";
+            strcpy(gotname,temp.c_str());
         }
     }
 }

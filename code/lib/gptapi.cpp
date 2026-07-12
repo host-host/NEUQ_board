@@ -126,5 +126,5 @@ void gptapis2(http_para *a){
         p.erase("Authorization");
         p.erase("url");
     }
-    return http_send(a,Hok Hjson Hc0,json.stringify().c_str(),0);
+    return http_send(a,Hok Hjson Hc0,json.stringify_Unformatted().c_str(),0);
 }
