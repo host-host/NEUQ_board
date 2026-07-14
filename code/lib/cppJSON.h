@@ -171,30 +171,22 @@ struct cppJSON{
         }
     }
     void push_back(const char* content) {
-        if (a && cJSON_IsArray(a)) {
+        if(a&&cJSON_IsArray(a)) {
             if (content) cJSON_AddItemToArray(a, cJSON_CreateString(content));
             else cJSON_AddItemToArray(a, cJSON_CreateNull());
         }
     }
     void push_back(const std::string& content) {
-        if (a && cJSON_IsArray(a)) {
-            cJSON_AddItemToArray(a, cJSON_CreateString(content.c_str()));
-        }
+        if(a&&cJSON_IsArray(a))cJSON_AddItemToArray(a,cJSON_CreateString(content.c_str()));
     }
     void push_back(double content) {
-        if (a && cJSON_IsArray(a)) {
-            cJSON_AddItemToArray(a, cJSON_CreateNumber(content));
-        }
+        if(a&&cJSON_IsArray(a))cJSON_AddItemToArray(a, cJSON_CreateNumber(content));
     }
     void push_back(bool content) {
-        if (a && cJSON_IsArray(a)) {
-            cJSON_AddItemToArray(a, cJSON_CreateBool(content));
-        }
+        if(a&&cJSON_IsArray(a))cJSON_AddItemToArray(a, cJSON_CreateBool(content));
     }
     void push_back(const cppJSON& childNode) {
-        if (a && cJSON_IsArray(a) && childNode.a) {
-            cJSON_AddItemToArray(a, cJSON_Duplicate(childNode.a, 1));
-        }
+        if(a&&cJSON_IsArray(a)&&childNode.a)cJSON_AddItemToArray(a, cJSON_Duplicate(childNode.a, 1));
     }
     void push_back(cppJSON&& childNode) {
         if (a && cJSON_IsArray(a) && childNode.a) {
@@ -210,6 +202,24 @@ struct cppJSON{
         if(!a)return 0;
         return cJSON_GetObjectItem(a, key)!=0;
     }
+    bool IsArray()const{
+        return a&&cJSON_IsArray(a);
+    }
+    bool IsObject()const{
+        return a&&cJSON_IsObject(a);
+    }
+    bool IsString()const{
+        return a&&cJSON_IsString(a);
+    }
+    bool IsNumber()const{
+        return a&&cJSON_IsNumber(a);
+    }
+    bool IsBool()const{
+        return a&&cJSON_IsBool(a);
+    }
+    bool IsNull()const{
+        return a&&cJSON_IsNull(a);
+    }
     cppJSON child()const{
         return cppJSON(a?a->child:0,0);
     }
@@ -221,6 +231,9 @@ struct cppJSON{
     }
     std::string valuestring() const {
         return a&&a->valuestring?(std::string)a->valuestring:"";
+    }
+    operator std::string() const {
+        return valuestring();
     }
     bool operator!() const {
         return a==0;

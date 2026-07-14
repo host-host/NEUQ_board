@@ -154,55 +154,48 @@ async function sendMessage() {//发送消息的核心入口
     const messagePayload = buildPayloadFromDOM();
 
     const selectButton = document.getElementById('selectButton');
-    const ida = parseInt(selectButton.getAttribute("ida"));
+    const provider = selectButton.getAttribute("provider");
     const modelName = selectButton.textContent;
-    let customConfig = Models[ida].custom;
+    // 从发送请求前开始计时，包含连接、排队以及首字生成前的等待时间。
+    const requestStartTime = new Date().getTime();
 
     let bodyData = {
         "model": modelName,
+        "ida": {
+            "provider": provider,
+            "id": currentChatId || ""
+        },
         "stream": true,
         "messages": messagePayload,
         "stream_options": {"include_usage": true},
-        "ida": ida,
         "enable_thinking": true
     };
 
-    if (currentChatId) bodyData.id = currentChatId;
-
-    if (customConfig) {
-        for (let i = 0; i < customConfig.length; i++) {
-            if (customConfig[i].model === modelName) {
-                bodyData = { ...customConfig[i], messages: messagePayload, ida: ida };
-                if (currentChatId) bodyData.id = currentChatId;
-                break;
-            }
-        }
-    }
-
     try {
-        const idResponse = await fetch('/api/gpt_gotid', {
+        const response = await fetch('/api/gpt_chat', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(bodyData)
         });
-        const idResult = await idResponse.text();
-
-        if (idResult.startsWith("Error:")) {
-            alert(idResult);
+        if (!response.ok) {
+            const errorText = await response.text();
+            alert(errorText || '请求失败');
             sendBtn.disabled = false;
             loader.style.display = 'none';
             document.getElementById('chatBox').lastElementChild.remove();
             return;
         }
 
-        currentChatId = idResult; 
-        updateUrlParam(idResult);
+        const conversationId = response.headers.get('X-Conversation-ID');
+        if (!conversationId) throw new Error('服务器没有返回对话 ID');
+        currentChatId = conversationId;
+        updateUrlParam(conversationId);
         updateHeaderButtons();
 
         const { wrapper, contentDiv, thinkTextarea } = renderAssistantPlaceholder();
         scrollToBottom();
 
-        await callStreamingApi(idResult, wrapper, contentDiv, thinkTextarea);
+        await callStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime);
 
         await loadUserHistory();
     } catch (error) {

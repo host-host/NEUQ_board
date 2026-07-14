@@ -93,44 +93,24 @@ data: [DONE]
 
 POST /api/gpts2
 请求值：无
-返回值：类型json，表示有哪些ai
 返回示例：
-[{
-"parallel":	10,
-"model":	["deepseek-ai/DeepSeek-R1-0528-Turbo", "deepseek-ai/DeepSeek-V3.1", "deepseek-ai/DeepSeek-V3.2-Exp", "zai-org/GLM-4.5", "openai/gpt-oss-20b", "Qwen/Qwen3-32B", "Qwen/Qwen3-30B-A3B", "Qwen/QwQ-32B", "google/gemma-3-27b-it", "google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/Llama-4-Scout-17B-16E-Instruct"],
-"available":	false
-},{
-"parallel":	5,
-"model":	["gemini-2.5-flash", "gpt-5.2"],
-"available":	false,
-"public": true,
-"custom":	[{
-"model":	"gpt-5.2",
-"stream":	true,
-"stream_options":	{
-    "include_usage":	true
-},
-"reasoning_effort":	"high"
-}]
-}]
+[{"provider":"deepseek","public":["deepseek-v4-flash"],"private":["deepseek-v4-pro"],"format":"completions"}]
 解释：
-model表示这一个分类下有哪些模型名字可以调用，
-available表示该分类是否可用
-public表示使用该分类是否需要管理员权限
-onlypaint为true表示该分类不是正常对话的模型，是绘图的模型
-custom[model]表示使用该分类的model模型时，不使用默认消息格式，改为custom[model]里的消息格式
-默认消息格式是：{"stream": true,"stream_options": {"include_usage": true},"enable_thinking":true}
+provider表示模型提供商
+public表示可以访问的模型
+private表示需要权限访问的模型
+format表示上游格式，默认是completions。
 
 
-POST /api/gpt_gotid
-请求值：格式同/api/gpt2的请求格式,如果是连续对话,包含一个"id",其值为上一个对话的id
-返回值：一个字符串id，若以Error开头表示出现错误，否则其长度不超过32，表示该请求被缓存在了id中，可继续请求/api/gpt_askid
-
-
-POST /api/gpt_askid
-请求值：一个字符串，表示id
-返回值：同/api/gpt2
-解释：调用该接口的时候后端会自动将刚刚缓存的请求转发api上游服务器，然后返回上游服务器的返回值
+POST /api/gpt_chat
+请求值：completions格式的请求，并额外包含ida字段。ida字段中包含provider和id
+ida字段示例：
+{"provider":"deepseek","id":"conversation-id"}
+返回头：
+HTTP响应头 `X-Conversation-ID: <id>`，表示本次请求对应的id，长度不超过32
+返回值：
+EventStream流示响应
+若不是流式响应，通常为上游出错
 
 
 POST /api/gpt_idname
@@ -149,7 +129,7 @@ POST /api/gpt_changename
 
 POST /api/gpt_idcontent
 请求值：一个字符串，表示id
-返回值：类型json，返回该id对应的请求的历史消息记录
+返回值：类型json，返回该id对应的请求的历史消息记录。content中是completions格式的历史记录。
 返回示例：
 {
     "publish":false,

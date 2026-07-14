@@ -38,44 +38,52 @@ async function fetchModels() {//获取 AI 模型列表
         container.innerHTML = '';
         container2.innerHTML = '';
         let firstModelAssigned = false;
-        // 记录第一个授权模型，供有权限用户作为默认选项
-        let firstAuthModel = null;
+        let firstPrivateModel = null;
 
-        for (let i = 0; i < models.length; i++) {
-            let m = models[i];
-            if (m.available === false) continue;
-            if (m.onlypaint === true) continue; // 绘图模型，本前端不支持，跳过
-            m.model.forEach(modelName => {
+        for (const m of models) {
+            const publicModels = Array.isArray(m.public) ? m.public : [];
+            const privateModels = Array.isArray(m.private) ? m.private : [];
+
+            publicModels.forEach(modelName => {
                 const li = document.createElement('li');
                 li.textContent = modelName;
                 if (!firstModelAssigned) {
                     firstModelAssigned = true;
                     const selectButton = document.getElementById('selectButton');
                     selectButton.textContent = modelName;
-                    selectButton.setAttribute("ida", i);
-                }
-                if (m.public != true && !firstAuthModel) {
-                    firstAuthModel = { name: modelName, ida: i };
+                    selectButton.setAttribute("provider", m.provider);
                 }
                 li.onclick = () => {
                     const selectButton = document.getElementById('selectButton');
                     selectButton.textContent = modelName;
-                    selectButton.setAttribute("ida", i);
+                    selectButton.setAttribute("provider", m.provider);
                     document.getElementById('selectionModal').style.display = 'none';
                 };
-                li.setAttribute("ida", i);
-                if (m.public == true) {
-                    container.appendChild(li);
-                } else {
-                    container2.appendChild(li);
+                li.setAttribute("provider", m.provider);
+                container.appendChild(li);
+            });
+
+            privateModels.forEach(modelName => {
+                const li = document.createElement('li');
+                li.textContent = modelName;
+                if (!firstPrivateModel) {
+                    firstPrivateModel = { name: modelName, provider: m.provider };
                 }
+                li.onclick = () => {
+                    const selectButton = document.getElementById('selectButton');
+                    selectButton.textContent = modelName;
+                    selectButton.setAttribute("provider", m.provider);
+                    document.getElementById('selectionModal').style.display = 'none';
+                };
+                li.setAttribute("provider", m.provider);
+                container2.appendChild(li);
             });
         }
-        // 有权限时首次加载自动切换到授权模型，否则保持免费模型默认
-        if (isAdmin && firstAuthModel) {
+
+        if (isAdmin && firstPrivateModel) {
             const selectButton = document.getElementById('selectButton');
-            selectButton.textContent = firstAuthModel.name;
-            selectButton.setAttribute("ida", firstAuthModel.ida);
+            selectButton.textContent = firstPrivateModel.name;
+            selectButton.setAttribute('provider', firstPrivateModel.provider);
         }
     } catch (error) {
         document.getElementById('modelsContainer').innerHTML = '<li style="color: red">模型加载失败</li>';
@@ -352,25 +360,22 @@ async function downloadFile(fileId, fileName) {//下载文件附件
         alert("下载文件失败: " + error.message);
     }
 }
-async function callStreamingApi(id, wrapper, contentDiv, thinkTextarea) {//请求流式 AI 回复接口
-    const startTime = new Date().getTime();
+async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, startTime) {//读取 gpt_chat 的流式响应
     let rawContent = ''; 
 
     try {
-        const response = await fetch('/api/gpt_askid', {
-            method: 'POST',
-            headers: {'Content-Type': 'text/plain'},
-            body: id
-        });
-
         if (!response.ok) {
             throw new Error('API Request Failed!');
         }
         
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('text/event-stream')){
-            const errText = await response.text();
-            throw new Error(errText || 'Invalid content-type');
+            const upstreamText = await response.text();
+            const message = `${upstreamText}\n请刷新后再试`;
+            wrapper.dataset.raw = message;
+            contentDiv.textContent = message;
+            contentDiv.style.display = 'block';
+            return;
         }
 
         const reader = response.body.getReader();

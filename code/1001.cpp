@@ -2,10 +2,8 @@
 #include"lib/user.h"
 #include"lib/chat.h"
 #include"lib/check48.h"
-#include"lib/gptapi.h"
 // #include"lib/word.h"
-#include"lib/gptapi.h"
-#include"lib/gptapi2.h"
+#include"lib/gptapi3.h"
 #include<cstdio>
 #include<cstring>
 #define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
@@ -36,10 +34,8 @@ int main() {
     http_add(&a,"GET /api/check48 ",check48);
     // http_add(&a,"POST /api/getword ",getword);
     // http_add(&a,"POST /api/setword ",setword);
-    http_add(&a,"POST /api/gpt2 ",gptapi2);
+    http_add(&a,"POST /api/gpt_chat ",gpt_chat);
     http_add(&a,"POST /api/gpts2 ",gptapis2);
-    http_add(&a,"POST /api/gpt_gotid ",gpt_gotid);
-    http_add(&a,"POST /api/gpt_askid ",gpt_askid);
     http_add(&a,"POST /api/gpt_idname ",gpt_idname);
     http_add(&a,"POST /api/gpt_changename ",gpt_changename);
     http_add(&a,"POST /api/gpt_idcontent ",gpt_idcontent);
