@@ -164,10 +164,16 @@ struct cppJSON{
     }
     void insert(const char* name, cppJSON&& childNode) {
         if (a && cJSON_IsObject(a) && childNode.a) {
+            cJSON* item = childNode.isroot
+                ? childNode.a
+                : cJSON_Duplicate(childNode.a, 1);
+            if (!item) return;
             cJSON_DeleteItemFromObject(a, name);
-            cJSON_AddItemToObject(a, name, childNode.a);
-            childNode.isroot = false; 
-            childNode.a = 0;
+            cJSON_AddItemToObject(a, name, item);
+            if (childNode.isroot) {
+                childNode.isroot = false;
+                childNode.a = 0;
+            }
         }
     }
     void push_back(const char* content) {
@@ -190,9 +196,15 @@ struct cppJSON{
     }
     void push_back(cppJSON&& childNode) {
         if (a && cJSON_IsArray(a) && childNode.a) {
-            cJSON_AddItemToArray(a, childNode.a);
-            childNode.isroot = false; 
-            childNode.a = 0;
+            cJSON* item = childNode.isroot
+                ? childNode.a
+                : cJSON_Duplicate(childNode.a, 1);
+            if (!item) return;
+            cJSON_AddItemToArray(a, item);
+            if (childNode.isroot) {
+                childNode.isroot = false;
+                childNode.a = 0;
+            }
         }
     }
     void erase(const char*x){

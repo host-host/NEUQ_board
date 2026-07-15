@@ -11,7 +11,7 @@
 #define LIMIT 1024//128GB限制
 #define ll long long
 #define SEG (1LL<<27)//128MB
-#define MAXLEN (SEG-16)
+#define MAXLEN (100LL*1024*1024)
 #define wmb() asm volatile("sfence":::"memory")
 #define LOCK(a) while(__sync_val_compare_and_swap(a,0,1))usleep(0)
 #define p2p(p) ((point*)(a->a[(p)>>27]+((p)&(SEG-1))))
@@ -145,7 +145,7 @@ void* ndb2_got(ndb2 handle,const char* key,int flag){
     char name[48]={0};
     if(!key)return 0;
     int n=strlen(key);
-    if(n<=0||n>47||flag<0||flag>100*1024*1024)return 0;
+    if(n<=0||n>47||flag<0||flag>MAXLEN)return 0;
     memcpy(name,key,n);
     ndb* a=(ndb*)handle;
     ll p[10],child=0,ret;
@@ -236,7 +236,7 @@ static int fx_content(ndb*a,ll p){
     if(!fx_voff(a,p)||(p&15))return 0;
     if(p2p(p)->child!=0)return 0;
     ll len=p2p(p)->next;
-    if(len<=0||len>100LL*1024*1024)return 0;
+    if(len<=0||len>MAXLEN)return 0;
     return fx_voff(a,p+16+len-1);
 }
 static int fx_name(const char*nm){
