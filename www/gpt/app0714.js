@@ -170,6 +170,8 @@ async function sendMessage() {//发送消息的核心入口
         "stream_options": {"include_usage": true},
         "enable_thinking": true
     };
+    const maxTokens = Number(requestSettings.max_tokens);
+    if (Number.isInteger(maxTokens) && maxTokens > 0) bodyData.max_tokens = maxTokens;
 
     const reply = renderAssistantPlaceholder();
     scrollToBottom();

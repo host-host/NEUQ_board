@@ -1,6 +1,54 @@
 let Models = [];
 let isAdmin = false; // 当前用户是否有授权模型权限
 const chatTitleCache = {};
+let requestSettings = { max_tokens: '' };
+
+function setSelectedModel(name, provider) {
+    const selectButton = document.getElementById('selectButton');
+    if (!selectButton) return;
+    selectButton.textContent = name;
+    selectButton.setAttribute('provider', provider);
+    requestSettings.max_tokens = '';
+    showMaxTokensPresets();
+}
+
+function toggleRequestSettings(event) {
+    event.stopPropagation();
+    document.getElementById('requestSettingsPopover').classList.toggle('active');
+}
+
+function setMaxTokensPreset(value, event) {
+    requestSettings.max_tokens = String(value);
+    document.querySelectorAll('.max-tokens-option').forEach(button => button.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
+
+function showCustomMaxTokens() {
+    document.getElementById('maxTokensPresets').style.display = 'none';
+    document.getElementById('maxTokensCustom').style.display = 'flex';
+    const input = document.getElementById('settingsMaxTokens');
+    input.value = requestSettings.max_tokens || '';
+    input.focus();
+}
+
+function showMaxTokensPresets() {
+    document.getElementById('maxTokensPresets').style.display = 'flex';
+    document.getElementById('maxTokensCustom').style.display = 'none';
+    const currentValue = requestSettings.max_tokens;
+    const options = document.querySelectorAll('.max-tokens-option');
+    options.forEach(button => button.classList.remove('active'));
+    const selectedOption = [...options].find(button => button.dataset.value === currentValue);
+    (selectedOption || options[options.length - 1])?.classList.add('active');
+}
+
+function setCustomMaxTokens(value) {
+    const number = Number(value);
+    requestSettings.max_tokens = Number.isInteger(number) && number > 0 ? String(number) : '';
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('requestSettingsPopover')?.classList.remove('active');
+});
 function loaduser() {//加载用户信息
     sessionStorage.setItem(
         'login_next',
@@ -54,13 +102,11 @@ async function fetchModels() {//获取 AI 模型列表
                 if (!firstModelAssigned) {
                     firstModelAssigned = true;
                     const selectButton = document.getElementById('selectButton');
-                    selectButton.textContent = modelName;
-                    selectButton.setAttribute("provider", m.provider);
+                    setSelectedModel(modelName, m.provider);
                 }
                 li.onclick = () => {
                     const selectButton = document.getElementById('selectButton');
-                    selectButton.textContent = modelName;
-                    selectButton.setAttribute("provider", m.provider);
+                    setSelectedModel(modelName, m.provider);
                     document.getElementById('selectionModal').style.display = 'none';
                 };
                 li.setAttribute("provider", m.provider);
@@ -74,9 +120,7 @@ async function fetchModels() {//获取 AI 模型列表
                     firstPrivateModel = { name: modelName, provider: m.provider };
                 }
                 li.onclick = () => {
-                    const selectButton = document.getElementById('selectButton');
-                    selectButton.textContent = modelName;
-                    selectButton.setAttribute("provider", m.provider);
+                    setSelectedModel(modelName, m.provider);
                     document.getElementById('selectionModal').style.display = 'none';
                 };
                 li.setAttribute("provider", m.provider);
@@ -85,9 +129,7 @@ async function fetchModels() {//获取 AI 模型列表
         }
 
         if (isAdmin && firstPrivateModel) {
-            const selectButton = document.getElementById('selectButton');
-            selectButton.textContent = firstPrivateModel.name;
-            selectButton.setAttribute('provider', firstPrivateModel.provider);
+            setSelectedModel(firstPrivateModel.name, firstPrivateModel.provider);
         }
     } catch (error) {
         document.getElementById('modelsContainer').innerHTML = '<li style="color: red">模型加载失败</li>';
