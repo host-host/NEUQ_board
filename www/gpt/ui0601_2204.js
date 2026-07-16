@@ -65,7 +65,7 @@ function safeParseMarkdown(markdownText) {
             const renderedHtml = katex.renderToString(content.trim(), {
                 displayMode: isBlock,
                 throwOnError: false,
-                trust: true,
+                trust: false,
                 output: 'html'
             });
             
@@ -88,7 +88,11 @@ function safeParseMarkdown(markdownText) {
             html = html.split(id).join(errorSpan);
         }
     });
-    return html;
+    return DOMPurify.sanitize(html, {
+        FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'base'],
+        ALLOW_DATA_ATTR: false,
+        ALLOW_UNKNOWN_PROTOCOLS: false
+    });
 }
 
 // 渲染用户消息气泡
@@ -116,9 +120,9 @@ function renderUserMessage(text) {
             <div class="chat-user-bubble-container">
                 <div class="chat-user" style="background: transparent; border: none; padding: 0;">
                     <div class="image-attachment-card">
-                        <img src="${base64Data}" alt="${fileMeta.name}" class="chat-uploaded-image" onclick="zoomImage(this.src)" />
+                        <img class="chat-uploaded-image" />
                         <div class="image-attachment-info">
-                            <span class="image-name">🖼️ ${fileMeta.name}</span>
+                            <span class="image-name"></span>
                         </div>
                     </div>
                 </div>
@@ -127,6 +131,17 @@ function renderUserMessage(text) {
                 <button class="del-btn copy-btn" style="color:var(--danger-color);">🗑️ 删除</button>
             </div>
         `;
+        const image = wrapper.querySelector('.chat-uploaded-image');
+        const imageName = wrapper.querySelector('.image-name');
+        imageName.textContent = `🖼️ ${fileMeta.name || '未知图片'}`;
+        if (base64Data) {
+            image.src = base64Data;
+            image.alt = fileMeta.name || '图片附件';
+            image.addEventListener('click', () => zoomImage(base64Data));
+        } else {
+            image.alt = '无效图片地址';
+            image.style.display = 'none';
+        }
         chatBox.appendChild(wrapper);
         setupEditDelete(wrapper, 'user');
     } else if (matchFile) {
@@ -139,12 +154,10 @@ function renderUserMessage(text) {
         wrapper.innerHTML = `
             <div class="chat-user-bubble-container">
                 <div class="chat-user" style="background: transparent; border: none; padding: 0;">
-                    <div class="file-attachment-card" 
-                         ${hasId ? `onclick="downloadFile('${fileMeta.id}', '${fileMeta.name}')" title="点击下载此文件"` : 'style="cursor:default;"'}
-                         ${hasId ? '' : 'style="opacity:0.7; cursor:not-allowed;"'}>
+                    <div class="file-attachment-card">
                         <span class="file-attachment-icon">📄</span>
                         <div class="file-attachment-info">
-                            <span class="file-attachment-name">${fileMeta.name}</span>
+                            <span class="file-attachment-name"></span>
                             <span class="file-attachment-size">
                                 ${isLarge ? '(已提取文本)' : `大小: ${(textLength / 1024).toFixed(2)} KB (已提取文本)`}
                             </span>
@@ -156,6 +169,15 @@ function renderUserMessage(text) {
                 <button class="del-btn copy-btn" style="color:var(--danger-color);">🗑️ 删除</button>
             </div>
         `;
+        const fileCard = wrapper.querySelector('.file-attachment-card');
+        wrapper.querySelector('.file-attachment-name').textContent = fileMeta.name || '未知文件';
+        if (hasId) {
+            fileCard.title = '点击下载此文件';
+            fileCard.addEventListener('click', () => downloadFile(fileMeta.id, fileMeta.name || 'download'));
+        } else {
+            fileCard.style.opacity = '0.7';
+            fileCard.style.cursor = 'not-allowed';
+        }
         chatBox.appendChild(wrapper);
         setupEditDelete(wrapper, 'user');
     } else {
