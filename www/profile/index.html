@@ -165,6 +165,7 @@
     </div>
 
 </body>
+<script src="/auth.js"></script>
 <script>
 document.getElementById('form_change_password').addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -187,6 +188,7 @@ document.getElementById('form_change_password').addEventListener('submit', async
         tmp=await response.text();
         if(tmp=='OK'){
             alert("Success!");
+            sessionStorage.removeItem(AUTH_NEXT_KEY);
             window.location.href="/login";
         } else {
             alert(tmp);

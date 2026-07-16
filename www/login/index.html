@@ -156,6 +156,7 @@
         </form>
     </div>
 </body>
+<script src="/auth.js"></script>
 <script>
 //     function work1(){
 //         const inputs = document.querySelectorAll(".inputGroup input");
@@ -167,9 +168,7 @@
 //         }, 300);
 //     }
 // window.addEventListener("load", () => {work1()});
-const href=window.location.href;
-const ind = href.indexOf('?');
-if(ind!==-1)document.getElementById('signup').href="/reg"+href.slice(ind,href.length);
+document.getElementById('signup').href='/reg';
 document.getElementById('form_login').addEventListener('submit', async function(event) {
     event.preventDefault();
     var username=document.getElementById('username').value;
@@ -185,8 +184,7 @@ document.getElementById('form_login').addEventListener('submit', async function(
         });
         tmp=await response.text();
         if(tmp=='OK'){
-            if(ind!==-1)window.location.href=href.slice(ind+1,href.length);
-            else window.location.href="/";
+            window.location.href=authConsumeReturnPath();
         } else {
             alert(tmp);
             submitButton.disabled = false;

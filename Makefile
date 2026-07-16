@@ -8,7 +8,7 @@ SRC_CPP = $(wildcard code/lib/*.cpp)
 OBJS = $(patsubst code/lib/%.c, build/%.o, $(SRC_C)) \
        $(patsubst code/lib/%.cpp, build/%.o, $(SRC_CPP))
 
-LIB_HDRS = $(wildcard lib/*.h)
+LIB_HDRS = $(wildcard code/lib/*.h)
 
 SRC_MAIN = $(wildcard code/*.cpp)
 

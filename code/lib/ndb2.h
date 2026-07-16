@@ -1,12 +1,16 @@
 /**
- * ndb数据库为key-value数据库，支持不同key的并发读写，以及相同key的并发读
+ * ndb数据库为key-value数据库
  * key为\0结尾的非空字符串，不超过47B
  * value不超过100MB
  * 数据库总大小不超过128GB
  */
 #ifndef NDB2_H
 #define NDB2_H
-
+/**
+ * 支持不同key的并发读写，以及相同key的并发读
+ * 相同key的并发读写时，若未扩容，会返回相同的内存地址，数据竞争行为由用户保证
+ * 不支持相同key的并发读写时扩容
+*/
 #ifdef __cplusplus
 extern "C"{
 #endif

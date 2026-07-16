@@ -20,7 +20,7 @@ static int bncmp(const char* a,const char* b){
 }
 static inline ll readll(const char* a){
     ll x=0;
-	while(*a<'0'||*a>'9')a++;
+	while((*a<'0'||*a>'9')&&*a)a++;
     while(*a>='0'&&*a<='9')x=x*10+*a++-'0';
 	return x;
 }

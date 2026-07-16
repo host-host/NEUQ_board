@@ -5,7 +5,11 @@ let isGenerating = false;
 
 // ---------- 用户 ----------
 function loaduser() {
-    document.getElementById('loginLink').href = "/login?" + window.location.href;
+    sessionStorage.setItem(
+        'login_next',
+        window.location.pathname + window.location.search + window.location.hash
+    );
+    document.getElementById('loginLink').href = "/login";
     fetch('/api/user')
         .then(r => { if (!r.ok) throw new Error('net'); return r.json(); })
         .then(data => {

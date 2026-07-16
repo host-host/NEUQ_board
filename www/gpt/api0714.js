@@ -2,7 +2,11 @@ let Models = [];
 let isAdmin = false; // 当前用户是否有授权模型权限
 const chatTitleCache = {};
 function loaduser() {//加载用户信息
-    document.getElementById('drop').href = "/login?" + window.location.href;
+    sessionStorage.setItem(
+        'login_next',
+        window.location.pathname + window.location.search + window.location.hash
+    );
+    document.getElementById('drop').href = "/login";
     return fetch('/api/user')
     .then(response => {
         if(!response.ok) throw new Error('Network response was not ok');
