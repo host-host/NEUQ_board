@@ -171,6 +171,17 @@ async function sendMessage() {//发送消息的核心入口
         "enable_thinking": true
     };
 
+    const reply = renderAssistantPlaceholder();
+    scrollToBottom();
+    const showError = (errorMessage) => {
+        const message = `${errorMessage}\n请刷新后再试`;
+        reply.wrapper.dataset.raw = message;
+        reply.contentDiv.textContent = message;
+        reply.contentDiv.style.whiteSpace = 'pre-wrap';
+        reply.contentDiv.style.display = 'block';
+        scrollToBottom();
+    };
+
     try {
         const response = await fetch('/api/gpt_chat', {
             method: 'POST',
@@ -179,27 +190,25 @@ async function sendMessage() {//发送消息的核心入口
         });
         if (!response.ok) {
             const errorText = await response.text();
-            alert(errorText || '请求失败');
+            showError(errorText || `请求失败（HTTP ${response.status}）`);
             sendBtn.disabled = false;
             loader.style.display = 'none';
-            document.getElementById('chatBox').lastElementChild.remove();
             return;
         }
 
-        const conversationId = response.headers.get('X-Conversation-ID');
-        if (!conversationId) throw new Error('服务器没有返回对话 ID');
+        const conversationId = response.headers.get('X-Conversation-ID') || '';
         currentChatId = conversationId;
         updateUrlParam(conversationId);
         updateHeaderButtons();
 
-        const { wrapper, contentDiv, thinkTextarea } = renderAssistantPlaceholder();
-        scrollToBottom();
+        const { wrapper, contentDiv, thinkTextarea } = reply;
 
         await callStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime);
 
         await loadUserHistory();
     } catch (error) {
         console.error('发送错误:', error);
+        showError(error.message || '网络请求失败');
     } finally {
         sendBtn.disabled = false;
         loader.style.display = 'none';

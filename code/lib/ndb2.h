@@ -20,7 +20,7 @@ ndb2 ndb2_init(const char* file);
  * 返回指针，为0表示创建失败或者未找到
  */
 void* ndb2_got(ndb2 a,const char* key,int valuelen);
-#define ndb2_gotlen(p) (*(((long long*)(p))-1))
+#define ndb2_gotmaxlen(p) (*(((long long*)(p))-1))
 
 /**
  * 用该函数可以遍历数据库或者查找下一个节点，遍历数据库使用方法如下
@@ -28,6 +28,7 @@ void* ndb2_got(ndb2 a,const char* key,int valuelen);
  *  for(void*p=ndb2_next(a,key);p;p=ndb2_next(a,key)){
  *	    //do something
  *  }
+ * key必须是至少 48 字节的可写缓冲区
  */
 void* ndb2_next(ndb2 a,char* key);
 

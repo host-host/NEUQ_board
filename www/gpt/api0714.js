@@ -362,7 +362,7 @@ async function downloadFile(fileId, fileName) {//下载文件附件
 }
 async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, startTime) {//读取 gpt_chat 的流式响应
     let rawContent = ''; 
-
+    let streamError = null;
     try {
         if (!response.ok) {
             throw new Error('API Request Failed!');
@@ -371,9 +371,10 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('text/event-stream')){
             const upstreamText = await response.text();
-            const message = `${upstreamText}\n请刷新后再试`;
+            const message = `${upstreamText || '服务器没有返回内容'}\n请刷新后再试`;
             wrapper.dataset.raw = message;
             contentDiv.textContent = message;
+            contentDiv.style.whiteSpace = 'pre-wrap';
             contentDiv.style.display = 'block';
             return;
         }
@@ -450,12 +451,28 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
         }
     } catch (error) {
         console.error("请求或读取流失败:", error);
+        streamError = error;
     }
 
-    if (!rawContent.trim()) {
-        rawContent = '服务器繁忙，请稍后再试';
-        wrapper.dataset.raw = rawContent;
-        contentDiv.innerHTML = safeParseMarkdown(rawContent);
+    if (streamError) {
+        const errorMessage = streamError.message || '流式响应中断';
+        if (rawContent.trim()) {
+            rawContent += `\n\n${errorMessage}\n请刷新后再试`;
+            wrapper.dataset.raw = rawContent;
+            contentDiv.innerHTML = safeParseMarkdown(rawContent);
+            contentDiv.style.display = 'block';
+        } else {
+            const message = `${errorMessage}\n请刷新后再试`;
+            wrapper.dataset.raw = message;
+            contentDiv.textContent = message;
+            contentDiv.style.whiteSpace = 'pre-wrap';
+            contentDiv.style.display = 'block';
+        }
+    } else if (!rawContent.trim()) {
+        const message = '服务器没有返回内容\n请刷新后再试';
+        wrapper.dataset.raw = message;
+        contentDiv.textContent = message;
+        contentDiv.style.whiteSpace = 'pre-wrap';
         contentDiv.style.display = 'block';
     }
 
