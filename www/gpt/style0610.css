@@ -96,6 +96,115 @@ body, html {
     gap: 8px;
 }
 
+.history-heading {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.history-heading .history-toggle-btn {
+    flex: 1;
+}
+
+.history-manage-btn {
+    margin-bottom: 8px;
+    padding: 7px 8px;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-light);
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.history-manage-btn:hover {
+    color: var(--primary-color);
+    background: var(--primary-light);
+}
+
+.history-batch-toolbar {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-select-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.history-select-all input,
+.history-select-checkbox {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.history-select-checkbox {
+    display: none;
+    margin-right: 8px;
+}
+
+.history-item.batch-mode .history-select-checkbox {
+    display: block;
+}
+
+.history-item.batch-mode .history-icon,
+.history-item.batch-mode .history-delete-btn,
+.history-item.batch-mode .history-rename-btn {
+    display: none;
+}
+
+.history-item.selected {
+    background-color: var(--primary-light);
+    border-color: var(--primary-border);
+    color: var(--text-dark);
+}
+
+.history-batch-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.history-batch-cancel,
+.history-batch-delete {
+    padding: 5px 7px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.history-batch-cancel {
+    color: var(--text-muted);
+}
+
+.history-batch-delete {
+    color: #ffffff;
+    background: var(--danger-color);
+}
+
+.history-batch-delete:hover:not(:disabled) {
+    background: var(--danger-hover);
+}
+
+.history-batch-delete:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* 历史卡片设计 */
 .history-item {
     display: flex;
