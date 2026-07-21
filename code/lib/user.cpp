@@ -2,6 +2,7 @@
 #include<string>
 #include"user.h"
 #include"ndb2.h"
+#include"mylib.h"
 #include"cppJSON.h"
 #define USER_TOHOME "<script>window.location.href='/';</script>"
 #define ll long long
@@ -52,7 +53,7 @@ void login(http_para* ssl){
     char tmp[]="Set-Cookie: id=1234567812345678; Max-Age=604800; Path=/; Secure; HttpOnly\r\n";
     memcpy(tmp+15,p,8);
     if(time(0)>p1->time){
-        for(int i=0;i<8;i++)p1->cookie_rand[i]=rand()%26+'A';
+		mylib_random_string(p1->cookie_rand,8);
         p1->time=time(0)+604800;
     }
     memcpy(tmp+15+8,p1->cookie_rand,8);
@@ -93,15 +94,13 @@ void reg(http_para* ssl){
 	memcpy(a.phone,phone,min(strlen(phone),19));
 	if((p=(ll*)ndb2_got(name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
 	if(!(p=(ll*)ndb2_got(name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
-	char kb[9];
-	while(1){
-		char tmp[8]={0};
-		for(int i=0;i<8;i++)tmp[i]=rand()%26+(rand()%2?'a':'A');
-		*p=*(ll*)tmp;
-		if(!ndb2_got(user,idkey(p,kb),0))break;
-	}
+	char kb[9]={0};
+	do{
+		mylib_random_string(kb,8);
+	}while(ndb2_got(user,kb,0));
+	memcpy(p,kb,8);
 	user_* p1;
-	if(!(p1=(user_*)ndb2_got(user,idkey(p,kb),sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
+	if(!(p1=(user_*)ndb2_got(user,kb,sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
 	memcpy(p1,&a,sizeof(user_));
 	http_send(ssl,Hok Hhtml Hc0,"OK",0);
 }
@@ -123,15 +122,12 @@ void change_password(http_para* ssl){
 	if(memcmp(pwd,puser->pwd,strlen(puser->pwd)))return http_send(ssl,Hok Hc0 Htxt,"Password error!",0);
     memset(puser->pwd,0,24);
     memcpy(puser->pwd,npwd,min(23,strlen(npwd)));
-	for(int i=0;i<8;i++)puser->cookie_rand[i]=rand()%26+'A';
+	mylib_random_string(puser->cookie_rand,8);
 	return http_send(ssl,Hok Hc0 Htxt,"OK",0);
 }
 static std::string generate_file_id() {
-    char buf[17] = {0};
-    for(int i = 0; i < 16; i++) {
-        int v = rand() % 36;
-        buf[i] = v < 10 ? '0' + v : 'a' + v - 10;
-    }
+    char buf[17]={0};
+	mylib_random_string(buf,16);
     return std::string(buf);
 }
 void uploads_file(http_para* ssl) {

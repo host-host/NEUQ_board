@@ -23,7 +23,7 @@ make
 
 ## API 概览
 
-所有接口以 `/api/` 为前缀，完整说明见 [`API_doc.txt`](API_doc.txt)。
+所有接口以 `/api/` 为前缀，完整说明见 [`doc/API_doc.txt`](doc/API_doc.txt)。
 
 ## 许可
 

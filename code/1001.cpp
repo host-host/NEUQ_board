@@ -4,9 +4,9 @@
 #include"lib/check48.h"
 // #include"lib/word.h"
 #include"lib/gptapi3.h"
+#include"lib/mylib.h"
 #include<cstdio>
 #include<cstring>
-#define LOG(a,...) printf("<%s : %d>%s : " a "\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 void other(http_para* a){
     LOG("%s\n",a->get);
 }

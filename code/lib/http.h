@@ -30,6 +30,8 @@ extern "C"{
 
 #define Hdown "Content-Disposition: form-data\r\n"
 
+#define my_http_error(a,message) http_send((a),Hok Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
+
 struct http{
     int plen;
     void* p;//char*,fun

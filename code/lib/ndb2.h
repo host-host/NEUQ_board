@@ -6,11 +6,6 @@
  */
 #ifndef NDB2_H
 #define NDB2_H
-/**
- * 支持不同key的并发读写，以及相同key的并发读
- * 相同key的并发读写时，若未扩容，会返回相同的内存地址，数据竞争行为由用户保证
- * 不支持相同key的并发读写时扩容
-*/
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -22,6 +17,10 @@ ndb2 ndb2_init(const char* file);
  * valuelen==0表示不创建新节点
  * valuelen>0表示创建长度为valuelen的节点，支持扩容已有节点
  * 返回指针，为0表示创建失败或者未找到
+ * 支持不同key的并发读写，以及相同key的并发读
+ * 相同key的并发读写时：
+ *  - 若扩容，可能会返回不同的内存地址，旧地址依然可用，不过旧地址以后不再会被返回，数据竞争行为由调用者保证。
+ *  - 若未扩容，会返回相同的内存地址，数据竞争行为由调用者保证。
  */
 void* ndb2_got(ndb2 a,const char* key,int valuelen);
 #define ndb2_gotmaxlen(p) (*(((long long*)(p))-1))

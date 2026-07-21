@@ -8,7 +8,7 @@ extern "C"{
 typedef struct {
 	char name[24],pwd[24],cookie_rand[8];
 	int admin,time;
-	char email[80],phone[20];
+	char email[80],phone[20],gptapikey[20];
 }user_;
 void user_init();
 user_* getuser(const char* get);
