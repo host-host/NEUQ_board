@@ -2,19 +2,16 @@
 
 #include <openssl/sha.h>
 #include <openssl/rand.h>
-#include <stdlib.h>
+#include <string.h>
 
-void mylib_random_string(char* out,size_t n){
+size_t mylib_random_string(char* out,size_t n){
     static const char chars[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     unsigned char tmp[256];
-    size_t l=0;
-    while(l<n) {
-        if(RAND_bytes(tmp,sizeof(tmp))!=1){
-            while(l<n)out[l++]=chars[rand()%62];
-            return;
-        }
+    for(size_t l=0;l<n;) {
+        if(RAND_bytes(tmp,sizeof(tmp))!=1)return l;
         for(size_t i=0;i<256&&l<n;i++)if(tmp[i]<248)out[l++]=chars[tmp[i]%62];
     }
+    return n;
 }
 void mylib_sha256(const void* data,size_t n,char out[44]){
     static const char chars[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";

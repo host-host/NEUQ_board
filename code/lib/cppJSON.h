@@ -1,55 +1,94 @@
-#ifndef cppJSON__h
-#define cppJSON__h
-
+#ifndef CPPJSON_H
+#define CPPJSON_H
 
 #include"cJSON.h"
 #include<cstring>
 #include<string>
-inline void clear_a_item(cJSON*item){
+#include<utility>
+#include<climits>
+inline static void clear_a_item(cJSON*item){
     if(item==0)return;
-    if (!(item->type & cJSON_IsReference) && (item->child != NULL)){
-        cJSON_Delete(item->child);
-        item->child=0;
+    if(!(item->type&cJSON_IsReference)){
+        if(item->child)cJSON_Delete(item->child);
+        if(item->valuestring)cJSON_free(item->valuestring);
     }
-    if (!(item->type & cJSON_IsReference) && (item->valuestring != NULL)){
-        cJSON_free(item->valuestring);
-        item->valuestring=0;
-    }
-    item->type=0;
+    item->child=0;
+    item->valuestring=0;
+    item->type&=cJSON_StringIsConst;
     item->valueint=0;
     item->valuedouble=0;
 }
-inline char* safe_cJSON_strdup(const char* str) {
-    if (str == nullptr) return nullptr;
-    size_t len = strlen(str) + 1;
-    char* copy = (char*)cJSON_malloc(len);
-    if (copy != nullptr)memcpy(copy, str, len);
+inline static char* my_cJSON_strdup(const char* str) {
+    if(!str)return 0;
+    size_t len=strlen(str)+1;
+    char* copy=(char*)cJSON_malloc(len);
+    if(copy)memcpy(copy,str,len);
     return copy;
+}
+inline static void move_a_item_content(cJSON* target,cJSON* source){
+    clear_a_item(target);
+    if(source){
+        target->child=source->child;
+        target->type|=source->type&~cJSON_StringIsConst;
+        target->valuestring=source->valuestring;
+        target->valueint=source->valueint;
+        target->valuedouble=source->valuedouble;
+        source->child=0;
+        source->valuestring=0;
+        cJSON_Delete(source);
+    }else target->type|=cJSON_NULL;
 }
 struct cppJSON{
     cJSON*a;
     bool isroot;
+    struct iterator{
+        cJSON* item;
+        cppJSON operator*()const{return cppJSON(item,0);}
+        iterator& operator++(){
+            if(item)item=item->next;
+            return *this;
+        }
+        bool operator!=(const iterator& other)const{return item!=other.item;}
+    };
     cppJSON():a(0),isroot(0){}
-    cppJSON(cJSON* x,bool isroot):a(x),isroot(isroot){}
+    cppJSON(cJSON* x,bool root):a(x),isroot(root){}
     cppJSON(const char* x):a(cJSON_Parse(x)),isroot(1){}
+    cppJSON(const char* x,int len):a(x&&len>=0?cJSON_ParseWithLength(x,(size_t)len):0),isroot(1){}
     ~cppJSON(){
         if(isroot&&a)cJSON_Delete(a);
     }
-    cppJSON(const cppJSON&)=delete;
-    cppJSON& operator=(const cppJSON&)=delete;
-    cppJSON(cppJSON&& other)noexcept:a(other.a),isroot(other.isroot) {
+    cppJSON(const cppJSON& other) {
+        a=other.isroot?other.a?cJSON_Duplicate(other.a,1):0:other.a;
+        isroot=other.isroot;
+    }
+    cppJSON& operator=(const cppJSON& other){
+        if(this==&other)return *this;
+        cJSON* replacement=other.isroot&&other.a?cJSON_Duplicate(other.a,1):other.a;
+        if(other.isroot&&other.a&&!replacement)return *this;
+        if(isroot&&a)cJSON_Delete(a);
+        a=replacement;
+        isroot=other.isroot;
+        return *this;
+    }
+    cppJSON(cppJSON&& other) noexcept: a(other.a), isroot(other.isroot) {
+        other.a = nullptr;
+        other.isroot = false;
+    }
+    cppJSON& operator=(cppJSON&& other) noexcept {
+        if(this==&other)return *this;
+        if(isroot&&a)cJSON_Delete(a);
+        a=other.a;
+        isroot=other.isroot;
         other.a=0;
         other.isroot=0;
-    }
-    cppJSON& operator=(cppJSON&& other)noexcept {
-        if(this!=&other) {
-            if(isroot&&a)cJSON_Delete(a);
-            a=other.a;
-            isroot=other.isroot;
-            other.a=0;
-            other.isroot=0;
-        }
         return *this;
+    }
+    bool replace(const cppJSON& other){
+        if(!a)return false;
+        cJSON* replacement=other.a?cJSON_Duplicate(other.a,1):0;
+        if(other.a&&!replacement)return false;
+        move_a_item_content(a,replacement);
+        return true;
     }
     cppJSON clone() const {
         cppJSON newObj;
@@ -61,24 +100,24 @@ struct cppJSON{
     }
     std::string stringify() const {
         if(a==0)return "null";
-        char* jsonString = cJSON_Print(a);
-        std::string result(jsonString);
+        char* jsonString=cJSON_Print(a);
+        std::string result(jsonString?jsonString:"");
         cJSON_free(jsonString);
         return result;
     }
     std::string stringify_Unformatted() const {
         if(a==0)return "null";
-        char* jsonString = cJSON_PrintUnformatted(a);
-        std::string result(jsonString);
+        char* jsonString=cJSON_PrintUnformatted(a);
+        std::string result(jsonString?jsonString:"");
         cJSON_free(jsonString);
         return result;
     }
     cppJSON operator[](const char* key) const {
-        if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItem(a, key), false);
+        if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItemCaseSensitive(a, key), false);
         return cppJSON();
     }
     cppJSON operator[](std::string key) const {
-        if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItem(a, key.c_str()), false);
+        if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItemCaseSensitive(a, key.c_str()), false);
         return cppJSON();
     }
     cppJSON operator[](int id) const {
@@ -88,29 +127,31 @@ struct cppJSON{
     cppJSON& operator=(const char* value) {
         if(!a)return *this;
         clear_a_item(a);
-        a->type=cJSON_String;
-        a->valuestring=(char*)safe_cJSON_strdup(value);
+        a->type|=cJSON_String;
+        a->valuestring=(char*)my_cJSON_strdup(value);
+        if(!a->valuestring)a->type^=cJSON_String|cJSON_NULL;
         return *this;
     }
     cppJSON& operator=(const std::string& value) {
         if(!a)return *this;
         clear_a_item(a);
-        a->type=cJSON_String;
-        a->valuestring=(char*)safe_cJSON_strdup(value.c_str());
+        a->type|=cJSON_String;
+        a->valuestring=(char*)my_cJSON_strdup(value.c_str());
+        if(!a->valuestring)a->type^=cJSON_String|cJSON_NULL;
         return *this;
     }
     cppJSON& operator=(double value) {
         if(!a)return *this;
         clear_a_item(a);
-        a->type=cJSON_Number;
-        a->valueint = (int)value;
-        a->valuedouble = value;
+        a->type|=cJSON_Number;
+        a->valueint=value>INT_MAX?INT_MAX:value<INT_MIN?INT_MIN:(int)value;
+        a->valuedouble=value;
         return *this;
     }
     cppJSON& operator=(bool value) {
         if(!a)return *this;
         clear_a_item(a);
-        a->type = value ? cJSON_True : cJSON_False;
+        a->type|= value ? cJSON_True : cJSON_False;
         return *this;
     }
     bool operator==(const char* value)const {
@@ -131,49 +172,50 @@ struct cppJSON{
         if(a->type&cJSON_True)return value==true;
         return 0;
     }
+    bool operator==(const cppJSON& other)const {
+        if(a==other.a)return true;
+        return a&&other.a&&cJSON_Compare(a,other.a,true);
+    }
     void insert(const char* name, const char* content) {
         if (a && cJSON_IsObject(a)) {
-            cJSON_DeleteItemFromObject(a, name);
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             if (content) cJSON_AddStringToObject(a, name, content);
             else cJSON_AddNullToObject(a, name);
         }
     }
     void insert(const char* name, const std::string& content) {
         if (a && cJSON_IsObject(a)) {
-            cJSON_DeleteItemFromObject(a, name);
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddStringToObject(a, name, content.c_str());
         }
     }
     void insert(const char* name, double content) {
         if (a && cJSON_IsObject(a)) {
-            cJSON_DeleteItemFromObject(a, name);
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddNumberToObject(a, name, content);
         }
     }
     void insert(const char* name, bool content) {
         if (a && cJSON_IsObject(a)) {
-            cJSON_DeleteItemFromObject(a, name);
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddBoolToObject(a, name, content);
         }
     }
     void insert(const char* name, const cppJSON& childNode) {
-        if (a && cJSON_IsObject(a) && childNode.a) {
-            cJSON_DeleteItemFromObject(a, name);
-            cJSON_AddItemToObject(a, name, cJSON_Duplicate(childNode.a, 1));
+        if (a && cJSON_IsObject(a)) {
+            cJSON* item=cJSON_Duplicate(childNode.a, 1);
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
+            if(childNode.a)cJSON_AddItemToObject(a, name, item);
+            else cJSON_AddNullToObject(a,name);
         }
     }
     void insert(const char* name, cppJSON&& childNode) {
-        if (a && cJSON_IsObject(a) && childNode.a) {
-            cJSON* item = childNode.isroot
-                ? childNode.a
-                : cJSON_Duplicate(childNode.a, 1);
-            if (!item) return;
-            cJSON_DeleteItemFromObject(a, name);
-            cJSON_AddItemToObject(a, name, item);
-            if (childNode.isroot) {
-                childNode.isroot = false;
-                childNode.a = 0;
-            }
+        if (a && cJSON_IsObject(a)) {
+            cJSON* item=childNode.a?childNode.isroot?childNode.a:cJSON_Duplicate(childNode.a,1):0;
+            cJSON_DeleteItemFromObjectCaseSensitive(a, name);
+            if(item)cJSON_AddItemToObject(a,name,item);
+            else cJSON_AddNullToObject(a,name);
+            if(childNode.isroot)childNode.a=0;
         }
     }
     void push_back(const char* content) {
@@ -192,27 +234,30 @@ struct cppJSON{
         if(a&&cJSON_IsArray(a))cJSON_AddItemToArray(a, cJSON_CreateBool(content));
     }
     void push_back(const cppJSON& childNode) {
-        if(a&&cJSON_IsArray(a)&&childNode.a)cJSON_AddItemToArray(a, cJSON_Duplicate(childNode.a, 1));
+        if(a&&cJSON_IsArray(a)){
+            if(childNode.a)cJSON_AddItemToArray(a,cJSON_Duplicate(childNode.a,1));
+            else cJSON_AddItemToArray(a,cJSON_CreateNull());
+        }
     }
     void push_back(cppJSON&& childNode) {
-        if (a && cJSON_IsArray(a) && childNode.a) {
-            cJSON* item = childNode.isroot
-                ? childNode.a
-                : cJSON_Duplicate(childNode.a, 1);
-            if (!item) return;
-            cJSON_AddItemToArray(a, item);
-            if (childNode.isroot) {
-                childNode.isroot = false;
-                childNode.a = 0;
-            }
+        if(a&&cJSON_IsArray(a)){
+            cJSON* item=childNode.a?childNode.isroot?childNode.a:cJSON_Duplicate(childNode.a,1):0;
+            if(item)cJSON_AddItemToArray(a,item);
+            else cJSON_AddItemToArray(a,cJSON_CreateNull());
+            if(childNode.isroot)childNode.a=0;
         }
     }
     void erase(const char*x){
-        if (a)cJSON_DeleteItemFromObject(a,x);
+        if(a&&cJSON_IsObject(a))cJSON_DeleteItemFromObjectCaseSensitive(a,x);
+    }
+    void erase(int id){
+        if(a&&cJSON_IsArray(a)&&id>=0)cJSON_DeleteItemFromArray(a,id);
     }
     bool has(const char* key) const {
-        if(!a)return 0;
-        return cJSON_GetObjectItem(a, key)!=0;
+        if(!a||!key)return 0;
+        if(cJSON_IsObject(a))return cJSON_GetObjectItemCaseSensitive(a,key)!=0;
+        if(cJSON_IsArray(a))for(cJSON* entry=a->child; entry; entry=entry->next)if(entry->valuestring&&strcmp(entry->valuestring,key)==0)return 1;
+        return 0;
     }
     bool IsArray()const{
         return a&&cJSON_IsArray(a);
@@ -231,6 +276,16 @@ struct cppJSON{
     }
     bool IsNull()const{
         return a&&cJSON_IsNull(a);
+    }
+    int size()const{
+        return a&&(cJSON_IsArray(a)||cJSON_IsObject(a))?cJSON_GetArraySize(a):0;
+    }
+    iterator begin()const{return iterator{a?a->child:0};}
+    iterator end()const{return iterator{0};}
+    void clear(){
+        if(a&&isroot)cJSON_Delete(a);
+        a=0;
+        isroot=0;
     }
     cppJSON child()const{
         return cppJSON(a?a->child:0,0);

@@ -49,6 +49,7 @@ void* http_w(http_para* a){
     int n=0;
     struct timeval timehttps={10,0};
     setsockopt(a->cl,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
+    setsockopt(a->cl,SOL_SOCKET,SO_SNDTIMEO,(char*)&timehttps,sizeof(struct timeval));
     a->get=(char*)malloc(5*1024*1000);
     while(1){
         int m=read(a->cl,a->get+n,5000000-n);
@@ -126,9 +127,13 @@ void http_stop(struct http *a){
 }
 void http_send(http_para *a,const char* head,const char* content,int n){
     if(n==0)n=strlen(content);
+    if(head==0){
+        for(int l=0,m;l<n&&((m=write(a->cl,content+l,n-l))>0);l+=m);
+        return;
+    }
     char* con=(char*)malloc(n+strlen(head)+35);
     int m=sprintf(con,"%sContent-Length: %d\r\n\r\n",head,n);
     memcpy(con+m,content,n);
-    if(write(a->cl,con,m+n));
+    for(int l=0,w;l<m+n&&((w=write(a->cl,con+l,m+n-l))>0);l+=w);
     free(con);
 }
