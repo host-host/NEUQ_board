@@ -40,6 +40,12 @@ user_* getuser(const char* get){
 	}
     return 0;
 }
+user_* getuser_by_id(const char* id){
+	if(!id||strlen(id)!=8)return 0;
+	char kb[9]={0};
+	memcpy(kb,id,8);
+	return (user_*)ndb2_got(user,kb,0);
+}
 void login(http_para* ssl){
 	char* name=ssl->get+ssl->n,*pwd=name+strlen(name)+1;
     char c[24]={0};
@@ -102,6 +108,8 @@ void reg(http_para* ssl){
 	user_* p1;
 	if(!(p1=(user_*)ndb2_got(user,kb,sizeof(user_))))return http_send(ssl,Hok Htxt Hc0,"server error! D2F",0);
 	memcpy(p1,&a,sizeof(user_));
+	memcpy(p1->userid,kb,8);
+	p1->userid[8]=0;
 	http_send(ssl,Hok Hhtml Hc0,"OK",0);
 }
 void logout(http_para *ssl){

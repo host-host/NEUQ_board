@@ -8,10 +8,11 @@ extern "C"{
 typedef struct {
 	char name[24],pwd[24],cookie_rand[8];
 	int admin,time;
-	char email[80],phone[20],gptapikey[20];
+	char email[80],phone[20],gptapikey[20],userid[10];
 }user_;
 void user_init();
 user_* getuser(const char* get);
+user_* getuser_by_id(const char* id);
 void login(http_para* ssl);
 void reg(http_para* ssl);
 void logout(http_para *ssl);
