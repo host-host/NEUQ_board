@@ -6,6 +6,8 @@
 #include<string>
 #include<utility>
 #include<climits>
+#include<cstdio>
+#include<cstdlib>
 inline static void clear_a_item(cJSON*item){
     if(item==0)return;
     if(!(item->type&cJSON_IsReference)){
@@ -307,6 +309,41 @@ struct cppJSON{
     }
     explicit operator bool() const noexcept {
         return a != nullptr;
+    }
+    void init_from_file(const char* file_path){
+        if(a&&isroot)cJSON_Delete(a);
+        isroot=1;
+        a=0;
+        FILE* file=fopen(file_path,"rb");
+        if(!file)return;
+        if(fseek(file,0,SEEK_END)!=0) {
+            fclose(file);
+            return;
+        }
+        long size=ftell(file);
+        if(size<0||fseek(file,0,SEEK_SET)!=0) {
+            fclose(file);
+            return;
+        }
+        char* buffer=(char*)malloc((size_t)size+1);
+        if(!buffer) {
+            fclose(file);
+            return;
+        }
+        size_t read_size=fread(buffer,1,(size_t)size,file);
+        fclose(file);
+        if (read_size != (size_t)size) {
+            free(buffer);
+            return;
+        }
+        buffer[size] = '\0';
+        a=cJSON_Parse(buffer);
+        free(buffer);
+    }
+    static cppJSON from_file(const char* path) {
+        cppJSON result;
+        result.init_from_file(path);
+        return result;
     }
     // void debug(){
     //     printf("--------%llx ",(long long)a);

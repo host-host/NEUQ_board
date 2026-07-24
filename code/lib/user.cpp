@@ -41,7 +41,7 @@ user_* getuser(const char* get){
     return 0;
 }
 user_* getuser_by_id(const char* id){
-	if(!id||strlen(id)!=8)return 0;
+	if(!id)return 0;
 	char kb[9]={0};
 	memcpy(kb,id,8);
 	return (user_*)ndb2_got(user,kb,0);
