@@ -202,16 +202,18 @@ function renderUserMessage(text) {
 
         setupEditDelete(wrapper, 'user');
     }
+    return wrapper;
 }
 
 // 渲染 AI 消息气泡
-function renderAssistantMessage(text) {
+function renderAssistantMessage(text, reasoning = '') {
     const chatBox = document.getElementById('chatBox');
     const wrapper = document.createElement('div');
     wrapper.className = 'chat-message-wrapper';
     wrapper.dataset.role = 'assistant';
     wrapper.dataset.raw = text;
     wrapper.innerHTML = `
+        ${reasoning ? '<div class="think">▶ 思考过程</div><textarea class="chat-think" readonly></textarea>' : ''}
         <div class="chat-content-markdown">${safeParseMarkdown(text)}</div>
         <div class="contentcalc">
             <div class="action-bar">
@@ -221,8 +223,80 @@ function renderAssistantMessage(text) {
             </div>
         </div>
     `;
+    if (reasoning) {
+        const thinkHeader = wrapper.querySelector('.think');
+        const thinkTextarea = wrapper.querySelector('.chat-think');
+        thinkTextarea.value = reasoning;
+        thinkTextarea.style.display = 'none';
+        thinkHeader.onclick = () => {
+            thinkTextarea.style.display = thinkTextarea.style.display === 'none' ? 'block' : 'none';
+        };
+    }
     chatBox.appendChild(wrapper);
     setupEditDelete(wrapper, 'assistant');
+    return wrapper;
+}
+
+function renderToolCall(item, outputText = '', reasoning = '') {
+    const chatBox = document.getElementById('chatBox');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-message-wrapper tool-call-wrapper';
+    wrapper.dataset.role = 'assistant';
+
+    const details = document.createElement('details');
+    details.className = 'tool-call';
+    const summary = document.createElement('summary');
+    summary.className = 'tool-call-summary';
+    summary.innerHTML = `
+        <svg class="tool-call-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        <span class="tool-call-name"></span>
+        <span class="tool-call-status"></span>
+        <svg class="tool-call-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    `;
+    summary.querySelector('.tool-call-name').textContent = item?.name || '工具调用';
+    const status = item?.status || (outputText ? 'completed' : '');
+    const statusText = status === 'completed' ? '已完成' : status === 'in_progress' ? '运行中' : status;
+    const statusElement = summary.querySelector('.tool-call-status');
+    statusElement.textContent = statusText;
+    if (!statusText) statusElement.style.display = 'none';
+
+    const body = document.createElement('div');
+    body.className = 'tool-call-body';
+    const appendField = (label, value, className = '') => {
+        if (value === '' || value == null) return;
+        const field = document.createElement('div');
+        field.className = `tool-call-field ${className}`.trim();
+        const title = document.createElement('div');
+        title.className = 'tool-call-field-label';
+        title.textContent = label;
+        const content = document.createElement('pre');
+        content.className = 'tool-call-field-content';
+        content.textContent = value;
+        field.append(title, content);
+        body.appendChild(field);
+    };
+    appendField('调用 ID', item?.call_id || '', 'tool-call-id');
+    appendField('输入', item?.input ?? item?.arguments ?? '');
+    appendField('输出', outputText);
+    details.append(summary, body);
+
+    if (reasoning) {
+        const thinkHeader = document.createElement('div');
+        thinkHeader.className = 'think';
+        thinkHeader.textContent = '▶ 思考过程';
+        const thinkTextarea = document.createElement('textarea');
+        thinkTextarea.className = 'chat-think';
+        thinkTextarea.readOnly = true;
+        thinkTextarea.value = reasoning;
+        thinkTextarea.style.display = 'none';
+        thinkHeader.onclick = () => {
+            thinkTextarea.style.display = thinkTextarea.style.display === 'none' ? 'block' : 'none';
+        };
+        wrapper.append(thinkHeader, thinkTextarea);
+    }
+    wrapper.appendChild(details);
+    chatBox.appendChild(wrapper);
+    return wrapper;
 }
 
 // 渲染 AI 正在回复的占位气泡
@@ -276,6 +350,7 @@ function setupEditDelete(wrapper, role) {
     if (delBtn) {
         delBtn.onclick = () => {
             if(confirm("确定删除这条聊天记录吗？")) {
+                if (typeof removeResponseHistoryItem === 'function') removeResponseHistoryItem(wrapper);
                 wrapper.remove();
             }
         };
@@ -300,6 +375,7 @@ function setupEditDelete(wrapper, role) {
                     const newText = ta.value;
                     displayDiv.textContent = newText;
                     wrapper.dataset.raw = newText;
+                    if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, newText);
                     displayDiv.style.display = 'block';
                     ta.style.display = 'none';
                     if (chatUser) chatUser.style.width = '';
@@ -327,6 +403,7 @@ function setupEditDelete(wrapper, role) {
                     isEditing = true;
                 } else {
                     wrapper.dataset.raw = editTa.value;
+                    if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, editTa.value);
                     contentDiv.innerHTML = safeParseMarkdown(editTa.value);
                     editTa.style.display = 'none';
                     contentDiv.style.display = 'block';
@@ -427,7 +504,7 @@ function updatePendingFilesUI() {
 function updateHeaderButtons() {
     const renameBtn = document.getElementById('renameChatBtn');
     const shareBtn = document.getElementById('shareChatBtn');
-    if (currentChatId) {
+    if (currentChatId && currentChatOwned) {
         renameBtn.style.display = 'inline-block';
         shareBtn.style.display = 'flex';
     } else {

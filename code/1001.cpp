@@ -4,6 +4,7 @@
 #include"lib/check48.h"
 // #include"lib/word.h"
 #include"lib/gptapi3.h"
+#include"lib/gptapi5.h"
 #include"lib/mylib.h"
 #include<cstdio>
 #include<cstring>
@@ -42,6 +43,20 @@ int main() {
     http_add(&a,"POST /api/gpt_getuserhistory ",gpt_getuserhistory);
     http_add(&a,"POST /api/gpt_deletehistory ",gpt_deletehistory);
     http_add(&a,"POST /api/gpt_share ",gpt_share);
+
+    http_add(&a,"POST /v1/responses ",gpt5_responses);
+    http_add(&a,"POST /api/v1/responses ",gpt5_responses);
+
+    http_add(&a,"POST /v1/chat/completions ",gpt5_chat_completions);
+    http_add(&a,"POST /api/v1/chat/completions ",gpt5_chat_completions);
+
+    http_add(&a,"POST /api/gpt5_apikey ",gpt5_apikey);
+    http_add(&a,"POST /api/gpt5_resolve ",gpt5_resolve);
+    http_add(&a,"POST /api/gpt5_history_list ",gpt5_history_list);
+    http_add(&a,"POST /api/gpt5_history_get ",gpt5_history_get);
+    http_add(&a,"POST /api/gpt5_history_rename ",gpt5_history_rename);
+    http_add(&a,"POST /api/gpt5_history_delete ",gpt5_history_delete);
+    http_add(&a,"POST /api/gpt5_share ",gpt5_share);
     http_add(&a,"GET /api/stop ",apistop);
     // http_add(&a,"",other);
     return http_start(&a,INADDR_LOOPBACK,1001);//INADDR_ANY

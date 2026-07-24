@@ -167,3 +167,66 @@ POST /api/gpt_share
 请求示例：
 {"id":"12345","publish":true}
 解释，通过此接口可以共享编号为id的对话给别人，publish只能设置为true，false功能未实现
+
+
+POST /api/v1/responses
+请求头：Authorization: Bearer sk-<8字符用户ID><19字符随机密钥>
+请求值：标准 Responses JSON 请求
+返回值：透传上游 HTTP 状态、端到端响应头和响应体。
+解释：请求体不会被改写。服务端只读取 model、input 和 Authorization，用于权限校验和本地历史归组。
+
+
+POST /api/v1/chat/completions
+请求头：Authorization: Bearer sk-<8字符用户ID><19字符随机密钥>
+请求值：标准 Chat Completions JSON 请求
+返回值：透传上游 HTTP 状态、端到端响应头和响应体。
+解释：请求体不会被改写。服务端只读取 model、messages 和 Authorization，用于权限校验和本地历史归组。
+
+
+POST /api/gpt5_apikey
+鉴权：Cookie 登录
+请求示例1：{}
+请求示例2：{"rotate":true}
+返回值：JSON 对象，api_key 为当前用户的 API 密钥。
+返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs"}
+解释：无密钥时初始化密钥；rotate 为 true 时轮换并立即废止旧密钥。
+
+
+POST /api/gpt5_resolve
+请求示例：{"response_id":"resp_xxx"}
+返回示例：{"con_id":"12345"}
+解释：根据上游 response.id 查询本地历史会话 ID。
+
+
+POST /api/gpt5_history_list
+鉴权：Cookie 登录
+返回值：当前用户未删除的历史对话元数据数组，每项包含 con_id 和 name。
+返回示例：[{"con_id":"12345","name":"New title"},{"con_id":"67890","name":""}]
+解释：name 为空表示标题尚未生成；完整对话内容需通过 /api/gpt5_history_get 按需读取。
+
+
+POST /api/gpt5_history_get
+鉴权：私有会话需要 Cookie 登录且仅所有者可读；已分享会话允许匿名读取
+请求示例：{"con_id":"12345"}
+返回值：content 结构体
+
+
+POST /api/gpt5_history_rename
+鉴权：Cookie 登录
+请求示例：{"con_id":"12345","title":"New title"}
+返回示例：{"ok":true}
+解释：仅会话所有者可重命名；
+
+
+POST /api/gpt5_history_delete
+鉴权：Cookie 登录
+请求示例：{"con_id":"12345"}
+返回示例：{"ok":true}
+解释：软删除，设置 content.deleted 并从用户历史列表移除。
+
+
+POST /api/gpt5_share
+鉴权：Cookie 登录
+请求示例：{"con_id":"12345","publish":true}
+返回示例：{"ok":true}
+解释：仅会话所有者可分享，publish 目前只能为 true；分享后可通过 /api/gpt5_history_get 匿名读取。

@@ -98,6 +98,7 @@ void reg(http_para* ssl){
 	memcpy(a.pwd,pwd,min(strlen(pwd),23));
 	memcpy(a.email,email,min(strlen(email),79));
 	memcpy(a.phone,phone,min(strlen(phone),19));
+	mylib_random_string(a.gptapikey,19);
 	if((p=(ll*)ndb2_got(name2id,a.name,0)))return http_send(ssl,Hok Hhtml Hc0,"This user already exists.",0);
 	if(!(p=(ll*)ndb2_got(name2id,a.name,8)))return http_send(ssl,Hok Htxt Hc0,"server error! D3F",0);
 	char kb[9]={0};

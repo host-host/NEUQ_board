@@ -515,6 +515,108 @@ body, html {
     outline: none;
 }
 
+.tool-call-wrapper {
+    align-items: flex-start;
+}
+
+.tool-call {
+    width: min(100%, 760px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.tool-call-summary {
+    min-height: 42px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 13px;
+    user-select: none;
+}
+
+.tool-call-summary::-webkit-details-marker {
+    display: none;
+}
+
+.tool-call-summary::marker {
+    content: '';
+}
+
+.tool-call-summary:hover {
+    background: #f8fafc;
+}
+
+.tool-call-icon {
+    flex: 0 0 auto;
+    color: #2563eb;
+}
+
+.tool-call-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.tool-call-status {
+    margin-left: auto;
+    flex: 0 0 auto;
+    color: #15803d;
+    font-size: 12px;
+}
+
+.tool-call-chevron {
+    flex: 0 0 auto;
+    transition: transform 0.18s ease;
+}
+
+.tool-call[open] .tool-call-chevron {
+    transform: rotate(90deg);
+}
+
+.tool-call-body {
+    border-top: 1px solid var(--border-color);
+    background: #f8fafc;
+}
+
+.tool-call-field {
+    padding: 10px 12px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.tool-call-field:first-child {
+    border-top: 0;
+}
+
+.tool-call-field-label {
+    margin-bottom: 5px;
+    color: var(--text-light);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tool-call-field-content {
+    max-height: 320px;
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--text-dark);
+    font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.tool-call-id .tool-call-field-content {
+    color: var(--text-muted);
+}
+
 .contentcalc {
     align-self: flex-start;
     font-size: 12px;
