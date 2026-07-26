@@ -30,5 +30,5 @@ cppJSON gpt6_work(
     const std::string& format,
     std::string& response_id
 );
-cppJSON my_format(const cppJSON& a);
+cppJSON my_format(const cppJSON& a,const std::string& format,int);
 #endif

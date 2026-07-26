@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <ctime>
 #include <fcntl.h>
+#include <set>
 #include <map>
 #include <pthread.h>
 #include <string>
@@ -12,7 +13,6 @@
 #include <vector>
 #include <unistd.h>
 using namespace std;
-
 __attribute((constructor)) static void gptapi6_init() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 }
@@ -329,22 +329,30 @@ cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,
     response_id=response["id"].valuestring();
     return response["output"].clone();
 }
-cppJSON my_format(const cppJSON& a){
+set<string>responses_allow={"type","call_id","output","name","input","role","tools","content","encrypted_content"};
+cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){
         cppJSON result("[]");
-        for(cppJSON item:a)result.push_back(my_format(item));
+        for(cppJSON item:a)result.push_back(my_format(item,format,k-1));
         return result;
     }
     if(a.IsObject()){
         std::vector<cppJSON> items;
-        for(cppJSON item:a)items.push_back(item);
+        for(cppJSON item:a){
+            const char* key=item.a&&item.a->string?item.a->string:"";
+            if(format=="responses"&&k==1){
+                if(responses_allow.find(key)==responses_allow.end())continue;
+                if(item.IsArray()&&item.size()==0)continue;
+            }
+            items.push_back(item);
+        }
         std::stable_sort(items.begin(),items.end(),[](const cppJSON& x,const cppJSON& y){
             const char* x_key=x.a&&x.a->string?x.a->string:"";
             const char* y_key=y.a&&y.a->string?y.a->string:"";
             return std::string(x_key)<std::string(y_key);
         });
         cppJSON result("{}");
-        for(cppJSON item:items)result.insert(item.a->string,my_format(item));
+        for(cppJSON item:items)result.insert(item.a->string,my_format(item,format,k-1));
         return result;
     }
     return a.clone();

@@ -34,7 +34,8 @@ struct content{
     char name[64];
     char format[20];
     char con_id[32];
-    char other[1024];
+    char hash[44];
+    char other[1024-44];
     char content[0];
 };
 struct history{
@@ -184,15 +185,33 @@ void insert2index_db(const string&a,const string&b){
     char* p=(char*)ndb2_got(index_db,tmp,b.length()+10);
     if(p)memcpy(p,b.c_str(),b.length());
 }
+void maketitle(char*name,string b,const cppJSON& config){//此处已确保配置文件第一个是用于取标题的 api。并且是completions格式
+    if(!name[0]){
+        cppJSON title_request("{\"stream\":false}");
+        title_request.insert("model",config[0]["public"][0].valuestring());
+        cppJSON title_messages("[]");
+        cppJSON title_message("{\"role\":\"user\"}");
+        string prompt="将以下回复的内容取一个简短的标题：\n"+b;
+        title_message.insert("content",prompt.c_str());
+        title_messages.push_back(std::move(title_message));
+        title_request.insert("messages",std::move(title_messages));
+        string _;
+        cppJSON title_reply=gpt6_work(0,config[0]["url"],config[0]["Authorization"][0],title_request.stringify_Unformatted(),"completions",_);
+        string title=title_reply[0]["content"];
+        if(title.size()>4&&title.substr(0,2)=="**"&&title.substr(title.size()-2)=="**")title=title.substr(2,title.size()-4);
+        if(title.size()>60)title=utf8_substr(title,56)+"...";
+        if(!title.empty())strcpy(name,title.c_str());
+    }
+
+}
 static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
     char *tmp=strcasestr(a->get,"Authorization: Bearer sk-");
     if(tmp)tmp+=25;
     user_* p=getuser_by_id(tmp);
     if(p&&memcmp(tmp+8,p->gptapikey,19))p=0;
     if(!p)return my_http_error(a,"Invalid API key.");
-    cppJSON request(a->get+a->n);
+    cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
     string model=request["model"];
-    cppJSON input=my_format(request[array_name]),config=cppJSON::from_file(CONFIG),conf;
     if(!config)return my_http_error(a,"can not read gpt2.json.");
     for(cppJSON i:config){
         string config_format=i["format"];
@@ -206,23 +225,20 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     if(!conf)return my_http_error(a,"Permission denied.");
     string auth=gpt5_take_auth(conf);
     if(auth.empty())return my_http_error(a,"Service busy.");
-    cppJSON previous_new_input=input.clone();
+    cppJSON previous_new_input_format=my_format(request[array_name],format,2);
     string hash;
     char hash_[48],*con_id=0;
     content*con=0;
-    for(int i=previous_new_input.size()-1,j=0;i&&(++j)<15;i--){
-        if(previous_new_input[i]["role"]=="assistant")break;
-        previous_new_input.erase(i);
-        hash="new_input_"+previous_new_input.stringify_Unformatted();
+    for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
+        if(previous_new_input_format[i]["role"]=="assistant")break;
+        previous_new_input_format.erase(i);
+        hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
         mylib_sha256(hash.c_str(),hash.length(),hash_);
         char* candidate_id=(char*)ndb2_got(index_db,hash_,0);
         content* candidate=(content*)ndb2_got(content_db,candidate_id,0);
-        string candidate_hash=candidate?(string)"new_input_"+candidate->content:string();
-        if(candidate_hash==hash&&candidate){
-            if(!strcmp(candidate->format,format.c_str())&&!memcmp(candidate->ownerid,p->userid,8)){
-                con_id=candidate_id;
-                con=candidate;
-            }
+        if(candidate&&!strcmp(candidate->format,format.c_str())&&!strcmp(candidate->hash,hash_)){
+            con_id=candidate_id;
+            con=candidate;
             break;
         }
     }
@@ -231,12 +247,9 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     else{
         int o1=__sync_val_compare_and_swap(&con->isusing,0,1);
         if(o1)isnew=true;
-        else{
-            string hash2=(string)"new_input_"+con->content;
-            if(hash2!=hash){
-                con->isusing=0;
-                isnew=true;
-            }
+        else if(strcmp(con->hash,hash_)){
+            con->isusing=0;
+            isnew=true;
         }
     }
     if(isnew){
@@ -266,29 +279,20 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id);
     insert2index_db("response_id_"+response_id,con_id);
     gpt5_release_auth(auth);
-    if(!con->name[0]){//此处已确保配置文件第一个是用于取标题的 api。并且是completions格式
-        cppJSON title_request("{\"stream\":false}");
-        title_request.insert("model",config[0]["public"][0].valuestring());
-        cppJSON title_messages("[]");
-        cppJSON title_message("{\"role\":\"user\"}");
-        string prompt="将以下回复的内容取一个简短的标题：\n"+output.stringify_Unformatted();
-        title_message.insert("content",prompt.c_str());
-        title_messages.push_back(std::move(title_message));
-        title_request.insert("messages",std::move(title_messages));
-        string _;
-        cppJSON title_reply=gpt6_work(0,config[0]["url"],config[0]["Authorization"][0],title_request.stringify_Unformatted(),"completions",_);
-        string title=title_reply[0]["content"];
-        if(title.size()>4&&title.substr(0,2)=="**"&&title.substr(title.size()-2)=="**")title=title.substr(2,title.size()-4);
-        if(title.size()>60)title=utf8_substr(title,56)+"...";
-        if(!title.empty())strcpy(con->name,title.c_str());
-    }
-    for(cppJSON i:output)input.push_back(my_format(i));
+    cppJSON input=request[array_name].clone();
+    for(cppJSON i:output)input.push_back(i);
     string new_input=input.stringify_Unformatted();
-    insert2index_db("new_input_"+new_input,con_id);
+    cppJSON new_input_format=my_format(input,format,2);
+    string new_input_key=(string)"new_input_"+p->userid+new_input_format.stringify_Unformatted();
+    char new_hash[44];
+    mylib_sha256(new_input_key.c_str(),new_input_key.length(),new_hash);
+    insert2index_db(new_input_key,con_id);
     con=(content*)ndb2_got(content_db,con_id,sizeof(content)+new_input.length()+10);
     if(con){
         memcpy(con->content,new_input.c_str(),new_input.length()+1);
+        memcpy(con->hash,new_hash,44);
         con->isusing=0;
+        if(!con->name[0])maketitle(con->name,output.stringify_Unformatted(),config);
     }
     if(isnew)free(con_id);
 }
