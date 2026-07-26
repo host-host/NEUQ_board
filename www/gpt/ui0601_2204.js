@@ -237,7 +237,7 @@ function renderAssistantMessage(text, reasoning = '') {
     return wrapper;
 }
 
-function renderToolCall(item, outputText = '', reasoning = '') {
+function renderToolCall(item, outputText = '', reasoning = '', traceText = '') {
     const chatBox = document.getElementById('chatBox');
     const wrapper = document.createElement('div');
     wrapper.className = 'chat-message-wrapper tool-call-wrapper';
@@ -259,6 +259,12 @@ function renderToolCall(item, outputText = '', reasoning = '') {
     const statusElement = summary.querySelector('.tool-call-status');
     statusElement.textContent = statusText;
     if (!statusText) statusElement.style.display = 'none';
+    if (traceText) {
+        const trace = document.createElement('div');
+        trace.className = 'tool-call-trace';
+        trace.textContent = traceText;
+        summary.insertBefore(trace, statusElement);
+    }
 
     const body = document.createElement('div');
     body.className = 'tool-call-body';
@@ -275,7 +281,6 @@ function renderToolCall(item, outputText = '', reasoning = '') {
         field.append(title, content);
         body.appendChild(field);
     };
-    appendField('调用 ID', item?.call_id || '', 'tool-call-id');
     appendField('输入', item?.input ?? item?.arguments ?? '');
     appendField('输出', outputText);
     details.append(summary, body);
