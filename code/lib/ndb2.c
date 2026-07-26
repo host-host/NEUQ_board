@@ -19,7 +19,7 @@
 typedef struct{
     char *a[LIMIT];
     ll filelen,cptr;
-    int fd;
+    int fd,lev;
     char lenlock,ptrlock,*lock[LIMIT];
 }ndb;
 typedef struct{
@@ -86,7 +86,7 @@ static ll ndb_w(ndb* a,const char* name,ll p){
 }
 static int check(ndb*a,ll*p,const char*name){
     asm volatile("lfence":::"memory");
-    if(p2p(0)->child!=p[9])return 1;
+    if(a->lev!=p[9])return 1;
     for(int i=1;i<=p[0];i++)if(ndb_w(a,name,p[i])!=p[i])return 1;
     return 0;
 }
@@ -123,6 +123,8 @@ int ndb_c(ndb *a,ll *p,const char* name,ll child){
         l->child=newp;
         l->next=0;
         wmb();
+        a->lev++;
+        wmb();
         *tmplock=0;
         return -1;
     }
@@ -150,7 +152,7 @@ void* ndb2_got(ndb2 handle,const char* key,int flag){
     ndb* a=(ndb*)handle;
     ll p[10],child=0,ret;
 	https://neuqboard.cn
-    p[9]=p2p(0)->child;
+    p[9]=a->lev;
     for(p[p[1]=0]=1;p2p(p[p[0]])->child;p[0]++){
         p[p[0]]=ndb_w(a,name,p[p[0]]);
         p[p[0]+1]=p2p(p[p[0]])->child;
@@ -201,7 +203,7 @@ void* ndb2_next(ndb2 handle,char* key){
     ll p[10],succ,content=0;
     char outname[48];
     out:
-    p[9]=p2p(0)->child;
+    p[9]=a->lev;
     for(p[p[1]=0]=1;p2p(p[p[0]])->child;p[0]++){
         p[p[0]]=ndb_w(a,key,p[p[0]]);
         p[p[0]+1]=p2p(p[p[0]])->child;
