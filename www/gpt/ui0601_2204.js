@@ -355,7 +355,11 @@ function setupEditDelete(wrapper, role) {
     if (delBtn) {
         delBtn.onclick = () => {
             if(confirm("确定删除这条聊天记录吗？")) {
-                if (typeof removeResponseHistoryItem === 'function') removeResponseHistoryItem(wrapper);
+                if (wrapper.dataset.nativeFormat === 'claude' && typeof removeClaudeHistoryItem === 'function')
+                    removeClaudeHistoryItem(wrapper);
+                else if (wrapper.dataset.nativeFormat === 'gemini' && typeof removeGeminiHistoryItem === 'function')
+                    removeGeminiHistoryItem(wrapper);
+                else if (typeof removeResponseHistoryItem === 'function') removeResponseHistoryItem(wrapper);
                 wrapper.remove();
             }
         };
@@ -380,7 +384,11 @@ function setupEditDelete(wrapper, role) {
                     const newText = ta.value;
                     displayDiv.textContent = newText;
                     wrapper.dataset.raw = newText;
-                    if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, newText);
+                    if (wrapper.dataset.nativeFormat === 'claude' && typeof updateClaudeHistoryItem === 'function')
+                        updateClaudeHistoryItem(wrapper, newText);
+                    else if (wrapper.dataset.nativeFormat === 'gemini' && typeof updateGeminiHistoryItem === 'function')
+                        updateGeminiHistoryItem(wrapper, newText);
+                    else if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, newText);
                     displayDiv.style.display = 'block';
                     ta.style.display = 'none';
                     if (chatUser) chatUser.style.width = '';
@@ -408,7 +416,11 @@ function setupEditDelete(wrapper, role) {
                     isEditing = true;
                 } else {
                     wrapper.dataset.raw = editTa.value;
-                    if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, editTa.value);
+                    if (wrapper.dataset.nativeFormat === 'claude' && typeof updateClaudeHistoryItem === 'function')
+                        updateClaudeHistoryItem(wrapper, editTa.value);
+                    else if (wrapper.dataset.nativeFormat === 'gemini' && typeof updateGeminiHistoryItem === 'function')
+                        updateGeminiHistoryItem(wrapper, editTa.value);
+                    else if (typeof updateResponseHistoryItem === 'function') updateResponseHistoryItem(wrapper, editTa.value);
                     contentDiv.innerHTML = safeParseMarkdown(editTa.value);
                     editTa.style.display = 'none';
                     contentDiv.style.display = 'block';

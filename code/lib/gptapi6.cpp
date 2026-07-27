@@ -288,6 +288,38 @@ static bool gpt6_extract_response(const string& body,const string& format,cppJSO
     return false;
 }
 
+static cppJSON claude_history(const string& body,string& response_id);
+static cppJSON gemini_history(const string& body,string& response_id);
+
+string gpt6_request_model(http_para* a,const cppJSON& request,const string& format) {
+    if(format!="gemini")return request["model"].valuestring();
+    if(!a||!a->get)return string();
+    string request_line(a->get,(size_t)a->n);
+    size_t begin=request_line.find("/models/");
+    size_t end=begin==string::npos?string::npos:request_line.find(":streamGenerateContent",begin);
+    if(end==string::npos)return string();
+    string model=request_line.substr(begin+8,end-begin-8);
+    for(char c:model)if(!isalnum((unsigned char)c)&&c!='-'&&c!='_'&&c!='.')return string();
+    return model;
+}
+
+bool gpt6_is_assistant(const cppJSON& item,const string& format) {
+    return item["role"]==(format=="gemini"?"model":"assistant");
+}
+
+static string gpt6_request_url(string url,http_para* a,const string& message,const string& format) {
+    if(format!="gemini")return url;
+    string model=gpt6_request_model(a,cppJSON(message.c_str()),format);
+    size_t marker=url.find("{model}");
+    if(marker!=string::npos)url.replace(marker,7,model);
+    else if(url.find(":streamGenerateContent")==string::npos){
+        if(!url.empty()&&url.back()!='/')url+='/';
+        url+="models/"+model+":streamGenerateContent";
+    }
+    if(url.find("alt=sse")==string::npos)url+=(url.find('?')==string::npos?"?":"&")+string("alt=sse");
+    return url;
+}
+
 cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,
                        const string& message,const string& format,string& response_id) {
     response_id.clear();
@@ -298,9 +330,20 @@ cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,
     if(curl) {
         struct curl_slist* headers=0;
         headers=curl_slist_append(headers,"Content-Type: application/json");
-        string auth="Authorization: "+Authorization;
-        headers=curl_slist_append(headers,auth.c_str());
-        curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
+        string auth;
+        if(format=="claude"){
+            auth="x-api-key: "+Authorization;
+            headers=curl_slist_append(headers,auth.c_str());
+            headers=curl_slist_append(headers,"anthropic-version: 2023-06-01");
+        }else if(format=="gemini"){
+            auth="x-goog-api-key: "+Authorization;
+            headers=curl_slist_append(headers,auth.c_str());
+        }else{
+            auth="Authorization: "+Authorization;
+            headers=curl_slist_append(headers,auth.c_str());
+        }
+        string request_url=gpt6_request_url(url,a,message,format);
+        curl_easy_setopt(curl,CURLOPT_URL,request_url.c_str());
         curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
         curl_easy_setopt(curl,CURLOPT_POSTFIELDS,message.data());
         curl_easy_setopt(curl,CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)message.size());
@@ -322,13 +365,133 @@ cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,
         gpt6_write_all(a->cl,head.data(),head.size());
         gpt6_write_all(a->cl,body.data(),body.size());
     }
-    cppJSON response;
-    bool parsed=gpt6_extract_response(proxy.body,format,response);
+    cppJSON response,item;
+    bool native=format=="claude"||format=="gemini";
+    if(native)item=format=="claude"?claude_history(proxy.body,response_id)
+                                    :gemini_history(proxy.body,response_id);
+    bool parsed=native?item.IsObject():gpt6_extract_response(proxy.body,format,response);
     gpt6_log_exchange(message,proxy.body,format,result,proxy.status_line,parsed);
-    if(result!=CURLE_OK||!parsed)return cppJSON();
+    if(result!=CURLE_OK||!parsed)return cppJSON("[]");
+    if(native){
+        cppJSON output("[]");
+        output.push_back(std::move(item));
+        return output;
+    }
     response_id=response["id"].valuestring();
-    return response["output"].clone();
+    cppJSON output=response["output"].clone();
+    return output.IsArray()?std::move(output):cppJSON("[]");
 }
+
+static vector<cppJSON> native_sse_payloads(const string& body) {
+    vector<cppJSON> result;
+    size_t pos=0;
+    while(pos<body.size()) {
+        size_t end=body.find('\n',pos);
+        string line=end==string::npos?body.substr(pos):body.substr(pos,end-pos);
+        pos=end==string::npos?body.size():end+1;
+        if(!line.empty()&&line.back()=='\r')line.pop_back();
+        if(line.rfind("data:",0)!=0)continue;
+        string payload=line.substr(5);
+        while(!payload.empty()&&(payload.front()==' '||payload.front()=='\t'))payload.erase(0,1);
+        if(payload.empty()||payload=="[DONE]")continue;
+        cppJSON event(payload.c_str(),(int)payload.size());
+        if(event.IsObject())result.push_back(std::move(event));
+    }
+    return result;
+}
+
+static void native_append_string(cppJSON& object,const char* key,const string& delta) {
+    if(!object.IsObject()||delta.empty())return;
+    object.insert(key,object[key].valuestring()+delta);
+}
+
+static cppJSON claude_history(const string& body,string& response_id) {
+    response_id.clear();
+    cppJSON normal(body.c_str(),(int)body.size()),message;
+    if(normal.IsObject()&&normal["type"]=="message")message=normal.clone();
+    map<int,cppJSON> blocks;
+    map<int,string> partial_json;
+    if(!message)for(cppJSON event:native_sse_payloads(body)) {
+        string type=event["type"].valuestring();
+        if(type=="message_start"&&event["message"].IsObject())message=event["message"].clone();
+        else if(type=="content_block_start"&&event["content_block"].IsObject())
+            blocks[(int)event["index"].valuedouble()]=event["content_block"].clone();
+        else if(type=="content_block_delta"&&event["delta"].IsObject()) {
+            int index=(int)event["index"].valuedouble();
+            if(!blocks[index].IsObject())blocks[index]=cppJSON("{}");
+            cppJSON delta=event["delta"];
+            string delta_type=delta["type"].valuestring();
+            if(delta_type=="text_delta")native_append_string(blocks[index],"text",delta["text"].valuestring());
+            else if(delta_type=="thinking_delta")native_append_string(blocks[index],"thinking",delta["thinking"].valuestring());
+            else if(delta_type=="signature_delta")native_append_string(blocks[index],"signature",delta["signature"].valuestring());
+            else if(delta_type=="input_json_delta")partial_json[index]+=delta["partial_json"].valuestring();
+        } else if(type=="message_delta"&&event["delta"].IsObject()) {
+            if(!message.IsObject())message=cppJSON("{}");
+            for(cppJSON field:event["delta"])message.insert(field.a->string,field.clone());
+            if(event["usage"].IsObject()) {
+                if(!message["usage"].IsObject())message.insert("usage",cppJSON("{}"));
+                for(cppJSON field:event["usage"])
+                    message["usage"].insert(field.a->string,field.clone());
+            }
+        }
+    }
+    if(!message.IsObject())return cppJSON();
+    response_id=message["id"].valuestring();
+    if(!blocks.empty()) {
+        cppJSON content("[]");
+        for(auto& entry:blocks) {
+            if(!partial_json[entry.first].empty()) {
+                cppJSON input(partial_json[entry.first].c_str());
+                if(input)entry.second.insert("input",std::move(input));
+            }
+            content.push_back(entry.second.clone());
+        }
+        message.insert("content",std::move(content));
+    }
+    cppJSON history("{}");
+    history.insert("role",message["role"].valuestring().empty()?"assistant":message["role"].valuestring());
+    history.insert("content",message["content"].IsArray()||message["content"].IsString()
+                             ?message["content"].clone():cppJSON("[]"));
+    return history;
+}
+
+static bool same_gemini_part(const cppJSON& left,const cppJSON& right) {
+    if(!left.IsObject()||!right.IsObject())return false;
+    if(left["text"].IsString()&&right["text"].IsString())
+        return (left["thought"]==true)==(right["thought"]==true);
+    return (left.has("functionCall")&&right.has("functionCall"))||
+           (left.has("thoughtSignature")&&right.has("thoughtSignature"));
+}
+
+static cppJSON gemini_history(const string& body,string& response_id) {
+    response_id.clear();
+    cppJSON normal(body.c_str(),(int)body.size());
+    vector<cppJSON> payloads,parts;
+    if(normal.IsObject())payloads.push_back(normal.clone());
+    else payloads=native_sse_payloads(body);
+    cppJSON content("{}");
+    for(cppJSON response:payloads) {
+        string id=response["responseId"].valuestring();
+        if(!id.empty())response_id=id;
+        cppJSON chunk=response["candidates"][0]["content"];
+        if(!chunk.IsObject())continue;
+        if(!chunk["role"].valuestring().empty())content.insert("role",chunk["role"].valuestring());
+        if(!chunk["parts"].IsArray())continue;
+        for(cppJSON part:chunk["parts"]) {
+            if(!parts.empty()&&same_gemini_part(parts.back(),part)) {
+                if(part["text"].IsString())native_append_string(parts.back(),"text",part["text"].valuestring());
+                else parts.back()=part.clone();
+            } else parts.push_back(part.clone());
+        }
+    }
+    if(parts.empty())return cppJSON();
+    cppJSON output_parts("[]");
+    for(cppJSON& part:parts)output_parts.push_back(part.clone());
+    if(content["role"].valuestring().empty())content.insert("role","model");
+    content.insert("parts",std::move(output_parts));
+    return content;
+}
+
 set<string>responses_allow={"type","call_id","output","name","input","role","tools","content","encrypted_content"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){

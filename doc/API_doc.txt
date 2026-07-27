@@ -102,6 +102,45 @@ private表示需要权限访问的模型
 format表示上游格式，默认是completions。
 
 
+POST /api/v1/messages
+请求值：Claude Messages 原生 JSON，请求头需包含站内 Authorization。
+示例：
+{"model":"claude-sonnet-4-5","max_tokens":8192,"stream":true,"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}]}
+返回值：Anthropic 原生 SSE；前端从 message_start.message.id 读取原生响应 ID。没有 ID 时不解析站内会话 ID。
+历史记录：content 字段直接保存 Claude 原生 messages 数组（role + content blocks）。
+
+
+POST /api/v1beta/models/<model>:streamGenerateContent
+请求值：Gemini generateContent 原生 JSON，请求头需包含站内 Authorization。
+示例：
+{"contents":[{"role":"user","parts":[{"text":"hello"}]}],"generationConfig":{"maxOutputTokens":8192}}
+返回值：Gemini 原生 SSE；仅在响应本身含 responseId 时解析站内会话 ID，没有时正常展示并继续对话。
+历史记录：content 字段直接保存 Gemini 原生 contents 数组（role + parts）。
+
+
+原生供应商配置示例（密钥仅放置于服务器的 /web/res/pri/gpt2.json）：
+[
+  {
+    "provider":"anthropic",
+    "url":"https://api.anthropic.com/v1/messages",
+    "Authorization":["ANTHROPIC_API_KEY"],
+    "parallel":2,
+    "public":[],
+    "private":["claude-sonnet-4-5"],
+    "format":"claude"
+  },
+  {
+    "provider":"google",
+    "url":"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent",
+    "Authorization":["GEMINI_API_KEY"],
+    "parallel":2,
+    "public":[],
+    "private":["gemini-2.5-flash"],
+    "format":"gemini"
+  }
+]
+
+
 POST /api/gpt_chat
 请求值：completions格式的请求，并额外包含ida字段。ida字段中包含provider和id
 ida字段示例：

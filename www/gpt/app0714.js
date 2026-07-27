@@ -25,6 +25,8 @@ function startNewChat() {//新建对话
     currentChatOwned = false;
     currentChatFormat = null;
     currentResponsesInput = [];
+    currentClaudeMessages = [];
+    currentGeminiContents = [];
     updateUrlParam(null);
     document.getElementById('chatBox').innerHTML = `
         <div class="welcome-box" id="welcomeBox">
@@ -255,15 +257,31 @@ async function sendMessage() {//发送消息的核心入口
     scrollToBottom();
 
     if (requestFormat === 'responses') appendNewResponseInput(newUserWrappers);
+    else if (requestFormat === 'claude') appendNewClaudeMessages(newUserWrappers);
+    else if (requestFormat === 'gemini') appendNewGeminiContents(newUserWrappers);
     // 从发送请求前开始计时，包含连接、排队以及首字生成前的等待时间。
     const requestStartTime = new Date().getTime();
 
-    let bodyData = requestFormat === 'responses' ? {
+    let bodyData;
+    if (requestFormat === 'responses') bodyData = {
         model: modelName,
         stream: true,
         instructions: 'You are a helpful assistant.',
         input: currentResponsesInput
-    } : {
+    };
+    else if (requestFormat === 'claude') bodyData = {
+        model: modelName,
+        max_tokens: 8192,
+        stream: true,
+        system: 'You are a helpful assistant.',
+        messages: currentClaudeMessages
+    };
+    else if (requestFormat === 'gemini') bodyData = {
+        systemInstruction: {parts: [{text: 'You are a helpful assistant.'}]},
+        contents: currentGeminiContents,
+        generationConfig: {}
+    };
+    else bodyData = {
         model: modelName,
         stream: true,
         messages: buildPayloadFromDOM(),
@@ -273,6 +291,7 @@ async function sendMessage() {//发送消息的核心入口
     const maxTokens = Number(requestSettings.max_tokens);
     if (Number.isInteger(maxTokens) && maxTokens > 0) {
         if (requestFormat === 'responses') bodyData.max_output_tokens = maxTokens;
+        else if (requestFormat === 'gemini') bodyData.generationConfig.maxOutputTokens = maxTokens;
         else bodyData.max_tokens = maxTokens;
     }
 
@@ -289,9 +308,11 @@ async function sendMessage() {//发送消息的核心入口
 
     try {
         const apiKey = await ensureGpt5ApiKey();
-        const endpoint = requestFormat === 'responses'
-            ? '/api/v1/responses'
-            : '/api/v1/chat/completions';
+        const endpoint = requestFormat === 'responses' ? '/api/v1/responses'
+            : requestFormat === 'claude' ? '/api/v1/messages'
+            : requestFormat === 'gemini'
+                ? `/api/v1beta/models/${encodeURIComponent(modelName)}:streamGenerateContent`
+                : '/api/v1/chat/completions';
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -311,7 +332,15 @@ async function sendMessage() {//发送消息的核心入口
         const { wrapper, contentDiv, thinkTextarea } = reply;
         const responseId = requestFormat === 'responses'
             ? await callResponsesStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime)
-            : await callStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime);
+            : requestFormat === 'claude'
+                ? await callClaudeStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime)
+                : requestFormat === 'gemini'
+                    ? await callGeminiStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime)
+                    : await callStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime);
+        if (requestFormat === 'claude' || requestFormat === 'gemini') {
+            currentChatFormat = requestFormat;
+            updateHeaderButtons();
+        }
         if (responseId) {
             try {
                 currentChatId = await resolveGpt5ConversationId(responseId);
@@ -320,6 +349,8 @@ async function sendMessage() {//发送消息的核心入口
                 updateUrlParam(currentChatId);
                 updateHeaderButtons();
                 if (requestFormat === 'responses') await refreshResponsesState(currentChatId);
+                else if (requestFormat === 'claude') await refreshClaudeState(currentChatId);
+                else if (requestFormat === 'gemini') await refreshGeminiState(currentChatId);
             } catch (error) {
                 console.error('解析本地会话 ID 失败:', error);
             }

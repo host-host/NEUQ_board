@@ -211,7 +211,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     if(p&&memcmp(tmp+8,p->gptapikey,19))p=0;
     if(!p)return my_http_error(a,"Invalid API key.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
-    string model=request["model"];
+    string model=gpt6_request_model(a,request,format);
     if(!config)return my_http_error(a,"can not read gpt2.json.");
     for(cppJSON i:config){
         string config_format=i["format"];
@@ -230,8 +230,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     char hash_[48],*con_id=0;
     content*con=0;
     for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
-        if(previous_new_input_format[i]["role"]=="assistant")break;
-        previous_new_input_format.erase(i);
+        if(gpt6_is_assistant(previous_new_input_format[i],format))break;
         hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
         mylib_sha256(hash.c_str(),hash.length(),hash_);
         char* candidate_id=(char*)ndb2_got(index_db,hash_,0);
@@ -241,6 +240,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
             con=candidate;
             break;
         }
+        previous_new_input_format.erase(i);
     }
     bool isnew=false;
     if(!con||strcmp(con->format,format.c_str())||memcmp(con->ownerid,p->userid,8)!=0)isnew=true;
@@ -277,7 +277,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     }
     string response_id;
     cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id);
-    insert2index_db("response_id_"+response_id,con_id);
+    if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
     gpt5_release_auth(auth);
     cppJSON input=request[array_name].clone();
     for(cppJSON i:output)input.push_back(i);
@@ -301,4 +301,10 @@ void gpt5_responses(http_para* a) {
 }
 void gpt5_chat_completions(http_para* a) {
     gpt5_completion_request(a,"completions","messages");
+}
+void gpt5_claude_messages(http_para* a) {
+    gpt5_completion_request(a,"claude","messages");
+}
+void gpt5_gemini_generate_content(http_para* a) {
+    gpt5_completion_request(a,"gemini","contents");
 }

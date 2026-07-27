@@ -82,7 +82,7 @@ async function resolveGpt5ConversationId(responseId) {
 }
 
 function normalizeModelFormat(format) {
-    return format === 'responses' ? 'responses' : 'completions';
+    return ['responses', 'claude', 'gemini'].includes(format) ? format : 'completions';
 }
 
 function availableModelVariants(name, requireAccess = true) {
@@ -114,9 +114,9 @@ function setSelectedModel(name, preferredFormat = null) {
     requestSettings.max_tokens = '';
     showMaxTokensPresets();
     const label = document.querySelector('.max-tokens-label');
-    const tokenFieldName = (currentChatFormat || variant.format) === 'responses'
-        ? 'max_output_tokens'
-        : 'max_tokens';
+    const activeFormat = currentChatFormat || variant.format;
+    const tokenFieldName = activeFormat === 'responses' ? 'max_output_tokens'
+        : activeFormat === 'gemini' ? 'maxOutputTokens' : 'max_tokens';
     if (label) label.textContent = tokenFieldName;
     const customInput = document.getElementById('settingsMaxTokens');
     if (customInput) customInput.placeholder = tokenFieldName;
@@ -484,6 +484,8 @@ async function selectHistoryChat(id, updateUrl = true, owned = true) {//选择�
         currentChatFormat = normalizeModelFormat(data.format);
         selectCompatibleModel(currentChatFormat);
         if (currentChatFormat === 'responses') renderResponsesHistory(data);
+        else if (currentChatFormat === 'claude') renderClaudeHistory(data);
+        else if (currentChatFormat === 'gemini') renderGeminiHistory(data);
         else {
             currentResponsesInput = [];
             renderGpt5History(data);

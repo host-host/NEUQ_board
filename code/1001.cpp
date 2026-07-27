@@ -50,6 +50,12 @@ int main() {
     http_add(&a,"POST /v1/chat/completions ",gpt5_chat_completions);
     http_add(&a,"POST /api/v1/chat/completions ",gpt5_chat_completions);
 
+    http_add(&a,"POST /v1/messages ",gpt5_claude_messages);
+    http_add(&a,"POST /api/v1/messages ",gpt5_claude_messages);
+
+    http_add(&a,"POST /v1beta/models/",gpt5_gemini_generate_content);
+    http_add(&a,"POST /api/v1beta/models/",gpt5_gemini_generate_content);
+
     http_add(&a,"POST /api/gpt5_apikey ",gpt5_apikey);
     http_add(&a,"POST /api/gpt5_resolve ",gpt5_resolve);
     http_add(&a,"POST /api/gpt5_history_list ",gpt5_history_list);
