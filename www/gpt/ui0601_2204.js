@@ -255,7 +255,10 @@ function renderToolCall(item, outputText = '', reasoning = '', traceText = '') {
     `;
     summary.querySelector('.tool-call-name').textContent = item?.name || '工具调用';
     const status = item?.status || (outputText ? 'completed' : '');
-    const statusText = status === 'completed' ? '已完成' : status === 'in_progress' ? '运行中' : status;
+    const isExecTool = /(?:^|[._])exec$/i.test(String(item?.name || ''));
+    const statusText = status === 'completed'
+        ? (isExecTool ? '' : '已完成')
+        : status === 'in_progress' ? '运行中' : status;
     const statusElement = summary.querySelector('.tool-call-status');
     statusElement.textContent = statusText;
     if (!statusText) statusElement.style.display = 'none';

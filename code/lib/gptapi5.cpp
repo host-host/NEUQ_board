@@ -230,7 +230,6 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     char hash_[48],*con_id=0;
     content*con=0;
     for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
-        if(gpt6_is_assistant(previous_new_input_format[i],format))break;
         hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
         mylib_sha256(hash.c_str(),hash.length(),hash_);
         char* candidate_id=(char*)ndb2_got(index_db,hash_,0);
@@ -240,6 +239,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
             con=candidate;
             break;
         }
+        if(gpt6_is_assistant(previous_new_input_format[i],format))break;
         previous_new_input_format.erase(i);
     }
     bool isnew=false;
