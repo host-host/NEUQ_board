@@ -97,17 +97,10 @@ function responsesToolTrace(item) {
     return traces.map(trace => `${trace.title}: ${trace.detail}`).join('  •  ');
 }
 
-function isHiddenResponsesContext(item) {
-    if (item?.role !== 'user') return false;
-    const text = responsesMessageText(item).trim();
-    return text.startsWith('<environment_context>') && text.endsWith('</environment_context>');
-}
-
 function responseRenderableEntries(input) {
     const entries = [];
     input.forEach((item, index) => {
-        if (!isHiddenResponsesContext(item) &&
-            (item?.role === 'user' || item?.role === 'assistant' || isResponsesToolCall(item))) {
+        if (item?.role === 'user' || item?.role === 'assistant' || isResponsesToolCall(item)) {
             entries.push({item, index});
         }
     });
@@ -159,7 +152,6 @@ function renderResponsesHistory(data) {
             pendingReasoning += `${pendingReasoning ? '\n' : ''}${reasoning}`;
             return;
         }
-        if (isHiddenResponsesContext(item)) return;
         let wrapper;
         if (item.role === 'user') {
             if (Array.isArray(item.content)) {
