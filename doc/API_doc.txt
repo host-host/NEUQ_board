@@ -66,30 +66,10 @@ POST /api/chat_send
 返回示例2：{"status":"error","message":"Please log in first."}
 
 
-POST /api/stop
+GET /api/stop
 安全的关闭服务，仅允许本地访问
 用法：curl http://127.0.0.1:1001/api/stop
 
-
-POST /api/gpt2
-请求值：类型json
-请求示例
-{"model":"deepseek-ai/DeepSeek-V3.1","stream":true,"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"hello"}],"stream_options":{"include_usage":true},"ida":0,"enable_thinking":true}
-解释：
-该请求表示使用/api/gpts2接口得到的模型分类中下标第0个（"ida":0）分类下的模型名为"deepseek-ai/DeepSeek-V3.1"的模型，
-除了model，messages，ida这三个是自己构造，剩下的部分有默认格式，默认格式为{"stream": true,"stream_options": {"include_usage": true},"enable_thinking":true}
-返回值：EventStream流示响应
-返回示例1：
-data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":" today","reasoning_content":null},"logprobs":null,"finish_reason":null}],"usage":null}
-
-data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":"?","reasoning_content":null},"logprobs":null,"finish_reason":null}],"usage":null}
-
-data: {"id":"ad2e5a0f-37d7-4875-85be-0212cf4e931e","object":"chat.completion.chunk","created":1779346747,"model":"deepseek-v4-flash","system_fingerprint":"fp_8b330d02d0_prod0820_fp8_kvcache_20260402","choices":[{"index":0,"delta":{"content":"","reasoning_content":null},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":11,"completion_tokens":45,"total_tokens":56,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":35},"prompt_cache_hit_tokens":0,"prompt_cache_miss_tokens":11}}
-
-data: [DONE]
-返回示例2：
-"data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"错误，模型不可用\"}}]}\r\n\r\ndata: [DONE]"
-解释：无状态的透传代理，校验 ida/model 权限后删掉ida，把请求体原样转发给该模型分组的上游，再把 SSE 流原样返回
 
 POST /api/gpts2
 请求值：无
@@ -103,123 +83,27 @@ format表示上游格式，默认是completions。
 
 
 POST /api/v1/messages
+POST /v1/messages
 请求值：Claude Messages 原生 JSON，请求头需包含站内 Authorization。
-示例：
-{"model":"claude-sonnet-4-5","max_tokens":8192,"stream":true,"messages":[{"role":"user","content":[{"type":"text","text":"hello"}]}]}
-返回值：Anthropic 原生 SSE；前端从 message_start.message.id 读取原生响应 ID。没有 ID 时不解析站内会话 ID。
-历史记录：content 字段直接保存 Claude 原生 messages 数组（role + content blocks）。
+返回值：透传上游
 
 
 POST /api/v1beta/models/<model>:streamGenerateContent
+POST /v1beta/models/<model>:streamGenerateContent
 请求值：Gemini generateContent 原生 JSON，请求头需包含站内 Authorization。
-示例：
-{"contents":[{"role":"user","parts":[{"text":"hello"}]}],"generationConfig":{"maxOutputTokens":8192}}
-返回值：Gemini 原生 SSE；仅在响应本身含 responseId 时解析站内会话 ID，没有时正常展示并继续对话。
-历史记录：content 字段直接保存 Gemini 原生 contents 数组（role + parts）。
-
-
-原生供应商配置示例（密钥仅放置于服务器的 /web/res/pri/gpt2.json）：
-[
-  {
-    "provider":"anthropic",
-    "url":"https://api.anthropic.com/v1/messages",
-    "Authorization":["ANTHROPIC_API_KEY"],
-    "parallel":2,
-    "public":[],
-    "private":["claude-sonnet-4-5"],
-    "format":"claude"
-  },
-  {
-    "provider":"google",
-    "url":"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent",
-    "Authorization":["GEMINI_API_KEY"],
-    "parallel":2,
-    "public":[],
-    "private":["gemini-2.5-flash"],
-    "format":"gemini"
-  }
-]
-
-
-POST /api/gpt_chat
-请求值：completions格式的请求，并额外包含ida字段。ida字段中包含provider和id
-ida字段示例：
-{"provider":"deepseek","id":"conversation-id"}
-返回头：
-HTTP响应头 `X-Conversation-ID: <id>`，表示本次请求对应的id，长度不超过32
-返回值：
-EventStream流示响应
-若不是流式响应，通常为上游出错
-
-
-POST /api/gpt_idname
-请求值：一个字符串，表示id
-解释：返回该id对应的请求的概述
-返回示例：{"title":"小内存服务器VS Code远程优化四方案","owner":"NewInTown"}
-
-
-POST /api/gpt_changename
-请求值：json格式
-请求示例：
-{"id":"12345","name":"New Chat"}
-返回值：字符串“ok”或者“Error:*”
-解释：更改该id对应的请求的概述
-
-
-POST /api/gpt_idcontent
-请求值：一个字符串，表示id
-返回值：类型json，返回该id对应的请求的历史消息记录。content中是completions格式的历史记录。
-返回示例：
-{
-    "publish":false,
-    "owner":"Jack",
-    "createtime":12345,
-    "other":"",
-    "content":[
-        {"role":"system","content":"You are a helpful assistant."},
-        {"role":"user","content":"hello"},
-        {"role":"assistant","content":"Hello! How can I assist you today?"}
-    ]
-}
-解释：
-publish表示该对话是否公开
-owner表示该对话是谁创建的
-other留空,为将来保留
-createtime是Unix时间戳
-
-
-POST /api/gpt_getuserhistory
-请求值：无
-返回值：类型json，一个数组，里面是id，表示我的历史记录
-
-
-
-POST /api/gpt_deletehistory
-请求值：一个字符串，表示id
-返回值：字符串“ok”或者“error_*”
-解释：不会从数据库中删除记录
-
-
-POST /api/gpt_share
-请求值：json格式
-返回值：字符串“ok”或者“Error:*”
-请求示例：
-{"id":"12345","publish":true}
-解释，通过此接口可以共享编号为id的对话给别人，publish只能设置为true，false功能未实现
+返回值：透传上游
 
 
 POST /api/v1/responses
-请求头：Authorization: Bearer sk-<8字符用户ID><19字符随机密钥>
-请求值：标准 Responses JSON 请求
-返回值：透传上游 HTTP 状态、端到端响应头和响应体。
-解释：请求体不会被改写。服务端只读取 model、input 和 Authorization，用于权限校验和本地历史归组。
+POST /v1/responses
+请求值：标准 Responses JSON 请求，请求头需包含站内 Authorization。
+返回值：透传上游
 
 
 POST /api/v1/chat/completions
-请求头：Authorization: Bearer sk-<8字符用户ID><19字符随机密钥>
-请求值：标准 Chat Completions JSON 请求
-返回值：透传上游 HTTP 状态、端到端响应头和响应体。
-解释：请求体不会被改写。服务端只读取 model、messages 和 Authorization，用于权限校验和本地历史归组。
+POST /v1/chat/completions
+请求值：标准 Chat Completions JSON 请求，请求头需包含站内 Authorization。
+返回值：透传上游
 
 
 POST /api/gpt5_apikey

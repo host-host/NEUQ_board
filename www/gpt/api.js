@@ -350,6 +350,18 @@ async function loadUserHistory() {//加载用户历史记录
         return [];
     }
 }
+async function refreshUserHistory() {
+    const refreshBtn = document.getElementById('historyRefreshBtn');
+    if (!refreshBtn || refreshBtn.disabled) return;
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add('is-loading');
+    try {
+        await loadUserHistory();
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('is-loading');
+    }
+}
 function enterBatchDeleteMode() {//进入历史记录批量管理模式
     if (!document.querySelector('.history-item')) return;
     batchDeleteMode = true;

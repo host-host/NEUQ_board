@@ -106,6 +106,43 @@ body, html {
     flex: 1;
 }
 
+.history-refresh-btn {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+    padding: 7px;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-light);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.history-refresh-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.history-refresh-btn:hover:not(:disabled) {
+    color: var(--primary-color);
+    background: var(--primary-light);
+}
+
+.history-refresh-btn:disabled {
+    cursor: wait;
+}
+
+.history-refresh-btn.is-loading svg {
+    animation: history-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes history-refresh-spin {
+    to { transform: rotate(360deg); }
+}
+
 .history-manage-btn {
     margin-bottom: 8px;
     padding: 7px 8px;

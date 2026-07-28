@@ -342,7 +342,11 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsObject()){
         map<string,cppJSON> items;
         for(cppJSON item:a){
-            if(format=="responses"&&k==1&&(!responses_allow.count(item.a->string)||(item.IsArray()&&!item.size())))continue;
+            if(format=="responses"&&k==1){
+                if(!responses_allow.count(item.a->string))continue;
+                if(item.IsArray()&&!item.size())continue;
+                if(item.IsNull())continue;
+            }
             items[item.a->string]=my_format(item,format,k-1);
         }
         cppJSON result("{}");

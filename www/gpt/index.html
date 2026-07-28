@@ -12,7 +12,7 @@
     <script src="/cdn/cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="/cdn/cdn.jsdelivr.net/npm/marked-katex-extension/lib/index.umd.js"></script>
     <script src="/cdn/cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.8/purify.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=0728">
+    <link rel="stylesheet" href="style.css?v=0729">
 </head>
 <body>
     <div id="selectionModal" class="modal">
@@ -39,6 +39,9 @@
                 <button class="history-toggle-btn" onclick="toggleHistoryList()">
                     <span>历史记录</span>
                     <svg id="historyToggleIcon" class="history-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <button class="history-refresh-btn" id="historyRefreshBtn" onclick="refreshUserHistory()" title="刷新历史记录" aria-label="刷新历史记录">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"></path><path d="M3 21v-5h5"></path><path d="M3 12A9 9 0 0 1 18.4 5.6L21 8"></path><path d="M21 3v5h-5"></path></svg>
                 </button>
                 <button class="history-manage-btn" id="historyManageBtn" onclick="enterBatchDeleteMode()" title="批量管理历史记录" style="display:none;">管理</button>
             </div>
@@ -148,7 +151,7 @@
     </div>
     <script src="utils.js"></script><!-- 工具函数 -->
     <script src="ui.js?v=0728"></script><!-- 渲染ui -->
-    <script src="api.js?v=0727"></script><!-- 通用数据接口与会话管理 -->
+    <script src="api.js?v=0729"></script><!-- 通用数据接口与会话管理 -->
     <script src="api_completions.js?v=0728"></script><!-- Chat Completions 协议解析 -->
     <script src="api_responses.js?v=0728"></script><!-- Responses 协议解析 -->
     <script src="api_claude.js?v=0728"></script><!-- Claude Messages 原生协议 -->

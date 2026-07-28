@@ -3,7 +3,6 @@
 #include"lib/chat.h"
 #include"lib/check48.h"
 // #include"lib/word.h"
-#include"lib/gptapi3.h"
 #include"lib/gptapi5.h"
 #include"lib/mylib.h"
 #include<cstdio>
@@ -35,14 +34,7 @@ int main() {
     http_add(&a,"GET /api/check48 ",check48);
     // http_add(&a,"POST /api/getword ",getword);
     // http_add(&a,"POST /api/setword ",setword);
-    http_add(&a,"POST /api/gpt_chat ",gpt_chat);
-    http_add(&a,"POST /api/gpts2 ",gptapis2);
-    http_add(&a,"POST /api/gpt_idname ",gpt_idname);
-    http_add(&a,"POST /api/gpt_changename ",gpt_changename);
-    http_add(&a,"POST /api/gpt_idcontent ",gpt_idcontent);
-    http_add(&a,"POST /api/gpt_getuserhistory ",gpt_getuserhistory);
-    http_add(&a,"POST /api/gpt_deletehistory ",gpt_deletehistory);
-    http_add(&a,"POST /api/gpt_share ",gpt_share);
+    http_add(&a,"POST /api/gpts2 ",gpt5_gpts2);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
     http_add(&a,"POST /api/v1/responses ",gpt5_responses);

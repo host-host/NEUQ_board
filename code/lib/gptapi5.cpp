@@ -316,3 +316,12 @@ void gpt5_claude_messages(http_para* a) {
 void gpt5_gemini_generate_content(http_para* a) {
     gpt5_completion_request(a,"gemini","contents");
 }
+void gpt5_gpts2(http_para* a) {
+    cppJSON config=cppJSON::from_file("/web/res/pri/gpt2.json");
+    if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt2.json.",0);
+    for(cppJSON p:config) {
+        p.erase("url");
+        p.erase("Authorization");
+    }
+    http_send(a,Hok Hjson Hc0,config.stringify_Unformatted().c_str(),0);
+}
