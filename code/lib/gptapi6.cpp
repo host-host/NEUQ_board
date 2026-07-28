@@ -332,9 +332,6 @@ string gpt6_request_model(http_para* a,const cppJSON& request,const string& form
     for(char c:model)if(!isalnum((unsigned char)c)&&c!='-'&&c!='_'&&c!='.')return string();
     return model;
 }
-bool gpt6_is_assistant(const cppJSON& item,const string& format) {
-    return item["role"]==(format=="gemini"?"model":"assistant");
-}
 static const set<string>responses_allow={"type","call_id","output","name","input","role","tools","content","encrypted_content"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){

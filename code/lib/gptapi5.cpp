@@ -229,6 +229,9 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     string hash;
     char hash_[48],*con_id=0;
     content*con=0;
+    bool isnew=false;
+    time_t maxtime=time(0)+5;
+    retry:
     for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
         hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
         mylib_sha256(hash.c_str(),hash.length(),hash_);
@@ -239,15 +242,20 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
             con=candidate;
             break;
         }
-        if(gpt6_is_assistant(previous_new_input_format[i],format))break;
         previous_new_input_format.erase(i);
     }
-    bool isnew=false;
     if(!con||strcmp(con->format,format.c_str())||memcmp(con->ownerid,p->userid,8)!=0)isnew=true;
     else{
         int o1=__sync_val_compare_and_swap(&con->isusing,0,1);
-        if(o1)isnew=true;
-        else if(strcmp(con->hash,hash_)){
+        if(o1){
+            if(time(0)<maxtime){
+                previous_new_input_format=my_format(request[array_name],format,2);
+                con=0;
+                con_id=0;
+                usleep(1000000);
+                goto retry;
+            } else isnew=true;
+        } else if(strcmp(con->hash,hash_)){
             con->isusing=0;
             isnew=true;
         }

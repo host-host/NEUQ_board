@@ -31,6 +31,5 @@ cppJSON gpt6_work(
     std::string& response_id
 );
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
-bool gpt6_is_assistant(const cppJSON& item,const std::string& format);
 cppJSON my_format(const cppJSON& a,const std::string& format,int);
 #endif
