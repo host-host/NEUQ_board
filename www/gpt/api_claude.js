@@ -213,6 +213,7 @@ async function callClaudeStreamingApi(response, wrapper, contentDiv, thinkTextar
         wrapper.querySelector('.contentcalc')?.prepend(stats);
     }
     renderMathAndCode(contentDiv);
+    updateAssistantCollapse(wrapper, true);
     scrollToBottom();
     return streamError ? '' : responseId;
 }

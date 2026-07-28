@@ -144,6 +144,7 @@ function renderUserMessage(text) {
         }
         chatBox.appendChild(wrapper);
         setupEditDelete(wrapper, 'user');
+        updateAssistantCollapse(wrapper);
     } else if (matchFile) {
         let fileMeta = { id: "", name: "Unknown" };
         try { fileMeta = JSON.parse(matchFile[1]); } catch (e) { console.error(e); }
@@ -180,6 +181,7 @@ function renderUserMessage(text) {
         }
         chatBox.appendChild(wrapper);
         setupEditDelete(wrapper, 'user');
+        updateAssistantCollapse(wrapper);
     } else {
         wrapper.innerHTML = `
             <div class="chat-user-bubble-container">
@@ -201,6 +203,7 @@ function renderUserMessage(text) {
         ta.value = text;
 
         setupEditDelete(wrapper, 'user');
+        updateAssistantCollapse(wrapper);
     }
     return wrapper;
 }
@@ -234,7 +237,39 @@ function renderAssistantMessage(text, reasoning = '') {
     }
     chatBox.appendChild(wrapper);
     setupEditDelete(wrapper, 'assistant');
+    updateAssistantCollapse(wrapper);
     return wrapper;
+}
+
+// AI 与用户文本消息都提供折叠按钮，默认保持展开。
+function updateAssistantCollapse(wrapper, reset = false) {
+    const contentDiv = wrapper?.querySelector('.chat-content-markdown, .user-text-display');
+    if (!contentDiv) return;
+
+    requestAnimationFrame(() => {
+        if (contentDiv.style.display === 'none') return;
+
+        let toggleBtn = wrapper.querySelector('.assistant-collapse-btn');
+        if (!toggleBtn) {
+            toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'assistant-collapse-btn copy-btn';
+            wrapper.querySelector('.contentcalc .action-bar, .action-bar.user-actions')?.append(toggleBtn);
+            toggleBtn.onclick = () => {
+                const willExpand = contentDiv.classList.contains('is-collapsed');
+                contentDiv.classList.toggle('is-collapsed', !willExpand);
+                toggleBtn.setAttribute('aria-expanded', String(willExpand));
+                toggleBtn.textContent = willExpand ? '收起 ↑' : '展开 ↓';
+                if (!willExpand) wrapper.scrollIntoView({block: 'start', behavior: 'smooth'});
+            };
+        }
+
+        if (reset || !toggleBtn.hasAttribute('aria-expanded')) {
+            contentDiv.classList.remove('is-collapsed');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+            toggleBtn.textContent = '收起 ↑';
+        }
+    });
 }
 
 function renderToolCall(item, outputText = '', reasoning = '', traceText = '') {
@@ -380,6 +415,8 @@ function setupEditDelete(wrapper, role) {
                     ta.style.display = 'block';
                     ta.style.height = 'auto';
                     ta.style.height = ta.scrollHeight + 'px';
+                    const collapseBtn = wrapper.querySelector('.assistant-collapse-btn');
+                    if (collapseBtn) collapseBtn.style.display = 'none';
                     ta.focus();
                     editBtn.innerHTML = '💾 保存';
                     isEditing = true;
@@ -397,9 +434,12 @@ function setupEditDelete(wrapper, role) {
                     if (chatUser) chatUser.style.width = '';
                     editBtn.innerHTML = '✏️ 修改';
                     isEditing = false;
+                    const collapseBtn = wrapper.querySelector('.assistant-collapse-btn');
+                    if (collapseBtn) collapseBtn.style.display = '';
+                    updateAssistantCollapse(wrapper, true);
                 }
             } else {
-                const contentDiv = wrapper.querySelector('.chat-content-markdown');
+                    const contentDiv = wrapper.querySelector('.chat-content-markdown, .user-text-display');
                 let editTa = wrapper.querySelector('.assistant-edit-area');
                 
                 if (!isEditing) {
@@ -411,6 +451,8 @@ function setupEditDelete(wrapper, role) {
                     editTa.value = wrapper.dataset.raw;
                     editTa.style.display = 'block';
                     contentDiv.style.display = 'none';
+                    const collapseBtn = wrapper.querySelector('.assistant-collapse-btn');
+                    if (collapseBtn) collapseBtn.style.display = 'none';
                     
                     editTa.style.height = 'auto';
                     editTa.style.height = editTa.scrollHeight + 10 + 'px';
@@ -429,6 +471,9 @@ function setupEditDelete(wrapper, role) {
                     contentDiv.style.display = 'block';
                     editBtn.innerHTML = '✏️ 修改';
                     isEditing = false;
+                    const collapseBtn = wrapper.querySelector('.assistant-collapse-btn');
+                    if (collapseBtn) collapseBtn.style.display = '';
+                    updateAssistantCollapse(wrapper, true);
                 }
             }
         };

@@ -313,6 +313,7 @@ async function callResponsesStreamingApi(response, wrapper, contentDiv, thinkTex
         contentDiv.style.display = 'block';
     }
     renderMathAndCode(contentDiv);
+    updateAssistantCollapse(wrapper, true);
     scrollToBottom();
     return streamError ? '' : responseId;
 }

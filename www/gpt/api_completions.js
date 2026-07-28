@@ -42,6 +42,7 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
             contentDiv.textContent = message;
             contentDiv.style.whiteSpace = 'pre-wrap';
             contentDiv.style.display = 'block';
+            updateAssistantCollapse(wrapper, true);
             return '';
         }
 
@@ -144,6 +145,7 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
     }
 
     renderMathAndCode(contentDiv);
+    updateAssistantCollapse(wrapper, true);
     scrollToBottom();
     return responseId;
 }

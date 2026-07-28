@@ -481,6 +481,14 @@ body, html {
     overflow-x: auto;
 }
 
+.chat-content-markdown.is-collapsed,
+.user-text-display.is-collapsed {
+    max-height: 50px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+}
+
 /* 思考链标题与文本 */
 .think {
     align-self: flex-start;
