@@ -110,8 +110,8 @@ POST /api/gpt5_apikey
 鉴权：Cookie 登录
 请求示例1：{}
 请求示例2：{"rotate":true}
-返回值：JSON 对象，api_key 为当前用户的 API 密钥。
-返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs"}
+返回值：JSON 对象，api_key 为当前用户的 API 密钥；token_limit 和 token_used 分别为总额度与已用 token 数。
+返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs","token_limit":10000000,"token_used":1234}
 解释：无密钥时初始化密钥；rotate 为 true 时轮换并立即废止旧密钥。
 
 

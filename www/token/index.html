@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 用量</title>
+    <link rel="stylesheet" href="style.css?v=0731">
+</head>
+<body>
+    <main class="token-page">
+        <a class="brand" href="/gpt"><img src="/newintown.png" alt="newintown"></a>
+        <section class="token-panel" aria-labelledby="pageTitle">
+            <div class="panel-heading">
+                <div><h1 id="pageTitle">API 用量</h1><p>查看当前 API Key 与额度使用情况</p></div>
+                <a class="back-link" href="/gpt">返回对话</a>
+            </div>
+            <div id="accountContent" hidden>
+                <dl class="usage-summary">
+                    <div><dt>已用</dt><dd id="tokenUsed">-</dd></div>
+                    <div><dt>总额度</dt><dd id="tokenLimit">-</dd></div>
+                    <div><dt>剩余</dt><dd id="tokenRemaining">-</dd></div>
+                </dl>
+                <div class="api-key-section">
+                    <label for="apiKeyValue">API Key</label>
+                    <div class="api-key-control">
+                        <input id="apiKeyValue" type="password" readonly aria-label="API Key">
+                        <button id="toggleApiKeyButton" type="button" title="显示 API Key" aria-label="显示 API Key" aria-pressed="false">
+                            <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 5.2A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2 3"></path><path d="M6.6 6.6C3.5 8.5 2 12 2 12s3.5 7 10 7a9.8 9.8 0 0 0 4.4-1"></path></svg>
+                        </button>
+                        <button id="copyApiKeyButton" type="button" title="复制 API Key" aria-label="复制 API Key">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="api-key-section base-url-section">
+                    <label for="baseUrlValue">Base URL</label>
+                    <div class="api-key-control">
+                        <input id="baseUrlValue" type="text" value="https://api.neuqboard.cn/v1" readonly aria-label="Base URL">
+                    </div>
+                </div>
+                <p class="balance-notice">本网站不提供充值功能，请联系 nit 增加余额</p>
+            </div>
+            <div id="loadingState" class="state-message">正在加载账户信息...</div>
+            <div id="loginState" class="state-message" hidden><p>请先登录后查看 API 用量。</p><a class="login-button" href="/login">登录</a></div>
+            <div id="errorState" class="state-message" hidden></div>
+        </section>
+    </main>
+    <script src="app.js?v=0731"></script>
+</body>
+</html>

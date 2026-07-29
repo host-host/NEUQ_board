@@ -53,8 +53,11 @@ void gpt5_apikey(http_para* a) {
     if(!p)return my_http_error(a,"Please log in first.");
     bool rotate=cppJSON(a->get+a->n)["rotate"]==true;
     if(!p->gptapikey[0]||rotate)mylib_random_string(p->gptapikey,19);
+    if(!p->token_limit)p->token_limit=10000000ULL;
     cppJSON ans("{}");
     ans.insert("api_key",(string)"sk-"+p->userid+p->gptapikey);
+    ans.insert("token_limit",(double)p->token_limit);
+    ans.insert("token_used",(double)p->token_used);
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 void gpt5_resolve(http_para* a) {
@@ -202,7 +205,6 @@ void maketitle(char*name,string b,const cppJSON& config){//此处已确保配置
         if(title.size()>60)title=utf8_substr(title,56)+"...";
         if(!title.empty())strcpy(name,title.c_str());
     }
-
 }
 static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
     char *tmp=strcasestr(a->get,"Authorization: Bearer sk-");
@@ -223,6 +225,8 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
         }
     }
     if(!conf)return my_http_error(a,"Permission denied.");
+    if(!p->token_limit)p->token_limit=10000000ULL;
+    if(p->token_used>=p->token_limit)return my_http_error(a,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     string auth=gpt5_take_auth(conf);
     if(auth.empty())return my_http_error(a,"Service busy.");
     cppJSON previous_new_input_format=my_format(request[array_name],format,2);
@@ -284,7 +288,9 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
         }
     }
     string response_id;
-    cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id);
+    unsigned long long used_tokens=0;
+    cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id,&used_tokens);
+    p->token_used+=used_tokens;
     if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
     gpt5_release_auth(auth);
     cppJSON input=request[array_name].clone();

@@ -976,6 +976,20 @@ body, html {
     transform: translateY(-1px);
 }
 
+.token-account-link {
+    display: block;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+    color: var(--primary-color);
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.token-account-link:hover {
+    text-decoration: underline;
+}
+
 /* Markdown 子元素格式微调 */
 .chat-content-markdown h1, 
 .chat-content-markdown h2, 

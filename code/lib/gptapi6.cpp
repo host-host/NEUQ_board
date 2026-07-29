@@ -21,6 +21,31 @@ static cppJSON events(const string& body) {
     }
     return out;
 }
+static unsigned long long usage_tokens(const cppJSON& value) {
+    cppJSON usage=value["usage"];
+    if(!usage.IsObject())usage=value["usageMetadata"];
+    if(!usage.IsObject())return 0;
+    if(usage["total_tokens"].IsNumber())return (unsigned long long)usage["total_tokens"].valuedouble();
+    if(usage["totalTokenCount"].IsNumber())return (unsigned long long)usage["totalTokenCount"].valuedouble();
+    unsigned long long input=usage["input_tokens"].IsNumber()?(unsigned long long)usage["input_tokens"].valuedouble():0;
+    unsigned long long output=usage["output_tokens"].IsNumber()?(unsigned long long)usage["output_tokens"].valuedouble():0;
+    return input+output;
+}
+static unsigned long long response_usage_tokens(const string& body,const cppJSON& response) {
+    unsigned long long total=usage_tokens(response);
+    if(total||response.IsObject())return total;
+    cppJSON stream=events(body);
+    unsigned long long largest=0,input=0,output=0;
+    for(cppJSON event:stream) {
+        unsigned long long value=usage_tokens(event);
+        if(!value)value=usage_tokens(event["response"]);
+        if(value>largest)largest=value;
+        cppJSON usage=event["usage"];
+        if(usage["input_tokens"].IsNumber())input=(unsigned long long)usage["input_tokens"].valuedouble();
+        if(usage["output_tokens"].IsNumber())output=(unsigned long long)usage["output_tokens"].valuedouble();
+    }
+    return input||output?input+output:largest;
+}
 static void append(cppJSON& object,const char* key,const string& text) {
     if(object.IsObject()&&!text.empty())object.insert(key,object[key].valuestring()+text);
 }
@@ -290,7 +315,7 @@ static string gpt6_request_url(string url,http_para* a,const string& message,con
     if(url.find("alt=sse")==string::npos)url+=(url.find('?')==string::npos?"?":"&")+string("alt=sse");
     return url;
 }
-cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,const string& message,const string& format,string& response_id) {
+cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens) {
     response_id.clear();
     gpt6_proxy_data proxy;
     proxy.client=a;
@@ -315,9 +340,10 @@ cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,con
         gpt6_write_all(a->cl,body.data(),body.size());
     }
     cppJSON response(proxy.body.c_str(),(int)proxy.body.size());
+    if(used_tokens)*used_tokens=response_usage_tokens(proxy.body,response);
     cppJSON output=response.IsObject()?gpt6_normal_to_history(response,format,response_id):gpt7_sse_to_history(proxy.body,format,response_id);
     bool parsed=output.IsArray()&&output.size()>0;
-    gpt6_log_exchange(message,proxy.body,format,result,proxy.status_line,parsed);
+    if(used_tokens&&!*used_tokens)gpt6_log_exchange(message,proxy.body,format,result,proxy.status_line,parsed);
     if(result!=CURLE_OK||!parsed)return cppJSON("[]");
     return output;
 }

@@ -26,9 +26,10 @@ cppJSON gpt6_work(
     http_para* a,
     const std::string& url,
     const std::string& Authorization,
-    const std::string& message,
-    const std::string& format,
-    std::string& response_id
+ const std::string& message,
+ const std::string& format,
+ std::string& response_id,
+ unsigned long long* used_tokens=0
 );
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
 cppJSON my_format(const cppJSON& a,const std::string& format,int);
