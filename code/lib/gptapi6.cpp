@@ -358,7 +358,7 @@ string gpt6_request_model(http_para* a,const cppJSON& request,const string& form
     for(char c:model)if(!isalnum((unsigned char)c)&&c!='-'&&c!='_'&&c!='.')return string();
     return model;
 }
-static const set<string>responses_allow={"type","call_id","output","name","input","role","tools","content","encrypted_content"};
+static const set<string>responses_allow={"type","call_id","output","name","input","role","content","encrypted_content"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){
         cppJSON result("[]");

@@ -283,7 +283,17 @@ async function loadUserHistory() {//加载用户历史记录
             return [];
         }
         const ids = [];
-        for (const history of [...histories].reverse()) {
+        const sortedHistories = histories
+            .map((history, index) => ({history, index}))
+            .sort((a, b) => {
+                const aUpdateTime = Number(a.history?.updatetime);
+                const bUpdateTime = Number(b.history?.updatetime);
+                const aTime = Number.isFinite(aUpdateTime) ? aUpdateTime : -Infinity;
+                const bTime = Number.isFinite(bUpdateTime) ? bUpdateTime : -Infinity;
+                return bTime - aTime || a.index - b.index;
+            })
+            .map(item => item.history);
+        for (const history of sortedHistories) {
             const id = history?.con_id;
             if (typeof id !== 'string' || !id) continue;
             ids.push(id);

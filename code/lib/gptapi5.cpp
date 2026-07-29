@@ -85,6 +85,7 @@ void gpt5_history_list(http_para* a) {
         cppJSON item("{}");
         item.insert("con_id",con->con_id);
         item.insert("name",con->name);
+        item.insert("updatetime",(double)con->updatetime);
         ans.push_back(std::move(item));
     }
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
@@ -306,6 +307,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
         memcpy(con->content,new_input.c_str(),new_input.length()+1);
         memcpy(con->hash,new_hash,44);
         con->isusing=0;
+        con->updatetime=time(0);
         if(!con->name[0])maketitle(con->name,output.stringify_Unformatted(),config);
     }
     if(isnew)free(con_id);
