@@ -91,10 +91,6 @@ function availableModelVariants(name, requireAccess = true) {
     return model.variants.filter(variant => !requireAccess || variant.isPublic || isAdmin);
 }
 
-function modelSupportsFormat(name, format) {
-    return availableModelVariants(name).some(variant => variant.format === format);
-}
-
 function setSelectedModel(name, preferredFormat = null) {
     const selectButton = document.getElementById('selectButton');
     const allVariants = availableModelVariants(name, false);
@@ -104,10 +100,7 @@ function setSelectedModel(name, preferredFormat = null) {
         alert('该模型需要授权后使用');
         return;
     }
-    const targetFormat = currentChatFormat || preferredFormat;
-    const variant = variants.find(item => item.format === targetFormat)
-        || variants.find(item => item.format === 'responses')
-        || variants[0];
+    const variant = variants.find(item => item.format === preferredFormat) || variants[0];
     selectButton.textContent = name;
     selectButton.dataset.provider = variant.provider;
     selectButton.dataset.format = variant.format;
@@ -120,19 +113,6 @@ function setSelectedModel(name, preferredFormat = null) {
     if (label) label.textContent = tokenFieldName;
     const customInput = document.getElementById('settingsMaxTokens');
     if (customInput) customInput.placeholder = tokenFieldName;
-}
-
-function selectCompatibleModel(format) {
-    const currentName = document.getElementById('selectButton')?.textContent;
-    if (currentName && modelSupportsFormat(currentName, format)) {
-        setSelectedModel(currentName, format);
-        return true;
-    }
-    const model = Models.find(item => availableModelVariants(item.name)
-        .some(variant => variant.format === format));
-    if (!model) return false;
-    setSelectedModel(model.name, format);
-    return true;
 }
 
 function toggleRequestSettings(event) {
@@ -252,7 +232,8 @@ async function fetchModels() {//获取 AI 模型列表
             .forEach(model => appendModelOption(model, container2));
 
         const accessibleModels = Models.filter(model => availableModelVariants(model.name).length > 0);
-        const defaultModel = accessibleModels.find(model => modelSupportsFormat(model.name, 'responses'))
+        const defaultModel = accessibleModels.find(model => availableModelVariants(model.name)
+            .some(variant => variant.format === 'responses'))
             || accessibleModels[0];
         if (defaultModel) setSelectedModel(defaultModel.name, 'responses');
         else document.getElementById('selectButton').textContent = '暂无可用模型';
@@ -506,7 +487,6 @@ async function selectHistoryChat(id, updateUrl = true, owned = true) {//选择�
     try {
         const data = await fetchGpt5History(id, false);
         currentChatFormat = normalizeModelFormat(data.format);
-        selectCompatibleModel(currentChatFormat);
         if (currentChatFormat === 'responses') renderResponsesHistory(data);
         else if (currentChatFormat === 'claude') renderClaudeHistory(data);
         else if (currentChatFormat === 'gemini') renderGeminiHistory(data);

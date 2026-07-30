@@ -117,6 +117,40 @@ document.getElementById('copyApiKeyButton').addEventListener('click', async () =
     setTimeout(() => { button.title = '复制 API Key'; }, 1500);
 });
 
+document.getElementById('rotateApiKeyButton').addEventListener('click', async () => {
+    if (!confirm('重置后，之前的 API Key 将立即失效。确定要继续吗？')) return;
+    const button = document.getElementById('rotateApiKeyButton');
+    const status = document.getElementById('apiKeyStatus');
+    button.disabled = true;
+    status.className = 'api-key-status';
+    status.textContent = '正在重置...';
+    try {
+        const response = await fetch('/api/gpt5_apikey', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({rotate: true})
+        });
+        const text = await response.text();
+        let data;
+        try { data = text ? JSON.parse(text) : {}; }
+        catch (_) { throw new Error(text || '无法读取服务器响应'); }
+        if (!response.ok || data?.error?.message) {
+            throw new Error(data?.error?.message || `重置失败（HTTP ${response.status}）`);
+        }
+        if (typeof data.api_key !== 'string' || !data.api_key.startsWith('sk-')) {
+            throw new Error('服务器没有返回有效的 API Key');
+        }
+        accountData = data;
+        document.getElementById('apiKeyValue').value = data.api_key;
+        status.textContent = 'API Key 已重置，旧 Key 已失效';
+    } catch (error) {
+        status.className = 'api-key-status error';
+        status.textContent = error.message || '重置失败';
+    } finally {
+        button.disabled = false;
+    }
+});
+
 document.getElementById('toggleApiKeyButton').addEventListener('click', () => {
     const input = document.getElementById('apiKeyValue');
     const button = document.getElementById('toggleApiKeyButton');

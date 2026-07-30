@@ -206,10 +206,6 @@ void maketitle(char*name,string b,const cppJSON& config){
         if(!title.empty())strcpy(name,title.c_str());
     }
 }
-static bool provider_available(user_* p,const cppJSON& config,const string& provider,const string& format){
-    cppJSON conf=config["provider"][provider];
-    return conf.IsObject()&&(p->admin||conf["public"]==true)&&conf["format"]==format;
-}
 static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
     char *tmp=strcasestr(a->get,"Authorization: Bearer sk-");
     if(tmp)tmp+=25;
@@ -223,8 +219,8 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     cppJSON pros=config["model_available_provider"][model];
     string key=(string)p->userid+"_"+model;
     char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
-    if(pros.has(saved)&&provider_available(p,config,(string)saved,format))conf=config["provider"][saved];
-    else for(cppJSON pro:pros)if(provider_available(p,config,pro,format)){
+    if(pros.has(saved)&&(p->admin||config["provider"][saved]["public"]==true))conf=config["provider"][saved];
+    else for(cppJSON pro:pros)if(p->admin||config["provider"][pro]["public"]==true){
                 conf=config["provider"][pro];
                 break;
             }

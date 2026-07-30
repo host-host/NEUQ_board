@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API 用量</title>
-    <link rel="stylesheet" href="style.css?v=0730">
+    <link rel="stylesheet" href="style.css?v=0730v2">
 </head>
 <body>
     <main class="token-page">
@@ -31,7 +31,11 @@
                         <button id="copyApiKeyButton" type="button" title="复制 API Key" aria-label="复制 API Key">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         </button>
+                        <button id="rotateApiKeyButton" type="button" title="重置 API Key" aria-label="重置 API Key">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M18.5 9A7 7 0 0 0 6.2 6.2L4 8"></path><path d="M5.5 15A7 7 0 0 0 17.8 17.8L20 16"></path></svg>
+                        </button>
                     </div>
+                    <div id="apiKeyStatus" class="api-key-status" aria-live="polite"></div>
                 </div>
                 <div class="api-key-section base-url-section">
                     <label for="baseUrlValue">Base URL</label>
@@ -54,6 +58,6 @@
             <div id="errorState" class="state-message" hidden></div>
         </section>
     </main>
-    <script src="app.js?v=0730"></script>
+    <script src="app.js?v=0730v2"></script>
 </body>
 </html>

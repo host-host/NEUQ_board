@@ -87,7 +87,6 @@ POST /api/gpt5_model_list
 请求值：无
 返回值：gpt3.json 去掉 title；provider 的每一项去掉 name、url 和 Authorization，只保留 format、public 和 multiply。
 返回示例：{"model_multiply":{"gpt-5.6-sol":[35,210,3.5]},"model_available_provider":{"gpt-5.6-sol":["B","C"]},"provider":{"B":{"multiply":0.0114,"format":"responses"},"C":{"multiply":0.0171,"format":"responses","public":true}}}
-解释：model_available_provider 按顺序列出每个模型可以选择的 Provider；没有保存有效选择时使用第一个有权限且格式匹配的 Provider。
 
 
 POST /api/v1/messages

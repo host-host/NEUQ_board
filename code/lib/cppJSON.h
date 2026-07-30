@@ -179,32 +179,32 @@ struct cppJSON{
         return a&&other.a&&cJSON_Compare(a,other.a,true);
     }
     void insert(const char* name, const char* content) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             if (content) cJSON_AddStringToObject(a, name, content);
             else cJSON_AddNullToObject(a, name);
         }
     }
     void insert(const char* name, const std::string& content) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddStringToObject(a, name, content.c_str());
         }
     }
     void insert(const char* name, double content) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddNumberToObject(a, name, content);
         }
     }
     void insert(const char* name, bool content) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             cJSON_AddBoolToObject(a, name, content);
         }
     }
     void insert(const char* name, const cppJSON& childNode) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON* item=cJSON_Duplicate(childNode.a, 1);
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             if(childNode.a)cJSON_AddItemToObject(a, name, item);
@@ -212,7 +212,7 @@ struct cppJSON{
         }
     }
     void insert(const char* name, cppJSON&& childNode) {
-        if (a && cJSON_IsObject(a)) {
+        if (a && cJSON_IsObject(a)&&name) {
             cJSON* item=childNode.a?childNode.isroot?childNode.a:cJSON_Duplicate(childNode.a,1):0;
             cJSON_DeleteItemFromObjectCaseSensitive(a, name);
             if(item)cJSON_AddItemToObject(a,name,item);
@@ -314,6 +314,7 @@ struct cppJSON{
         if(a&&isroot)cJSON_Delete(a);
         isroot=1;
         a=0;
+        if(!file_path)return;
         FILE* file=fopen(file_path,"rb");
         if(!file)return;
         if(fseek(file,0,SEEK_END)!=0) {

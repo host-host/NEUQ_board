@@ -272,12 +272,6 @@ static size_t gpt6_body_callback(void* ptr,size_t size,size_t count,void* userda
     if(data->client&&!data->write_failed&&!gpt6_write_all(data->client->cl,(char*)ptr,total))data->write_failed=true;
     return total;
 }
-static void gpt6_options(CURL*) {
-}
-template<class T,class... A>static void gpt6_options(CURL* curl,CURLoption option,T value,A... rest) {
-    curl_easy_setopt(curl,option,value);
-    gpt6_options(curl,rest...);
-}
 static cppJSON gpt6_normal_to_history(const cppJSON& response,const string& format,string& response_id) {
     cppJSON output("[]"),history;
     if(format=="responses"&&response["output"].IsArray()&&response["output"].size()>0) {
@@ -303,19 +297,7 @@ static cppJSON gpt6_normal_to_history(const cppJSON& response,const string& form
     if(history)output.push_back(std::move(history));
     return output;
 }
-static string gpt6_request_url(string url,http_para* a,const string& message,const string& format) {
-    if(format!="gemini")return url;
-    string model=gpt6_request_model(a,cppJSON(message.c_str()),format);
-    size_t marker=url.find("{model}");
-    if(marker!=string::npos)url.replace(marker,7,model);
-    else if(url.find(":streamGenerateContent")==string::npos){
-        if(!url.empty()&&url.back()!='/')url+='/';
-        url+="models/"+model+":streamGenerateContent";
-    }
-    if(url.find("alt=sse")==string::npos)url+=(url.find('?')==string::npos?"?":"&")+string("alt=sse");
-    return url;
-}
-cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens) {
+cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens) {
     response_id.clear();
     gpt6_proxy_data proxy;
     proxy.client=a;
@@ -323,11 +305,26 @@ cppJSON gpt6_work(http_para* a,const string& url,const string& Authorization,con
     CURLcode result=CURLE_FAILED_INIT;
     if(curl) {
         struct curl_slist* headers=curl_slist_append(0,"Content-Type: application/json");
-        string auth=(format=="claude"?"x-api-key: ":format=="gemini"?"x-goog-api-key: ":"Authorization: ")+Authorization;
-        headers=curl_slist_append(headers,auth.c_str());
+        if(format=="responses"||format=="completions")Authorization="Bearer "+Authorization;
+        Authorization=(format=="claude"?"x-api-key: ":format=="gemini"?"x-goog-api-key: ":"Authorization: ")+Authorization;
+        headers=curl_slist_append(headers,Authorization.c_str());
         if(format=="claude")headers=curl_slist_append(headers,"anthropic-version: 2023-06-01");
-        string request_url=gpt6_request_url(url,a,message,format);
-        gpt6_options(curl,CURLOPT_URL,request_url.c_str(),CURLOPT_HTTPHEADER,headers,CURLOPT_POSTFIELDS,message.data(),CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)message.size(),CURLOPT_HEADERFUNCTION,gpt6_header_callback,CURLOPT_HEADERDATA,&proxy,CURLOPT_WRITEFUNCTION,gpt6_body_callback,CURLOPT_WRITEDATA,&proxy,CURLOPT_CONNECTTIMEOUT,60L,CURLOPT_TIMEOUT,1200L,CURLOPT_NOSIGNAL,1L);
+        if(!url.empty()&&url.back()=='/')url.pop_back();
+        if(format=="responses")url+="/v1/responses";
+        else if(format=="completions")url+="/v1/chat/completions";
+        else if(format=="claude")url+="/v1/messages";
+        else if(format=="gemini")url+="/v1beta/models/"+gpt6_request_model(a,cppJSON(),format)+":streamGenerateContent?alt=sse";
+        curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
+        curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
+        curl_easy_setopt(curl,CURLOPT_POSTFIELDS,message.data());
+        curl_easy_setopt(curl,CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)message.size());
+        curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,gpt6_header_callback);
+        curl_easy_setopt(curl,CURLOPT_HEADERDATA,&proxy);
+        curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,gpt6_body_callback);
+        curl_easy_setopt(curl,CURLOPT_WRITEDATA,&proxy);
+        curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT,60L);
+        curl_easy_setopt(curl,CURLOPT_TIMEOUT,1200L);
+        curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1L);
         result=curl_easy_perform(curl);
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);

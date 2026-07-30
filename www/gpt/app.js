@@ -38,9 +38,9 @@ function startNewChat() {//新建对话
     document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
     document.getElementById('sidebarPanel').classList.remove('active');
     document.getElementById('sidebarOverlay').classList.remove('active');
-    if (typeof selectCompatibleModel === 'function') {
-        if (!selectCompatibleModel('responses')) selectCompatibleModel('completions');
-    }
+    const selectButton = document.getElementById('selectButton');
+    if (selectButton && modelCatalog.has(selectButton.textContent))
+        setSelectedModel(selectButton.textContent, selectButton.dataset.format);
     updateHeaderButtons();
 }
 function responseContentPartsFromWrapper(wrapper) {
@@ -220,10 +220,6 @@ async function sendMessage() {//发送消息的核心入口
         alert('请先选择可用模型');
         return;
     }
-    if (currentChatFormat && !modelSupportsFormat(modelName, currentChatFormat)) {
-        alert(`当前对话使用 ${currentChatFormat} 格式，请选择支持该格式的模型。`);
-        return;
-    }
     const requestFormat = currentChatFormat || selectedFormat;
 
     const welcome = document.getElementById('welcomeBox');
@@ -311,7 +307,7 @@ async function sendMessage() {//发送消息的核心入口
         const endpoint = requestFormat === 'responses' ? '/api/v1/responses'
             : requestFormat === 'claude' ? '/api/v1/messages'
             : requestFormat === 'gemini'
-                ? `/api/v1beta/models/${encodeURIComponent(modelName)}:streamGenerateContent`
+                ? `/api/v1beta/models/${encodeURIComponent(modelName)}:streamGenerateContent?alt=sse`
                 : '/api/v1/chat/completions';
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -328,6 +324,8 @@ async function sendMessage() {//发送消息的核心入口
             loader.style.display = 'none';
             return;
         }
+        currentChatFormat = requestFormat;
+        updateHeaderButtons();
 
         const { wrapper, contentDiv, thinkTextarea } = reply;
         const responseId = requestFormat === 'responses'
@@ -337,15 +335,10 @@ async function sendMessage() {//发送消息的核心入口
                 : requestFormat === 'gemini'
                     ? await callGeminiStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime)
                     : await callStreamingApi(response, wrapper, contentDiv, thinkTextarea, requestStartTime);
-        if (requestFormat === 'claude' || requestFormat === 'gemini') {
-            currentChatFormat = requestFormat;
-            updateHeaderButtons();
-        }
         if (responseId) {
             try {
                 currentChatId = await resolveGpt5ConversationId(responseId);
                 currentChatOwned = true;
-                currentChatFormat = requestFormat;
                 updateUrlParam(currentChatId);
                 updateHeaderButtons();
                 if (requestFormat === 'responses') await refreshResponsesState(currentChatId);

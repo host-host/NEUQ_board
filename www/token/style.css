@@ -21,7 +21,10 @@ dd { margin:7px 0 0; font-size:18px; font-weight:650; font-variant-numeric:tabul
 .api-key-control input { min-width:0; flex:1; border:0; padding:11px 12px; background:#fcfcfb; color:var(--ink); font:12px ui-monospace,SFMono-Regular,Menlo,monospace; outline:0; }
 .api-key-control button { display:grid; width:42px; place-items:center; border:0; border-left:1px solid var(--line); background:var(--surface); color:var(--muted); cursor:pointer; }
 .api-key-control button:hover { background:var(--accent-soft); color:var(--accent); }
+.api-key-control button:disabled { background:#f5f5f4; color:var(--muted); cursor:not-allowed; }
 .api-key-control svg { width:17px; height:17px; }
+.api-key-status { min-height:20px; padding-top:7px; color:var(--muted); font-size:12px; }
+.api-key-status.error { color:#b91c1c; }
 .eye-closed { display:none; }
 #toggleApiKeyButton[aria-pressed="true"] .eye-open { display:none; }
 #toggleApiKeyButton[aria-pressed="true"] .eye-closed { display:block; }
