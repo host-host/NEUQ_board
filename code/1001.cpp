@@ -35,6 +35,7 @@ int main() {
     // http_add(&a,"POST /api/getword ",getword);
     // http_add(&a,"POST /api/setword ",setword);
     http_add(&a,"POST /api/gpts2 ",gpt5_gpts2);
+    http_add(&a,"POST /api/gpt5_model_list ",gpt5_model_list);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
     http_add(&a,"POST /api/v1/responses ",gpt5_responses);

@@ -82,6 +82,14 @@ private表示需要权限访问的模型
 format表示上游格式，默认是completions。
 
 
+POST /api/gpt5_model_list
+鉴权：无
+请求值：无
+返回值：gpt3.json 去掉 title；provider 的每一项去掉 name、url 和 Authorization，只保留 format、public 和 multiply。
+返回示例：{"model_multiply":{"gpt-5.6-sol":[35,210,3.5]},"model_available_provider":{"gpt-5.6-sol":["B","C"]},"provider":{"B":{"multiply":0.0114,"format":"responses"},"C":{"multiply":0.0171,"format":"responses","public":true}}}
+解释：model_available_provider 按顺序列出每个模型可以选择的 Provider；没有保存有效选择时使用第一个有权限且格式匹配的 Provider。
+
+
 POST /api/v1/messages
 POST /v1/messages
 请求值：Claude Messages 原生 JSON，请求头需包含站内 Authorization。
@@ -110,9 +118,11 @@ POST /api/gpt5_apikey
 鉴权：Cookie 登录
 请求示例1：{}
 请求示例2：{"rotate":true}
-返回值：JSON 对象，api_key 为当前用户的 API 密钥；token_limit 和 token_used 分别为总额度与已用 token 数。
-返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs","token_limit":10000000,"token_used":1234}
+请求示例3：{"model":"gpt-5.6-sol","provider":"C"}
+返回值：JSON 对象，api_key 为当前用户的 API 密钥；token_limit 和 token_used 分别为总额度与已用 token 数；admin 表示管理员权限；selected_provider 表示当前有效的 Provider 选择。
+返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs","token_limit":10000000,"token_used":1234,"admin":false,"selected_provider":{"gpt-5.6-sol":"C"}}
 解释：无密钥时初始化密钥；rotate 为 true 时轮换并立即废止旧密钥。
+计费：token_used 增加 ceil(used_tokens * model_multiply[model][0] * 0.5 * provider[provider].multiply / 0.3)。
 
 
 POST /api/gpt5_resolve

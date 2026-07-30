@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API 用量</title>
-    <link rel="stylesheet" href="style.css?v=0731">
+    <link rel="stylesheet" href="style.css?v=0730">
 </head>
 <body>
     <main class="token-page">
@@ -39,6 +39,14 @@
                         <input id="baseUrlValue" type="text" value="https://api.neuqboard.cn/v1" readonly aria-label="Base URL">
                     </div>
                 </div>
+                <section class="provider-section" aria-labelledby="providerTitle">
+                    <div class="provider-heading">
+                        <h2 id="providerTitle">Provider</h2>
+                        <span>扣除额度 = 实际 Token 用量 × 倍率</span>
+                    </div>
+                    <div id="providerChoices" class="provider-choices"></div>
+                    <div id="providerStatus" class="provider-status" aria-live="polite"></div>
+                </section>
                 <p class="balance-notice">本网站不提供充值功能，请联系 nit 增加余额</p>
             </div>
             <div id="loadingState" class="state-message">正在加载账户信息...</div>
@@ -46,6 +54,6 @@
             <div id="errorState" class="state-message" hidden></div>
         </section>
     </main>
-    <script src="app.js?v=0731"></script>
+    <script src="app.js?v=0730"></script>
 </body>
 </html>

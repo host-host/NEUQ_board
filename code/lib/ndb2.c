@@ -26,6 +26,26 @@ typedef struct{
     ll child,next;
     char name[48];
 }point;
+ndb2 ndb2_init_readonly(const char* file){
+    ndb *a=malloc(sizeof(ndb));
+    if(!a)return 0;
+    memset(a,0,sizeof(ndb));
+    if((a->fd=open(file,O_RDONLY,S_IRUSR|S_IWUSR))<0)goto out;
+    if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0){
+        ll c[BLOCK/8]={BLOCK-64};
+        if(write(a->fd,(char*)c,a->filelen=BLOCK)!=BLOCK)goto out;
+    }
+    for(int i=0;i<(a->filelen+SEG-1)/SEG;i++){
+        a->a[i]=mmap(0,SEG,PROT_READ,MAP_SHARED,a->fd,(ll)i*SEG);
+        if(a->a[i]==0||a->a[i]==MAP_FAILED)goto out;
+        if((a->lock[i]=malloc(SEG/BLOCK))==0)goto out;
+        memset(a->lock[i],0,SEG/BLOCK);
+    }
+    return a;
+    out:
+    ndb2_free(a);
+    return 0;
+}
 ndb2 ndb2_init(const char* file){
     ndb *a=malloc(sizeof(ndb));
     if(!a)return 0;
@@ -199,6 +219,7 @@ void ndb2_free(ndb2 handle){
     free(a);
 }
 void* ndb2_next(ndb2 handle,char* key){
+    if(!handle||!key)return 0;
     ndb* a=(ndb*)handle;
     ll p[10],succ,content=0;
     char outname[48];

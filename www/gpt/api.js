@@ -207,28 +207,30 @@ async function handleLogout(event) {//注销登录
 }
 async function fetchModels() {//获取 AI 模型列表
     try {
-        const response = await fetch('/api/gpts2', { method: 'POST' });
+        const response = await fetch('/api/gpt5_model_list', { method: 'POST' });
         const configs = await response.json();
         modelCatalog.clear();
-        const addModelVariant = (name, config, isPublic) => {
+        const addModelVariant = (name, provider, config) => {
             if (typeof name !== 'string' || !name) return;
             if (!modelCatalog.has(name)) {
                 modelCatalog.set(name, {name, hasPublic: false, hasPrivate: false, variants: []});
             }
             const model = modelCatalog.get(name);
+            const isPublic = config.public === true;
             if (isPublic) model.hasPublic = true;
             else model.hasPrivate = true;
             const format = normalizeModelFormat(config.format);
             const existing = model.variants.find(variant =>
-                variant.provider === config.provider && variant.format === format);
+                variant.provider === provider && variant.format === format);
             if (existing) existing.isPublic = existing.isPublic || isPublic;
-            else model.variants.push({provider: config.provider, format, isPublic});
+            else model.variants.push({provider, format, isPublic});
         };
-        for (const config of configs) {
-            (Array.isArray(config.public) ? config.public : [])
-                .forEach(name => addModelVariant(name, config, true));
-            (Array.isArray(config.private) ? config.private : [])
-                .forEach(name => addModelVariant(name, config, false));
+        for (const [name, providers] of Object.entries(configs.model_available_provider || {})) {
+            if (!Array.isArray(providers)) continue;
+            providers.forEach(provider => {
+                const config = configs.provider?.[provider];
+                if (config) addModelVariant(name, provider, config);
+            });
         }
         Models = [...modelCatalog.values()];
         const container = document.getElementById('modelsContainer');
