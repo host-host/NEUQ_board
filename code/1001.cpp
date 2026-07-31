@@ -38,12 +38,15 @@ int main() {
     http_add(&a,"POST /api/gpt5_model_list ",gpt5_model_list);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
+    http_add(&a,"POST /v1/responses?",gpt5_responses);
     http_add(&a,"POST /api/v1/responses ",gpt5_responses);
 
     http_add(&a,"POST /v1/chat/completions ",gpt5_chat_completions);
+    http_add(&a,"POST /v1/chat/completions?",gpt5_chat_completions);
     http_add(&a,"POST /api/v1/chat/completions ",gpt5_chat_completions);
 
     http_add(&a,"POST /v1/messages ",gpt5_claude_messages);
+    http_add(&a,"POST /v1/messages?",gpt5_claude_messages);
     http_add(&a,"POST /api/v1/messages ",gpt5_claude_messages);
 
     http_add(&a,"POST /v1beta/models/",gpt5_gemini_generate_content);

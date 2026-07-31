@@ -356,6 +356,7 @@ string gpt6_request_model(http_para* a,const cppJSON& request,const string& form
     return model;
 }
 static const set<string>responses_allow={"type","call_id","output","name","input","role","content","encrypted_content"};
+static const set<string>claude_allow={"role","content"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){
         cppJSON result("[]");
@@ -369,6 +370,20 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
                 if(!responses_allow.count(item.a->string))continue;
                 if(item.IsArray()&&!item.size())continue;
                 if(item.IsNull())continue;
+            }
+            if(format=="claude"&&k==1){
+                if(!claude_allow.count(item.a->string))continue;
+                if(item.IsArray()&&!item.size())continue;
+                if(item.IsNull())continue;
+            }
+            if((k==1||k==-1)&&format=="claude"){
+                if(strcmp(item.a->string,"content")==0&&item.IsString()){
+                    cppJSON tmp("[{}]");
+                    tmp[0].insert("text",item.valuestring());
+                    tmp[0].insert("type","text");
+                    items[item.a->string]=tmp;
+                    continue;
+                }
             }
             items[item.a->string]=my_format(item,format,k-1);
         }

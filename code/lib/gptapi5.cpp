@@ -206,11 +206,14 @@ void maketitle(char*name,string b,const cppJSON& config){
         if(!title.empty())strcpy(name,title.c_str());
     }
 }
+#define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
 static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
-    char *tmp=strcasestr(a->get,"Authorization: Bearer sk-");
-    if(tmp)tmp+=25;
+    char *tmp=0;
+    key_find("Authorization: Bearer sk-");
+    if(!tmp)key_find("Authorization: sk-");
+    if(!tmp)key_find("x-api-key: sk-");
     user_* p=getuser_by_id(tmp);
-    if(p&&memcmp(tmp+8,p->gptapikey,19))p=0;
+    if(p&&tmp&&memcmp(tmp+8,p->gptapikey,19))p=0;
     if(!p)return my_http_error(a,"Invalid API key.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
     string model=gpt6_request_model(a,request,format);
