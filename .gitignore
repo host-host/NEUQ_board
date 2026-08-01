@@ -2,3 +2,5 @@ build/
 nohup.out
 __pycache__
 cdn
+cl.cpp
+temp.cpp
