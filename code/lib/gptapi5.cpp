@@ -221,6 +221,57 @@ void gpt5_add(string a,bool stable){
     c[ST_D][0]=t;
     UNLOCK(c[ST_D][1]);
 }
+static bool gpt5_should_probe(const string& key) {
+    int (*c)[2]=(int (*)[2])ndb2_got(stable_db,key.c_str(),0);
+    if(!c)return false;
+    LOCK(&c[ST_D][1]);
+    int t=time(0)/(15*60),l=c[ST_D][0];
+    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
+    c[ST_D][0]=t;
+    int stable2=0,total2=0,stable4=0,total4=0;
+    for(int i=t-15;i<=t;i++) {
+        int index=(i+ST_D)%ST_D;
+        stable4+=c[index][0];
+        total4+=c[index][1];
+        if(i>=t-7) {
+            stable2+=c[index][0];
+            total2+=c[index][1];
+        }
+    }
+    UNLOCK(c[ST_D][1]);
+    return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
+}
+static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
+    string url=conf["url"],auth=conf["Authorization"];
+    if(url.empty()||auth.empty())return;
+    cppJSON request("{\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}");
+    request.insert("model",model);
+    string response_id;
+    int returncode=0;
+    unsigned long long used_tokens=0;
+    cppJSON output=gpt6_work(0,url,auth,request.stringify_Unformatted(),"completions",response_id,&used_tokens,&returncode);
+    string key=model+"_"+provider;
+    gpt5_add(key,used_tokens>0);
+}
+void* gpt5_probe_loop(void*) {
+    const time_t interval=2*60*60;
+    for(;;) {
+        time_t next=(time(0)/interval+1)*interval;
+        while(time(0)<next)sleep(next-time(0));
+        cppJSON config=cppJSON::from_file(CONFIG);
+        if(!config)continue;
+        for(cppJSON item:config["model_available_provider"]) {
+            string model=item.a->string;
+            for(cppJSON value:item) {
+                string provider=value;
+                cppJSON conf=config["provider"][provider.c_str()];
+                if(!conf)continue;
+                if(gpt5_should_probe(model+"_"+provider))gpt5_probe(model,provider,conf);
+            }
+        }
+    }
+    return 0;
+}
 void gpt5_askstable(http_para* a) {
     cppJSON ask(a->get+a->n),ans("{}");
     for(cppJSON i:ask){
