@@ -4,6 +4,7 @@ const loginState = document.getElementById('loginState');
 const errorState = document.getElementById('errorState');
 let accountData = null;
 let modelConfig = null;
+let stabilityRequestId = 0;
 const STABILITY_BUCKETS = 3 * 24 * 4;
 const STABILITY_BUCKET_MS = 15 * 60 * 1000;
 
@@ -129,7 +130,7 @@ async function saveProvider(model, select) {
 }
 
 function renderStability(row, raw) {
-    if (!Array.isArray(raw)) return;
+    const values = Array.isArray(raw) ? raw : [];
     const now = Math.floor(Date.now() / STABILITY_BUCKET_MS);
     const bars = row.querySelectorAll('.provider-stability-bar');
     for (let group = 0; group < 12; group++) {
@@ -137,8 +138,8 @@ function renderStability(row, raw) {
         for (let offset = 0; offset < 8; offset++) {
             const bucket = now - 95 + group * 8 + offset;
             const index = ((bucket % STABILITY_BUCKETS) + STABILITY_BUCKETS) % STABILITY_BUCKETS;
-            stable += Number(raw[index * 2]) || 0;
-            total += Number(raw[index * 2 + 1]) || 0;
+            stable += Number(values[index * 2]) || 0;
+            total += Number(values[index * 2 + 1]) || 0;
         }
         const rate = total ? stable / total * 100 : 100;
         const bar = bars[group];
@@ -149,11 +150,15 @@ function renderStability(row, raw) {
 }
 
 async function loadProviderStability() {
+    const requestId = ++stabilityRequestId;
     const rows = [...document.querySelectorAll('#providerChoices .provider-choice')]
-        .map(row => ({row, select: row.querySelector('select[data-model]')}))
-        .filter(item => item.select);
+        .map(row => {
+            const select = row.querySelector('select[data-model]');
+            return select ? {row, select, key: `${select.dataset.model}_${select.value}`} : null;
+        })
+        .filter(Boolean);
     if (!rows.length) return;
-    const keys = rows.map(({select}) => `${select.dataset.model}_${select.value}`);
+    const keys = rows.map(({key}) => key);
     try {
         const response = await fetch('/api/gpt5_askstable', {
             method: 'POST',
@@ -161,8 +166,11 @@ async function loadProviderStability() {
             body: JSON.stringify(keys)
         });
         const data = await response.json();
-        if (!response.ok || data?.error) return;
-        rows.forEach(({row, select}) => renderStability(row, data[`${select.dataset.model}_${select.value}`]));
+        if (!response.ok || data?.error || requestId !== stabilityRequestId) return;
+        rows.forEach(({row, select, key}) => {
+            const currentKey = `${select.dataset.model}_${select.value}`;
+            if (currentKey === key) renderStability(row, data[key]);
+        });
     } catch (_) {}
 }
 
