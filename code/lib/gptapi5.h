@@ -15,11 +15,11 @@ void gpt5_history_rename(http_para* a);
 void gpt5_history_delete(http_para* a);
 void gpt5_share(http_para* a);
 void gpt5_models(http_para* a);
+void gpt5_askstable(http_para* a);
 void gpt5_responses(http_para* a);
 void gpt5_chat_completions(http_para* a);
 void gpt5_claude_messages(http_para* a);
 void gpt5_gemini_generate_content(http_para* a);
-void gpt5_gpts2(http_para *a);
 void gpt5_model_list(http_para *a);
 
 #ifdef __cplusplus

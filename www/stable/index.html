@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>Provider 稳定性 - NEUQ Board</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="style.css?v=0802v1">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="返回 NEUQ Board 首页">
+            <img src="/newintown.png" alt="NEUQ Board">
+        </a>
+        <div class="topbar-title">
+            <strong>Provider 稳定性</strong>
+            <span>过去 72 小时</span>
+        </div>
+        <div class="topbar-actions">
+            <span id="updatedAt" class="updated-at">正在载入</span>
+            <button id="refreshButton" class="icon-button" type="button" title="刷新数据" aria-label="刷新数据">
+                <span aria-hidden="true">&#8635;</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <section class="summary-band" aria-label="总体状态">
+            <div class="summary-inner">
+                <div class="summary-primary">
+                    <span id="overallIndicator" class="large-indicator unknown" aria-hidden="true"></span>
+                    <div>
+                        <span class="summary-label">整体状态</span>
+                        <strong id="overallStatus">载入中</strong>
+                    </div>
+                </div>
+                <dl class="summary-metrics">
+                    <div>
+                        <dt>72 小时稳定率</dt>
+                        <dd id="overallRate">--</dd>
+                    </div>
+                    <div>
+                        <dt>统计请求</dt>
+                        <dd id="overallSamples">--</dd>
+                    </div>
+                    <div>
+                        <dt>稳定线路</dt>
+                        <dd id="healthyCount">--</dd>
+                    </div>
+                    <div>
+                        <dt>异常线路</dt>
+                        <dd id="issueCount">--</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="workspace">
+            <div class="toolbar">
+                <label class="search-control">
+                    <span class="search-icon" aria-hidden="true"></span>
+                    <input id="searchInput" type="search" placeholder="搜索模型或 Provider" autocomplete="off">
+                </label>
+                <div class="segment-control" id="statusFilter" role="group" aria-label="状态筛选">
+                    <button type="button" data-filter="all" class="active">全部</button>
+                    <button type="button" data-filter="healthy">稳定</button>
+                    <button type="button" data-filter="degraded">波动</button>
+                    <button type="button" data-filter="outage">异常</button>
+                    <button type="button" data-filter="unknown">无数据</button>
+                </div>
+                <label class="sort-control">
+                    <span>排序</span>
+                    <select id="sortSelect">
+                        <option value="status">状态优先</option>
+                        <option value="rate">稳定率</option>
+                        <option value="samples">请求数量</option>
+                        <option value="name">模型名称</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="legend" aria-label="热力图图例">
+                <span>每格 15 分钟</span>
+                <span class="legend-item"><i class="heat-empty"></i>无请求</span>
+                <span class="legend-item"><i class="heat-good"></i>稳定</span>
+                <span class="legend-item"><i class="heat-warn"></i>波动</span>
+                <span class="legend-item"><i class="heat-bad"></i>异常</span>
+            </div>
+
+            <div id="notice" class="notice loading" role="status">
+                <span class="spinner" aria-hidden="true"></span>
+                <span>正在获取 Provider 状态</span>
+            </div>
+            <div id="providerList" class="provider-list" aria-live="polite"></div>
+            <div id="emptyState" class="empty-state" hidden>
+                <strong>没有符合条件的线路</strong>
+                <span>调整搜索内容或状态筛选</span>
+            </div>
+        </section>
+    </main>
+
+    <template id="providerTemplate">
+        <article class="provider-row">
+            <div class="provider-overview">
+                <div class="provider-heading">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <div class="provider-name">
+                        <h2></h2>
+                        <span class="provider-tag"></span>
+                    </div>
+                    <span class="status-label"></span>
+                </div>
+                <dl class="provider-metrics">
+                    <div class="rate-metric">
+                        <dt>72 小时</dt>
+                        <dd class="rate-value">--</dd>
+                    </div>
+                    <div>
+                        <dt>最近 1 小时</dt>
+                        <dd class="hour-rate">--</dd>
+                    </div>
+                    <div>
+                        <dt>请求</dt>
+                        <dd class="sample-count">--</dd>
+                    </div>
+                    <div>
+                        <dt>失败</dt>
+                        <dd class="failure-count">--</dd>
+                    </div>
+                </dl>
+            </div>
+            <div class="heatmap-scroll" tabindex="0" aria-label="72 小时稳定性时间线">
+                <div class="heatmap"></div>
+            </div>
+        </article>
+    </template>
+
+    <div id="heatTooltip" class="heat-tooltip" role="tooltip" hidden></div>
+    <script src="app.js?v=0802v1"></script>
+</body>
+</html>

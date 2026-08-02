@@ -297,8 +297,9 @@ static cppJSON gpt6_normal_to_history(const cppJSON& response,const string& form
     if(history)output.push_back(std::move(history));
     return output;
 }
-cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens) {
+cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens,int* returncode) {
     response_id.clear();
+    if(returncode)*returncode=0;
     gpt6_proxy_data proxy;
     proxy.client=a;
     CURL* curl=curl_easy_init();
@@ -326,6 +327,8 @@ cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& mes
         curl_easy_setopt(curl,CURLOPT_TIMEOUT,1200L);
         curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1L);
         result=curl_easy_perform(curl);
+        long response_code=0;
+        if(curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&response_code)==CURLE_OK&&returncode)*returncode=(int)response_code;
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
     }

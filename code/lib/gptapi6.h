@@ -15,6 +15,7 @@
  * message        原样发送给上游的 JSON 请求体。
  * format         支持 responses、completions、claude 和 gemini。
  * response_id    上游原生响应 ID；上游未返回 ID 时为空。
+ * returncode     上游最终 HTTP 状态码；未收到 HTTP 响应时为 0。
  *
  * gpt6_work 的返回值必须是数组，数组内容是待追加的历史项：
  * responses   追加到下一次请求的 input。
@@ -29,7 +30,8 @@ cppJSON gpt6_work(
     const std::string& message,
     const std::string& format,
     std::string& response_id,
-    unsigned long long* used_tokens=0
+    unsigned long long* used_tokens=0,
+    int* returncode=0
 );
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
 cppJSON my_format(const cppJSON& a,const std::string& format,int);

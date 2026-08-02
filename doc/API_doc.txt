@@ -71,17 +71,6 @@ GET /api/stop
 用法：curl http://127.0.0.1:1001/api/stop
 
 
-POST /api/gpts2
-请求值：无
-返回示例：
-[{"provider":"deepseek","public":["deepseek-v4-flash"],"private":["deepseek-v4-pro"],"format":"completions"}]
-解释：
-provider表示模型提供商
-public表示可以访问的模型
-private表示需要权限访问的模型
-format表示上游格式，默认是completions。
-
-
 POST /api/gpt5_model_list
 鉴权：无
 请求值：无

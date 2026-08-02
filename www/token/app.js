@@ -4,6 +4,8 @@ const loginState = document.getElementById('loginState');
 const errorState = document.getElementById('errorState');
 let accountData = null;
 let modelConfig = null;
+const STABILITY_BUCKETS = 3 * 24 * 4;
+const STABILITY_BUCKET_MS = 15 * 60 * 1000;
 
 function formatTokens(value) {
     return new Intl.NumberFormat('zh-CN').format(Math.max(0, Math.floor(Number(value) || 0)));
@@ -39,6 +41,7 @@ async function loadTokenAccount() {
         document.getElementById('apiKeyValue').value = data.api_key;
         renderProviderChoices();
         showState(accountContent);
+        loadProviderStability();
     } catch (error) {
         errorState.textContent = error.message || '加载账户信息失败';
         showState(errorState);
@@ -47,6 +50,20 @@ async function loadTokenAccount() {
 
 function formatMultiply(value) {
     return Number(value.toFixed(6)).toString();
+}
+
+function createProviderStability() {
+    const element = document.createElement('div');
+    element.className = 'provider-stability';
+    element.innerHTML = '<div class="provider-stability-bars"></div><div class="provider-stability-axis"><span>24h前</span><span>现在</span></div>';
+    const bars = element.firstElementChild;
+    for (let i = 0; i < 12; i++) {
+        const bar = document.createElement('span');
+        bar.className = 'provider-stability-bar';
+        bar.title = '成功率 100%';
+        bars.appendChild(bar);
+    }
+    return element;
 }
 
 function renderProviderChoices() {
@@ -66,6 +83,7 @@ function renderProviderChoices() {
         name.textContent = model;
         const select = document.createElement('select');
         select.setAttribute('aria-label', `${model} Provider`);
+        select.dataset.model = model;
         const modelMultiply = Number(modelConfig.model_multiply?.[model]?.[0]) || 0;
         providers.forEach(id => {
             const option = document.createElement('option');
@@ -78,7 +96,7 @@ function renderProviderChoices() {
         select.value = providers.includes(accountData.selected_provider?.[model])
             ? accountData.selected_provider[model] : providers[0];
         select.addEventListener('change', () => saveProvider(model, select));
-        row.append(name, select);
+        row.append(name, select, createProviderStability());
         container.appendChild(row);
     }
     if (!container.children.length) container.innerHTML = '<div class="provider-choice"><span class="provider-model">暂无可选 Provider</span></div>';
@@ -99,13 +117,53 @@ async function saveProvider(model, select) {
         if (!response.ok || data?.error?.message) throw new Error(data?.error?.message || `保存失败（HTTP ${response.status}）`);
         accountData = data;
         status.textContent = '已保存';
+        loadProviderStability();
     } catch (error) {
         status.className = 'provider-status error';
         status.textContent = error.message || '保存失败';
         renderProviderChoices();
+        loadProviderStability();
     } finally {
         select.disabled = false;
     }
+}
+
+function renderStability(row, raw) {
+    if (!Array.isArray(raw)) return;
+    const now = Math.floor(Date.now() / STABILITY_BUCKET_MS);
+    const bars = row.querySelectorAll('.provider-stability-bar');
+    for (let group = 0; group < 12; group++) {
+        let stable = 0, total = 0;
+        for (let offset = 0; offset < 8; offset++) {
+            const bucket = now - 95 + group * 8 + offset;
+            const index = ((bucket % STABILITY_BUCKETS) + STABILITY_BUCKETS) % STABILITY_BUCKETS;
+            stable += Number(raw[index * 2]) || 0;
+            total += Number(raw[index * 2 + 1]) || 0;
+        }
+        const rate = total ? stable / total * 100 : 100;
+        const bar = bars[group];
+        bar.style.height = total && rate === 0 ? '2px' : `${rate}%`;
+        bar.className = `provider-stability-bar ${total ? rate < 20 ? 'bad' : rate < 50 ? 'warn' : 'good' : ''}`.trim();
+        bar.title = `成功率 ${rate === 100 ? '100' : rate.toFixed(1)}%`;
+    }
+}
+
+async function loadProviderStability() {
+    const rows = [...document.querySelectorAll('#providerChoices .provider-choice')]
+        .map(row => ({row, select: row.querySelector('select[data-model]')}))
+        .filter(item => item.select);
+    if (!rows.length) return;
+    const keys = rows.map(({select}) => `${select.dataset.model}_${select.value}`);
+    try {
+        const response = await fetch('/api/gpt5_askstable', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(keys)
+        });
+        const data = await response.json();
+        if (!response.ok || data?.error) return;
+        rows.forEach(({row, select}) => renderStability(row, data[`${select.dataset.model}_${select.value}`]));
+    } catch (_) {}
 }
 
 document.getElementById('copyApiKeyButton').addEventListener('click', async () => {

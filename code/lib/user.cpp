@@ -36,7 +36,7 @@ user_* getuser(const char* get){
 	if(tmpp){
 		char kb[9];
 		user_* p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),0);
-		if(p1&&ndb2_gotmaxlen(p1)<sizeof(user_))p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),sizoef(user_));
+		if(p1&&ndb2_gotmaxlen(p1)<(ll)sizeof(user_))p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),sizeof(user_));
 		if(p1&&memcmp(tmpp+10+8,p1->cookie_rand,8)==0&&time(0)<p1->time)return p1;
 	}
     return 0;
@@ -46,7 +46,7 @@ user_* getuser_by_id(const char* id){
 	char kb[9]={0};
 	memcpy(kb,id,8);
 	user_* p1=(user_*)ndb2_got(user,kb,0);
-	if(p1&&ndb2_gotmaxlen(p1)<sizeof(user_))p1=(user_*)ndb2_got(user,kb,sizeof(user_));
+	if(p1&&ndb2_gotmaxlen(p1)<(ll)sizeof(user_))p1=(user_*)ndb2_got(user,kb,sizeof(user_));
 	return p1;
 }
 void login(http_para* ssl){
