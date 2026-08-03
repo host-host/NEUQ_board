@@ -26,3 +26,8 @@ void mylib_sha256(const void* data,size_t n,char out[44]){
     out[l++]=chars[(s<<(6-bits))&63];
     out[l]=0;
 }
+size_t utf8_substr(const char *c,size_t n) {
+    if(strlen(c)<=n)return strlen(c);
+    while(n&&(c[n]&0xC0)==0x80)n--;
+    return n;
+}

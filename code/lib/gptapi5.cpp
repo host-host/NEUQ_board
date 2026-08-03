@@ -176,12 +176,6 @@ void gpt5_share(http_para* a) {
     con->publish=true;
     http_send(a,Hok Hjson Hc0,"{\"ok\":true}",0);
 }
-static std::string utf8_substr(const std::string& str, unsigned int max_bytes) {
-    if (str.length() <= max_bytes) return str;
-    unsigned int len = max_bytes;
-    while(len > 0 && (str[len] & 0xC0) == 0x80) len--;
-    return str.substr(0, len) + "...";
-}
 #define LOCK(a) while(__sync_val_compare_and_swap(a,0,1))usleep(0)
 #define UNLOCK(a) do{asm volatile("":::"memory");a=0;}while(0)
 void insert2index_db(const string&a,const string&b){
@@ -205,7 +199,7 @@ void maketitle(char*name,string b,const cppJSON& config){
         cppJSON title_reply=gpt6_work(0,title_config["url"],title_config["Authorization"],title_request.stringify_Unformatted(),"completions",_);
         string title=title_reply[0]["content"];
         if(title.size()>4&&title.substr(0,2)=="**"&&title.substr(title.size()-2)=="**")title=title.substr(2,title.size()-4);
-        if(title.size()>60)title=utf8_substr(title,56)+"...";
+        if(title.size()>60)title=title.substr(0,utf8_substr(title.c_str(),56))+"...";
         if(!title.empty())strcpy(name,title.c_str());
     }
 }

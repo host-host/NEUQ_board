@@ -81,12 +81,46 @@ static cppJSON responses(const cppJSON& input,string& id) {
     }
     if(!completed)return cppJSON("[]");
     id=completed["id"].valuestring();
-    if(items.empty()&&completed["output"].IsArray()&&completed["output"].size())return completed["output"].clone();
+    auto normalize=[](cppJSON item) {
+        item.erase("id");
+        if(item["type"]=="message") {
+            item.erase("status");
+            for(cppJSON part:item["content"]) {
+                part.erase("annotations");
+                part.erase("logprobs");
+            }
+        }
+        return item;
+    };
+    // Keep output_item.done as the source of truth. Fill only missing output
+    // indexes from the completed snapshot, which some providers emit without
+    // a matching output_item.done event.
+    if(completed["output"].IsArray()&&completed["output"].size()) {
+        cppJSON out("[]");
+        int index=0;
+        for(cppJSON item:completed["output"]) {
+            auto found=items.find(index++);
+            if(found!=items.end()) {
+                out.push_back(normalize(found->second.clone()));
+                continue;
+            }
+            auto text=texts.find(index-1);
+            if(text!=texts.end()&&!text->second.empty()) {
+                cppJSON message("{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\"}]}");
+                message["content"][0].insert("text",text->second);
+                out.push_back(std::move(message));
+            } else out.push_back(normalize(std::move(item)));
+        }
+        for(auto& item:items)if(item.first>=completed["output"].size())out.push_back(normalize(item.second.clone()));
+        return out;
+    }
     cppJSON out("[]");
     for(auto& item:items)out.push_back(item.second.clone());
-    if(!items.empty())return out;
     for(auto& text:texts) {
         if(text.second.empty())continue;
+        auto item=items.find(text.first);
+        if(item!=items.end()&&item->second["type"].valuestring()!="message")continue;
+        if(item!=items.end()&&item->second["content"].IsArray()&&item->second["content"].size())continue;
         cppJSON message("{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\"}]}");
         message["content"][0].insert("text",text.second);
         out.push_back(move(message));
