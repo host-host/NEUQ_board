@@ -9,6 +9,7 @@ extern "C"{
 void gptapi5_init();
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);
+void gpt5_log_list(http_para* a);
 void gpt5_resolve(http_para* a);
 void gpt5_history_list(http_para* a);
 void gpt5_history_get(http_para* a);

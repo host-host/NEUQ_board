@@ -113,6 +113,13 @@ POST /api/gpt5_apikey
 计费：token_used 增加 ceil(used_tokens * model_multiply[model][0] * 0.5 * provider[provider].multiply / 0.3)。
 
 
+POST /api/gpt5_log_list
+鉴权：Cookie 登录
+请求示例：{"start":1,"end":100}
+返回值：按从新到旧的位置返回 start 到 end 的用量记录，两端均包含。used_tokens 为上游实际 Token 用量，multiply 为最终计费倍率。
+返回示例：[{"model":"gpt-5.6-sol","provider":"C","used_tokens":1200,"multiply":1.995,"time":1785830400}]
+
+
 POST /api/gpt5_resolve
 请求示例：{"response_id":"resp_xxx"}
 返回示例：{"con_id":"12345"}

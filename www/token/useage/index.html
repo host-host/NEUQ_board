@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 日志</title>
+    <link rel="stylesheet" href="style.css?v=0804v1">
+</head>
+<body>
+    <main class="usage-page">
+        <header class="page-header">
+            <a class="brand" href="/gpt"><img src="/newintown.png" alt="newintown"></a>
+            <a class="back-link" href="/token">返回 API 用量</a>
+        </header>
+
+        <section class="usage-panel" aria-labelledby="pageTitle">
+            <div class="panel-heading">
+                <div>
+                    <h1 id="pageTitle">日志</h1>
+                    <p id="recordSummary">查看每次 API 请求的 Token 用量与扣除额度</p>
+                </div>
+                <label class="page-size-control">每页
+                    <select id="pageSize" aria-label="每页记录数">
+                        <option value="20">20 条</option>
+                        <option value="50">50 条</option>
+                        <option value="100">100 条</option>
+                    </select>
+                </label>
+            </div>
+
+            <div id="tableContent" hidden>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>时间</th><th>模型</th><th>Provider</th><th>实际 Token</th><th>倍率</th><th>扣除额度</th></tr>
+                        </thead>
+                        <tbody id="usageLogBody"></tbody>
+                    </table>
+                </div>
+                <nav class="pagination" aria-label="日志分页">
+                    <div class="page-buttons">
+                        <button id="firstPage" type="button" title="第一页" aria-label="第一页">&#171;</button>
+                        <button id="previousPage" type="button" title="上一页" aria-label="上一页">&#8249;</button>
+                    </div>
+                    <span id="pageIndicator">第 1 页</span>
+                    <div class="page-buttons">
+                        <button id="nextPage" type="button" title="下一页" aria-label="下一页">&#8250;</button>
+                    </div>
+                </nav>
+            </div>
+
+            <div id="loadingState" class="state-message">正在加载日志...</div>
+            <div id="emptyState" class="state-message" hidden>暂无日志记录</div>
+            <div id="loginState" class="state-message" hidden><p>请先登录后查看日志。</p><a class="login-button" href="/login">登录</a></div>
+            <div id="errorState" class="state-message error" hidden></div>
+        </section>
+    </main>
+    <script src="app.js?v=0804v1"></script>
+</body>
+</html>

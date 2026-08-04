@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <algorithm>
+#include <cctype>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -25,6 +27,7 @@ ndb2 index_db;//sha256(response_id) -> con_id
 ndb2 history_db;//user_id -> history
 ndb2 provider_db;//userid_model -> preferred provider
 ndb2 stable_db;//model_provider -> [3*24*4][2]
+ndb2 log_db;//userid -> reslogs
 struct content{
     bool publish;
     bool deleted;
@@ -45,12 +48,24 @@ struct history{
     char user_id[10];
     char con_id[][32];
 };
+struct reslog{
+    char model[48],provider[48];
+    int used_tokens;
+    double multiply;
+    long long time;
+    char other[256];//保留为未来增加功能
+};
+struct reslogs{
+    int lock,n;
+    reslog a[];
+};
 __attribute((constructor)) void gptapi5_init() {
     content_db=ndb2_init("/web/res/pri/gpt5content.ndb2");
     index_db=ndb2_init("/web/res/pri/gpt5sha256.ndb2");
     history_db=ndb2_init("/web/res/pri/gpt5userhistory.ndb2");
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
     stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
+    log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
 }
 void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
@@ -80,6 +95,41 @@ void gpt5_apikey(http_para* a) {
     }
     ans.insert("selected_provider",std::move(selected));
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
+}
+void gpt5_log_list(http_para* a) {
+    user_* p=getuser(a->get);
+    if(!p)return my_http_error(a,"Please log in first.");
+    cppJSON req(a->get+a->n),ans("[]");
+    int start=req["start"].valuedouble(),end=req["end"].valuedouble();
+    if(start<1)return my_http_error(a,"Bad request");
+    reslogs* logs=(reslogs*)ndb2_got(log_db,p->userid,0);
+    int n=logs?logs->n:0;
+    for(int i=n-start;i>=0&&i>=n-end;i--){
+        cppJSON item("{}");
+        item.insert("model",logs->a[i].model);
+        item.insert("provider",logs->a[i].provider);
+        item.insert("used_tokens",(double)logs->a[i].used_tokens);
+        item.insert("multiply",logs->a[i].multiply);
+        item.insert("time",(double)logs->a[i].time);
+        ans.push_back(std::move(item));
+    }
+    http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
+}
+static void gpt5_log(user_* p,const string& model,const string& provider,unsigned long long used_tokens,double multiply) {
+    reslogs* logs;
+    retry:
+    logs=(reslogs*)ndb2_got(log_db,p->userid,0);
+    if(!logs)if(!(logs=(reslogs*)ndb2_got(log_db,p->userid,sizeof(reslogs)+sizeof(reslog))))return;//db error
+    if(TRY(&logs->lock))goto retry;
+    int n=++logs->n;
+    logs=(reslogs*)ndb2_got(log_db,p->userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
+    reslog& item=logs->a[n-1];
+    memcpy(item.model,model.data(),min(model.size(),sizeof(item.model)-1));
+    memcpy(item.provider,provider.data(),min(provider.size(),sizeof(item.provider)-1));
+    item.used_tokens=used_tokens;
+    item.multiply=multiply;
+    item.time=time(0);
+    UNLOCK(logs->lock);
 }
 void gpt5_resolve(http_para* a) {
     cppJSON re(a->get+a->n);
@@ -176,8 +226,6 @@ void gpt5_share(http_para* a) {
     con->publish=true;
     http_send(a,Hok Hjson Hc0,"{\"ok\":true}",0);
 }
-#define LOCK(a) while(__sync_val_compare_and_swap(a,0,1))usleep(0)
-#define UNLOCK(a) do{asm volatile("":::"memory");a=0;}while(0)
 void insert2index_db(const string&a,const string&b){
     char tmp[48]={0};
     mylib_sha256(a.c_str(),a.length(),tmp);
@@ -383,8 +431,9 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id,&used_tokens,&returncode);
     // if(returncode<400||returncode>499||returncode==429)
     gpt5_add(model+"_"+provider,used_tokens>0);
-    p->token_used+=(long long)ceil(used_tokens*config["model_multiply"][model][0].valuedouble()
-        *GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3);
+    double mul=config["model_multiply"][model][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
+    ADD(&p->token_used,(long long)ceil(used_tokens*mul));
+    gpt5_log(p,model,provider,used_tokens,mul);
     if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
     cppJSON input=request[array_name].clone();
     for(cppJSON i:output)input.push_back(i);
