@@ -70,7 +70,8 @@ function createProviderStability() {
 function renderProviderChoices() {
     const container = document.getElementById('providerChoices');
     container.innerHTML = '';
-    for (const [model, providerIds] of Object.entries(modelConfig?.model_available_provider || {})) {
+    for (const [model, config] of Object.entries(modelConfig?.model || {})) {
+        const providerIds = config?.provider;
         if (!Array.isArray(providerIds)) continue;
         const providers = providerIds.filter(id => {
             const provider = modelConfig.provider?.[id];
@@ -85,7 +86,7 @@ function renderProviderChoices() {
         const select = document.createElement('select');
         select.setAttribute('aria-label', `${model} Provider`);
         select.dataset.model = model;
-        const modelMultiply = Number(modelConfig.model_multiply?.[model]?.[0]) || 0;
+        const modelMultiply = Number(config.price?.[0]) || 0;
         providers.forEach(id => {
             const option = document.createElement('option');
             const providerMultiply = Number(modelConfig.provider[id].multiply) || 0;

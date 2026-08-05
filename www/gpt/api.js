@@ -190,26 +190,27 @@ async function fetchModels() {//获取 AI 模型列表
         const response = await fetch('/api/gpt5_model_list', { method: 'POST' });
         const configs = await response.json();
         modelCatalog.clear();
-        const addModelVariant = (name, provider, config) => {
+        const addModelVariant = (name, provider, providerConfig, suggestedFormat) => {
             if (typeof name !== 'string' || !name) return;
             if (!modelCatalog.has(name)) {
                 modelCatalog.set(name, {name, hasPublic: false, hasPrivate: false, variants: []});
             }
             const model = modelCatalog.get(name);
-            const isPublic = config.public === true;
+            const isPublic = providerConfig.public === true;
             if (isPublic) model.hasPublic = true;
             else model.hasPrivate = true;
-            const format = normalizeModelFormat(config.format);
+            const format = normalizeModelFormat(suggestedFormat);
             const existing = model.variants.find(variant =>
                 variant.provider === provider && variant.format === format);
             if (existing) existing.isPublic = existing.isPublic || isPublic;
             else model.variants.push({provider, format, isPublic});
         };
-        for (const [name, providers] of Object.entries(configs.model_available_provider || {})) {
+        for (const [name, modelConfig] of Object.entries(configs.model || {})) {
+            const providers = modelConfig?.provider;
             if (!Array.isArray(providers)) continue;
             providers.forEach(provider => {
-                const config = configs.provider?.[provider];
-                if (config) addModelVariant(name, provider, config);
+                const providerConfig = configs.provider?.[provider];
+                if (providerConfig) addModelVariant(name, provider, providerConfig, modelConfig.suggest_format);
             });
         }
         Models = [...modelCatalog.values()];

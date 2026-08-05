@@ -82,8 +82,9 @@ function statusText(status) {
 
 function buildCatalog(config) {
     const catalog = [];
-    const mappings = config?.model_available_provider || {};
-    Object.entries(mappings).forEach(([model, providers]) => {
+    const models = config?.model || {};
+    Object.entries(models).forEach(([model, modelConfig]) => {
+        const providers = modelConfig?.provider;
         if (!Array.isArray(providers)) return;
         providers.forEach(provider => {
             if (typeof provider !== 'string') return;

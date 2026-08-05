@@ -19,7 +19,7 @@
 #include <set>
 #include <string>
 using namespace std;
-#define CONFIG "/web/res/pri/gpt3.json"
+#define CONFIG "/web/res/pri/gpt4.json"
 #define GPT5_TOKEN_C 0.5
 #define ll long long
 ndb2 content_db;//con_id -> content
@@ -71,11 +71,11 @@ void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG);
-    if(!config)return my_http_error(a,"can not read gpt3.json.");
+    if(!config)return my_http_error(a,"can not read gpt4.json.");
     bool rotate=request["rotate"]==true;
     string model=request["model"],provider=request["provider"];
     if(!model.empty()&&!provider.empty()) {
-        if(!config["model_available_provider"][model].has(provider.c_str()))return my_http_error(a,"Invalid provider.");
+        if(!config["model"][model]["provider"].has(provider.c_str()))return my_http_error(a,"Invalid provider.");
         string key=(string)p->userid+"_"+model;
         char* saved=(char*)ndb2_got(provider_db,key.c_str(),provider.size()+1);
         if(saved)memcpy(saved,provider.c_str(),provider.size()+1);
@@ -88,7 +88,7 @@ void gpt5_apikey(http_para* a) {
     ans.insert("token_used",(double)p->token_used);
     ans.insert("admin",p->admin!=0);
     cppJSON selected("{}");
-    for(cppJSON item:config["model_available_provider"]) {
+    for(cppJSON item:config["model"]) {
         string key=(string)p->userid+"_"+item.a->string;
         char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
         if(saved)selected.insert(item.a->string,saved);
@@ -302,9 +302,9 @@ void* gpt5_probe_loop(void*) {
         while(time(0)<next)sleep(next-time(0));
         cppJSON config=cppJSON::from_file(CONFIG);
         if(!config)continue;
-        for(cppJSON item:config["model_available_provider"]) {
+        for(cppJSON item:config["model"]) {
             string model=item.a->string;
-            for(cppJSON value:item) {
+            for(cppJSON value:item["provider"]) {
                 string provider=value;
                 cppJSON conf=config["provider"][provider.c_str()];
                 if(!conf)continue;
@@ -349,9 +349,9 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     if(!p)return my_http_error(a,"Invalid API key.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
     string model=gpt6_request_model(a,request,format);
-    if(!config)return my_http_error(a,"can not read gpt3.json.");
-    if(!config["model_available_provider"].has(model.c_str()))return my_http_error(a,"Model not found.");
-    cppJSON pros=config["model_available_provider"][model];
+    if(!config)return my_http_error(a,"can not read gpt4.json.");
+    if(!config["model"].has(model.c_str()))return my_http_error(a,"Model not found.");
+    cppJSON pros=config["model"][model]["provider"];
     string key=(string)p->userid+"_"+model;
     char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
     string provider;
@@ -370,7 +370,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     if(!p->token_limit)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return my_http_error(a,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     string auth=conf["Authorization"];
-    if(auth.empty())return my_http_error(a,"gpt3.json error: No Authorization");
+    if(auth.empty())return my_http_error(a,"gpt4.json error: No Authorization");
     cppJSON previous_new_input_format=my_format(request[array_name],format,2);
     string hash;
     char hash_[48],*con_id=0;
@@ -435,7 +435,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id,&used_tokens,&returncode);
     // if(returncode<400||returncode>499||returncode==429)
     gpt5_add(model+"_"+provider,used_tokens>0);
-    double mul=config["model_multiply"][model][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
+    double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(used_tokens*mul));
     gpt5_log(p,model,provider,used_tokens,mul);
     if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
@@ -473,11 +473,11 @@ void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);
     if(!p)return http_send(a,H401 Hjson Hc0,"{\"error\":{\"message\":\"Invalid API key.\"}}",0);
     cppJSON config=cppJSON::from_file(CONFIG);
-    if(!config)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"can not read gpt3.json.\"}}",0);
+    if(!config)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"can not read gpt4.json.\"}}",0);
     cppJSON data("[]");
-    for(cppJSON model:config["model_available_provider"]) {
+    for(cppJSON model:config["model"]) {
         bool available=false;
-        for(cppJSON provider:model) {
+        for(cppJSON provider:model["provider"]) {
             string name=provider;
             cppJSON conf=config["provider"][name.c_str()];
             if(conf&&(p->admin||conf["public"]==true)) {
@@ -500,7 +500,7 @@ void gpt5_models(http_para* a) {
 }
 void gpt5_model_list(http_para* a) {
     cppJSON config=cppJSON::from_file(CONFIG);
-    if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt3.json.",0);
+    if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt4.json.",0);
     config.erase("title");
     for(cppJSON provider:config["provider"]) {
         provider.erase("name");
