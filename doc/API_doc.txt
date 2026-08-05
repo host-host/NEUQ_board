@@ -78,6 +78,12 @@ POST /api/gpt5_model_list
 返回示例：{"model_multiply":{"gpt-5.6-sol":[35,210,3.5]},"model_available_provider":{"gpt-5.6-sol":["B","C"]},"provider":{"B":{"multiply":0.0114,"format":"responses"},"C":{"multiply":0.0171,"format":"responses","public":true}}}
 
 
+GET /v1/models
+鉴权：请求头需包含站内 Authorization。
+返回值：OpenAI Models API 标准列表。普通用户仅返回具有公开 Provider 的模型，管理员返回全部可用模型。
+返回示例：{"object":"list","data":[{"id":"gpt-5.6-sol","object":"model","created":0,"owned_by":"neuqboard"}]}
+
+
 POST /api/v1/messages
 POST /v1/messages
 请求值：Claude Messages 原生 JSON，请求头需包含站内 Authorization。

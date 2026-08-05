@@ -8,8 +8,20 @@ extern "C"{
 #endif
 
 #define Hok   "HTTP/1.1 200 OK\r\n"
+#define H400  "HTTP/1.1 400 Bad Request\r\n"
+#define H401  "HTTP/1.1 401 Unauthorized\r\n"
+#define H402  "HTTP/1.1 402 Payment Required\r\n"
+#define H403  "HTTP/1.1 403 Forbidden\r\n"
 #define H404  "HTTP/1.1 404 Not Found\r\n"
+#define H405  "HTTP/1.1 405 Method Not Allowed\r\n"
+#define H408  "HTTP/1.1 408 Request Timeout\r\n"
+#define H409  "HTTP/1.1 409 Conflict\r\n"
+#define H422  "HTTP/1.1 422 Unprocessable Entity\r\n"
+#define H429  "HTTP/1.1 429 Too Many Requests\r\n"
 #define H500  "HTTP/1.1 500 Internal Server Error\r\n"
+#define H502  "HTTP/1.1 502 Bad Gateway\r\n"
+#define H503  "HTTP/1.1 503 Service Unavailable\r\n"
+#define H504  "HTTP/1.1 504 Gateway Timeout\r\n"
 
 #define Hc0   "Cache-Control: no-cache\r\n"
 #define Hc1h  "Cache-Control: max-age=3600, public\r\n"

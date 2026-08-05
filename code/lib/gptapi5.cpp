@@ -335,13 +335,17 @@ void gpt5_askstable(http_para* a) {
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 #define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
-static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
+static user_* gpt5_api_user(http_para* a) {
     char *tmp=0;
     key_find("Authorization: Bearer sk-");
     if(!tmp)key_find("Authorization: sk-");
     if(!tmp)key_find("x-api-key: sk-");
     user_* p=getuser_by_id(tmp);
     if(p&&tmp&&memcmp(tmp+8,p->gptapikey,19))p=0;
+    return p;
+}
+static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
+    user_* p=gpt5_api_user(a);
     if(!p)return my_http_error(a,"Invalid API key.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
     string model=gpt6_request_model(a,request,format);
@@ -464,6 +468,35 @@ void gpt5_claude_messages(http_para* a) {
 }
 void gpt5_gemini_generate_content(http_para* a) {
     gpt5_completion_request(a,"gemini","contents");
+}
+void gpt5_models(http_para* a) {
+    user_* p=gpt5_api_user(a);
+    if(!p)return http_send(a,H401 Hjson Hc0,"{\"error\":{\"message\":\"Invalid API key.\"}}",0);
+    cppJSON config=cppJSON::from_file(CONFIG);
+    if(!config)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"can not read gpt3.json.\"}}",0);
+    cppJSON data("[]");
+    for(cppJSON model:config["model_available_provider"]) {
+        bool available=false;
+        for(cppJSON provider:model) {
+            string name=provider;
+            cppJSON conf=config["provider"][name.c_str()];
+            if(conf&&(p->admin||conf["public"]==true)) {
+                available=true;
+                break;
+            }
+        }
+        if(!available)continue;
+        cppJSON item("{}");
+        item.insert("id",model.a->string);
+        item.insert("object","model");
+        item.insert("created",0.0);
+        item.insert("owned_by","neuqboard");
+        data.push_back(std::move(item));
+    }
+    cppJSON response("{}");
+    response.insert("object","list");
+    response.insert("data",std::move(data));
+    http_send(a,Hok Hjson Hc0,response.stringify_Unformatted().c_str(),0);
 }
 void gpt5_model_list(http_para* a) {
     cppJSON config=cppJSON::from_file(CONFIG);
