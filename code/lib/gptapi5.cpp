@@ -67,6 +67,7 @@ __attribute((constructor)) void gptapi5_init() {
     stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
 }
+#define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
 void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");

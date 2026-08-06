@@ -21,30 +21,46 @@ static cppJSON events(const string& body) {
     }
     return out;
 }
-static unsigned long long usage_tokens(const cppJSON& value) {
+static const char* const USAGE_FIELD[4]={"input_tokens","output_tokens","cache_creation_input_tokens","cache_read_input_tokens"};
+static unsigned long long usage_number(const cppJSON& usage,const char* key) {
+    cppJSON item=usage[key];
+    return item.IsNumber()?(unsigned long long)item.valuedouble():0;
+}
+static cppJSON usage_object(const cppJSON& value) {
     cppJSON usage=value["usage"];
+    if(!usage.IsObject())usage=value["message"]["usage"];//claude 的 message_start 把 usage 嵌在 message 里
     if(!usage.IsObject())usage=value["usageMetadata"];
+    return usage;
+}
+static unsigned long long usage_tokens(const cppJSON& value) {
+    cppJSON usage=usage_object(value);
     if(!usage.IsObject())return 0;
+    unsigned long long total=0;
+    for(int i=0;i<4;i++)total+=usage_number(usage,USAGE_FIELD[i]);
+    //claude 的 cache_creation/cache_read 不含在 input_tokens 内，需与 input/output 相加
+    if(usage_number(usage,USAGE_FIELD[2])||usage_number(usage,USAGE_FIELD[3]))return total;
     if(usage["total_tokens"].IsNumber())return (unsigned long long)usage["total_tokens"].valuedouble();
     if(usage["totalTokenCount"].IsNumber())return (unsigned long long)usage["totalTokenCount"].valuedouble();
-    unsigned long long input=usage["input_tokens"].IsNumber()?(unsigned long long)usage["input_tokens"].valuedouble():0;
-    unsigned long long output=usage["output_tokens"].IsNumber()?(unsigned long long)usage["output_tokens"].valuedouble():0;
-    return input+output;
+    return total;
 }
 static unsigned long long response_usage_tokens(const string& body,const cppJSON& response) {
     unsigned long long total=usage_tokens(response);
     if(total||response.IsObject())return total;
     cppJSON stream=events(body);
-    unsigned long long largest=0,input=0,output=0;
+    unsigned long long largest=0,field[4]={0,0,0,0},sum=0;
     for(cppJSON event:stream) {
         unsigned long long value=usage_tokens(event);
         if(!value)value=usage_tokens(event["response"]);
         if(value>largest)largest=value;
-        cppJSON usage=event["usage"];
-        if(usage["input_tokens"].IsNumber())input=(unsigned long long)usage["input_tokens"].valuedouble();
-        if(usage["output_tokens"].IsNumber())output=(unsigned long long)usage["output_tokens"].valuedouble();
+        //input/cache 只出现在 message_start，output 只在 message_delta 里递增，逐字段取最大值
+        cppJSON usage=usage_object(event);
+        for(int i=0;i<4;i++) {
+            unsigned long long now=usage_number(usage,USAGE_FIELD[i]);
+            if(now>field[i])field[i]=now;
+        }
     }
-    return input||output?input+output:largest;
+    for(int i=0;i<4;i++)sum+=field[i];
+    return sum?sum:largest;
 }
 static void append(cppJSON& object,const char* key,const string& text) {
     if(object.IsObject()&&!text.empty())object.insert(key,object[key].valuestring()+text);
