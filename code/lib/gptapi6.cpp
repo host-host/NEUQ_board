@@ -347,7 +347,7 @@ static cppJSON gpt6_normal_to_history(const cppJSON& response,const string& form
     if(history)output.push_back(std::move(history));
     return output;
 }
-cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& message,const string& format,string& response_id,unsigned long long* used_tokens,int* returncode) {
+cppJSON gpt6_work(http_para* a,string url,string Authorization,const char* message,const string& format,string& response_id,unsigned long long* used_tokens,int* returncode) {
     response_id.clear();
     if(returncode)*returncode=0;
     gpt6_proxy_data proxy;
@@ -367,8 +367,8 @@ cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& mes
         else if(format=="gemini")url+="/v1beta/models/"+gpt6_request_model(a,cppJSON(),format)+":streamGenerateContent?alt=sse";
         curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
         curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
-        curl_easy_setopt(curl,CURLOPT_POSTFIELDS,message.data());
-        curl_easy_setopt(curl,CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)message.size());
+        curl_easy_setopt(curl,CURLOPT_POSTFIELDS,message);
+        curl_easy_setopt(curl,CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)strlen(message));
         curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,gpt6_header_callback);
         curl_easy_setopt(curl,CURLOPT_HEADERDATA,&proxy);
         curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,gpt6_body_callback);

@@ -100,6 +100,12 @@ struct cppJSON{
         }
         return newObj;
     }
+    char* Print() const {
+        return a?cJSON_Print(a):my_cJSON_strdup("null");
+    }
+    char* PrintUnformatted() const {
+        return a?cJSON_PrintUnformatted(a):my_cJSON_strdup("null");
+    }
     std::string stringify() const {
         if(a==0)return "null";
         char* jsonString=cJSON_Print(a);
@@ -310,6 +316,9 @@ struct cppJSON{
     explicit operator bool() const noexcept {
         return a != nullptr;
     }
+    cJSON* operator->() {
+        return a;
+    }
     void init_from_file(const char* file_path){
         if(a&&isroot)cJSON_Delete(a);
         isroot=1;
@@ -346,27 +355,9 @@ struct cppJSON{
         result.init_from_file(path);
         return result;
     }
-    // void debug(){
-    //     printf("--------%llx ",(long long)a);
-    //     if(a->type&cJSON_Invalid)printf("cJSON_Invalid ");
-    //     if(a->type&cJSON_False)printf("cJSON_False ");
-    //     if(a->type&cJSON_True)printf("cJSON_True ");
-    //     if(a->type&cJSON_NULL)printf("cJSON_NULL ");
-    //     if(a->type&cJSON_Number)printf("cJSON_Number ");
-    //     if(a->type&cJSON_String)printf("cJSON_String ");
-    //     if(a->type&cJSON_Array)printf("cJSON_Array ");
-    //     if(a->type&cJSON_Object)printf("cJSON_Object ");
-    //     if(a->type&cJSON_Raw)printf("cJSON_Raw ");
-    //     if(a->type&cJSON_IsReference)printf("cJSON_IsReference ");
-    //     if(a->type&cJSON_StringIsConst)printf("cJSON_StringIsConst ");
-    //     if(a->type>1023)printf("????type%d",a->type);
-    //     printf("\n");
-    //     printf("%llx %llx %llx\n%s:",(long long)a->child,(long long)a->prev,
-    //     (long long)a->next,(a->string?a->string:"NULL"));
-    //     if(a->type&cJSON_Number)printf("%lf",a->valuedouble);
-    //     if(a->type&cJSON_String)printf("%s",(a->valuestring?a->valuestring:"NULL"));
-    //     printf("\n");
-    // }
+    static void free_str(char* a){
+        cJSON_free(a);
+    }
 };
 
 #endif

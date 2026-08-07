@@ -27,7 +27,7 @@ cppJSON gpt6_work(
     http_para* a,
     std::string url,
     std::string Authorization,
-    const std::string& message,
+    const char* message,
     const std::string& format,
     std::string& response_id,
     unsigned long long* used_tokens=0,
