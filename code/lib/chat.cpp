@@ -39,7 +39,7 @@ void chat_list(http_para* a){
         if(nd->content[strlen(nd->content)+1]=='\0')item.insert("empty",true);
         ans.push_back(std::move(item));
     }
-    http_send(a,Hok Hc0 Hjson,ans.stringify_Unformatted().c_str(),0);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 void chat_content(http_para* a){
     cppJSON req(a->get+a->n);
@@ -48,7 +48,7 @@ void chat_content(http_para* a){
     if(!nd)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"content\":\"未找到内容\"}",0);
     cppJSON ans("{\"status\":\"ok\"}");
     ans.insert("content",nd->content+strlen(nd->content)+1);
-    http_send(a,Hok Hc0 Hjson,ans.stringify_Unformatted().c_str(),0);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 static void chat_add(chat*x,chat*y,chat*addx,const char*idx,chat*addy,const char*idy){
     memcpy(addx->prev,y->prev,16);

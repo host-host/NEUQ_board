@@ -126,6 +126,7 @@ void http_stop(struct http *a){
     a->stop=1;
 }
 void http_send(http_para *a,const char* head,const char* content,int n){
+    if(content==0)content="";
     if(n==0)n=strlen(content);
     if(head==0){
         for(int l=0,m;l<n&&((m=write(a->cl,content+l,n-l))>0);l+=m);

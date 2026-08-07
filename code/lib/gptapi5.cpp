@@ -53,7 +53,8 @@ struct reslog{
     int used_tokens;
     double multiply;
     long long time;
-    char other[256];//保留为未来增加功能
+    int input,output,cache;
+    char other[256-12];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -68,35 +69,32 @@ __attribute((constructor)) void gptapi5_init() {
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
 }
 #define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
-#define RET_JSON(j) do{char* tmp=j.PrintUnformatted();if(tmp){http_send(a,Hok Hjson Hc0,tmp,0);cppJSON::free_str(tmp);}return;}while(0)
 void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
-    if(!p)return my_http_error(a,"Please log in first.");
-    cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG);
-    if(!config)return my_http_error(a,"can not read gpt4.json.");
-    bool rotate=request["rotate"]==true;
-    string model=request["model"],provider=request["provider"];
-    if(!model.empty()&&!provider.empty()) {
-        if(!config["model"][model]["provider"].has(provider.c_str()))return my_http_error(a,"Invalid provider.");
+    if(!p)return ERROR(H400,"Please log in first.");
+    cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
+    const char* model=req["model"].valuestring(),*provider=req["provider"].valuestring();
+    if(model[0]&&provider[0]) {
+        if(!config["model"][model]["provider"].has(provider))return ERROR(H400,"Invalid provider.");
         string key=(string)p->userid+"_"+model;
-        char* saved=(char*)ndb2_got(provider_db,key.c_str(),provider.size()+1);
-        if(saved)memcpy(saved,provider.c_str(),provider.size()+1);
+        char* saved=(char*)ndb2_got(provider_db,key.c_str(),strlen(provider)+1);
+        if(saved)memcpy(saved,provider,strlen(provider)+1);
     }
-    if(!p->gptapikey[0]||rotate)mylib_random_string(p->gptapikey,19);
+    if(!p->gptapikey[0]||req["rotate"]==true)mylib_random_string(p->gptapikey,19);
     if(!p->token_limit)p->token_limit=10000000ULL;
-    cppJSON ans("{}");
-    ans.insert("api_key",(string)"sk-"+p->userid+p->gptapikey);
+    cppJSON ans("{}"),selected("{}");
+    string api_key=(string)"sk-"+p->userid+p->gptapikey;
+    ans.insert("api_key",api_key.c_str());
     ans.insert("token_limit",(double)p->token_limit);
     ans.insert("token_used",(double)p->token_used);
     ans.insert("admin",p->admin!=0);
-    cppJSON selected("{}");
     for(cppJSON item:config["model"]) {
-        string key=(string)p->userid+"_"+item.a->string;
+        string key=(string)p->userid+"_"+item.string();
         char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
-        if(saved)selected.insert(item.a->string,saved);
+        if(saved)selected.insert(item.string(),saved);
     }
     ans.insert("selected_provider",std::move(selected));
-    RET_JSON(ans);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 void gpt5_log_list(http_para* a) {
     user_* p=getuser(a->get);
@@ -115,7 +113,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("time",(double)logs->a[i].time);
         ans.push_back(std::move(item));
     }
-    RET_JSON(ans);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 static void gpt5_log(user_* p,const string& model,const string& provider,unsigned long long used_tokens,double multiply) {
     reslogs* logs;
@@ -135,7 +133,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,unsigne
 }
 void gpt5_resolve(http_para* a) {
     cppJSON re(a->get+a->n);
-    string id=re["response_id"];
+    string id=re["response_id"].valuestring();
     if(id.empty())return my_http_error(a,"response_id is required.");
     id="response_id_"+id;
     char c[48];
@@ -144,7 +142,7 @@ void gpt5_resolve(http_para* a) {
     if(!con_id)return my_http_error(a,"Response not found.");
     cppJSON response("{}");
     response.insert("con_id",con_id);
-    RET_JSON(response);
+    http_send(a,Hok Hc0 Hjson,response.PrintUnformatted().get(),0);
 }
 void gpt5_history_list(http_para* a) {
     user_* p=getuser(a->get);
@@ -161,11 +159,11 @@ void gpt5_history_list(http_para* a) {
         item.insert("updatetime",(double)con->updatetime);
         ans.push_back(std::move(item));
     }
-    RET_JSON(ans);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 void gpt5_history_get(http_para* a) {
     user_* p=getuser(a->get);
-    string con_id=cppJSON(a->get+a->n)["con_id"];
+    string con_id=cppJSON(a->get+a->n)["con_id"].valuestring();
     if(con_id.empty())return my_http_error(a,"con_id is required.");
     content* con=(content*)ndb2_got(content_db,con_id.c_str(),0);
     if(!con)return my_http_error(a,"conversation not found.");
@@ -177,13 +175,13 @@ void gpt5_history_get(http_para* a) {
     ans.insert("format",con->format);
     ans.insert("con_id",con->con_id);
     ans.insert("content",cppJSON(con->content));
-    RET_JSON(ans);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 void gpt5_history_rename(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
     cppJSON request(a->get+a->n);
-    string con_id=request["con_id"],title=request["title"];
+    string con_id=request["con_id"].valuestring(),title=request["title"].valuestring();
     if(con_id.empty())return my_http_error(a,"con_id is required.");
     if(title.empty())return my_http_error(a,"title is required.");
     if(title.size()>=sizeof(((content*)0)->name))return my_http_error(a,"title is too long.");
@@ -197,7 +195,7 @@ void gpt5_history_rename(http_para* a) {
 void gpt5_history_delete(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
-    string con_id=cppJSON(a->get+a->n)["con_id"];
+    string con_id=cppJSON(a->get+a->n)["con_id"].valuestring();
     if(con_id.empty())return my_http_error(a,"con_id is required.");
     content* con=(content*)ndb2_got(content_db,con_id.c_str(),0);
     if(!con)return my_http_error(a,"conversation not found.");
@@ -219,7 +217,7 @@ void gpt5_share(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
     cppJSON request(a->get+a->n);
-    string con_id=request["con_id"];
+    string con_id=request["con_id"].valuestring();
     if(con_id.empty())return my_http_error(a,"con_id is required.");
     if(!(request["publish"]==true))return my_http_error(a,"publish must be true.");
     content* con=(content*)ndb2_got(content_db,con_id.c_str(),0);
@@ -243,11 +241,10 @@ void maketitle(char*name,string b,const cppJSON& config){
         tmp[0].insert("content",b.c_str());
         req.insert("messages",std::move(tmp));
         string _;
-        char* tp=req.PrintUnformatted();
+        auto tp=req.PrintUnformatted();
         if(!tp)return;
-        cppJSON title_reply=gpt6_work(0,conf["url"],conf["Authorization"],tp,"completions",_);
-        cppJSON::free_str(tp);
-        string title=title_reply[0]["content"];
+        cppJSON title_reply=gpt6_work(0,conf["url"].valuestring(),conf["Authorization"].valuestring(),tp.get(),"completions",_);
+        string title=title_reply[0]["content"].valuestring();
         if(title.size()>4&&title.substr(0,2)=="**"&&title.substr(title.size()-2)=="**")title=title.substr(2,title.size()-4);
         if(title.size()>60)title=title.substr(0,utf8_substr(title.c_str(),56))+"...";
         if(!title.empty())strcpy(name,title.c_str());
@@ -286,17 +283,16 @@ static bool gpt5_should_probe(const string& key) {
     return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
 }
 static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
-    string url=conf["url"],auth=conf["Authorization"];
+    string url=conf["url"].valuestring(),auth=conf["Authorization"].valuestring();
     if(url.empty()||auth.empty())return;
     cppJSON request("{\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}");
-    request.insert("model",model);
+    request.insert("model",model.c_str());
     string response_id;
     int returncode=0;
     unsigned long long used_tokens=0;
-    char* message=request.PrintUnformatted();
+    auto message=request.PrintUnformatted();
     if(!message)return;
-    cppJSON output=gpt6_work(0,url,auth,message,"completions",response_id,&used_tokens,&returncode);
-    cppJSON::free_str(message);
+    cppJSON output=gpt6_work(0,url,auth,message.get(),"completions",response_id,&used_tokens,&returncode);
     string key=model+"_"+provider;
     gpt5_add(key,used_tokens>0);
 }
@@ -308,9 +304,9 @@ void* gpt5_probe_loop(void*) {
         cppJSON config=cppJSON::from_file(CONFIG);
         if(!config)continue;
         for(cppJSON item:config["model"]) {
-            string model=item.a->string;
+            string model=item.string();
             for(cppJSON value:item["provider"]) {
-                string provider=value;
+                string provider=value.valuestring();
                 cppJSON conf=config["provider"][provider.c_str()];
                 if(!conf)continue;
                 if(gpt5_should_probe(model+"_"+provider))gpt5_probe(model,provider,conf);
@@ -322,7 +318,7 @@ void* gpt5_probe_loop(void*) {
 void gpt5_askstable(http_para* a) {
     cppJSON ask(a->get+a->n),ans("{}");
     for(cppJSON i:ask){
-        string tp=i;
+        string tp=i.valuestring();
         int (*c)[2] = (int (*)[2])ndb2_got(stable_db,tp.c_str(),0);
         if(!c)continue;
         int t=time(0)/(15*60),l=c[ST_D][0];
@@ -335,9 +331,9 @@ void gpt5_askstable(http_para* a) {
             tmp.push_back((double)c[i][1]);
         }
         if(l<t)UNLOCK(c[ST_D][1]);
-        ans.insert(i.valuestring().c_str(),std::move(tmp));
+        ans.insert(i.valuestring(),std::move(tmp));
     }
-    RET_JSON(ans);
+    http_send(a,Hok Hc0 Hjson,ans.PrintUnformatted().get(),0);
 }
 #define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
 static user_* gpt5_api_user(http_para* a) {
@@ -356,7 +352,7 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     string model=gpt6_request_model(a,request,format);
     if(!config)return my_http_error(a,"can not read gpt4.json.");
     if(!config["model"].has(model.c_str()))return my_http_error(a,"Model not found.");
-    cppJSON pros=config["model"][model]["provider"];
+    cppJSON pros=config["model"][model.c_str()]["provider"];
     string key=(string)p->userid+"_"+model;
     char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
     string provider;
@@ -364,17 +360,17 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
         conf=config["provider"][saved];
         provider=saved;
     } else for(cppJSON pro:pros){
-        cppJSON tmp=config["provider"][pro];
+        cppJSON tmp=config["provider"][pro.valuestring()];
         if(tmp&&(p->admin||tmp["public"]==true)){
             conf=tmp;
-            provider=pro;
+            provider=pro.valuestring();
             break;
         }
     }
     if(!conf)return my_http_error(a,"Permission denied.");
     if(!p->token_limit)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return my_http_error(a,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    string auth=conf["Authorization"];
+    string auth=conf["Authorization"].valuestring();
     if(auth.empty())return my_http_error(a,"gpt4.json error: No Authorization");
     cppJSON previous_new_input_format=my_format(request[array_name],format,2);
     string hash;
@@ -384,7 +380,8 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     time_t maxtime=time(0)+5;
     retry:
     for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
-        hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
+        auto previous_new_input=previous_new_input_format.PrintUnformatted();
+        hash=(string)"new_input_"+p->userid+(previous_new_input?previous_new_input.get():"");
         mylib_sha256(hash.c_str(),hash.length(),hash_);
         char* candidate_id=(char*)ndb2_got(index_db,hash_,0);
         content* candidate=(content*)ndb2_got(content_db,candidate_id,0);
@@ -437,18 +434,20 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
     string response_id;
     unsigned long long used_tokens=0;
     int returncode=0;
-    cppJSON output=gpt6_work(a,conf["url"],auth,a->get+a->n,format,response_id,&used_tokens,&returncode);
+    cppJSON output=gpt6_work(a,conf["url"].valuestring(),auth,a->get+a->n,format,response_id,&used_tokens,&returncode);
     // if(returncode<400||returncode>499||returncode==429)
     gpt5_add(model+"_"+provider,used_tokens>0);
-    double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
+    double mul=config["model"][model.c_str()]["price"][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(used_tokens*mul));
     gpt5_log(p,model,provider,used_tokens,mul);
     if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
     cppJSON input=request[array_name].clone();
     for(cppJSON i:output)input.push_back(i);
-    string new_input=input.stringify_Unformatted();
+    auto serialized_input=input.PrintUnformatted();
+    string new_input=serialized_input?serialized_input.get():"";
     cppJSON new_input_format=my_format(input,format,2);
-    string new_input_key=(string)"new_input_"+p->userid+new_input_format.stringify_Unformatted();
+    auto serialized_input_format=new_input_format.PrintUnformatted();
+    string new_input_key=(string)"new_input_"+p->userid+(serialized_input_format?serialized_input_format.get():"");
     char new_hash[44];
     mylib_sha256(new_input_key.c_str(),new_input_key.length(),new_hash);
     insert2index_db(new_input_key,con_id);
@@ -458,7 +457,8 @@ static void gpt5_completion_request(http_para* a,const string& format,const char
         memcpy(con->hash,new_hash,44);
         con->isusing=0;
         con->updatetime=time(0);
-        if(!con->name[0])maketitle(con->name,output.stringify_Unformatted(),config);
+        auto serialized_output=output.PrintUnformatted();
+        if(!con->name[0]&&serialized_output)maketitle(con->name,serialized_output.get(),config);
     }
     if(isnew)free(con_id);
 }
@@ -483,7 +483,7 @@ void gpt5_models(http_para* a) {
     for(cppJSON model:config["model"]) {
         bool available=false;
         for(cppJSON provider:model["provider"]) {
-            string name=provider;
+            string name=provider.valuestring();
             cppJSON conf=config["provider"][name.c_str()];
             if(conf&&(p->admin||conf["public"]==true)) {
                 available=true;
@@ -492,7 +492,7 @@ void gpt5_models(http_para* a) {
         }
         if(!available)continue;
         cppJSON item("{}");
-        item.insert("id",model.a->string);
+        item.insert("id",model.string());
         item.insert("object","model");
         item.insert("created",0.0);
         item.insert("owned_by","neuqboard");
@@ -501,7 +501,7 @@ void gpt5_models(http_para* a) {
     cppJSON response("{}");
     response.insert("object","list");
     response.insert("data",std::move(data));
-    RET_JSON(response);
+    http_send(a,Hok Hc0 Hjson,response.PrintUnformatted().get(),0);
 }
 void gpt5_model_list(http_para* a) {
     cppJSON config=cppJSON::from_file(CONFIG);
@@ -512,5 +512,5 @@ void gpt5_model_list(http_para* a) {
         provider.erase("url");
         provider.erase("Authorization");
     }
-    RET_JSON(config);
+    http_send(a,Hok Hc0 Hjson,config.PrintUnformatted().get(),0);
 }

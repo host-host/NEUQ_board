@@ -63,7 +63,10 @@ static unsigned long long response_usage_tokens(const string& body,const cppJSON
     return sum?sum:largest;
 }
 static void append(cppJSON& object,const char* key,const string& text) {
-    if(object.IsObject()&&!text.empty())object.insert(key,object[key].valuestring()+text);
+    if(object.IsObject()&&!text.empty()) {
+        string value=object[key].valuestring()+text;
+        object.insert(key,value.c_str());
+    }
 }
 static cppJSON wrap(cppJSON item) {
     cppJSON out("[]");
@@ -93,7 +96,7 @@ static cppJSON responses(const cppJSON& input,string& id) {
             int index=event["output_index"].IsNumber()?event["output_index"].valuedouble():0;
             texts[index]+=event["delta"].valuestring();
         }
-        if(type=="response.completed"&&event["response"].IsObject()&&!event["response"]["id"].valuestring().empty())completed=event["response"].clone();
+        if(type=="response.completed"&&event["response"].IsObject()&&*event["response"]["id"].valuestring())completed=event["response"].clone();
     }
     if(!completed)return cppJSON("[]");
     id=completed["id"].valuestring();
@@ -123,7 +126,7 @@ static cppJSON responses(const cppJSON& input,string& id) {
             auto text=texts.find(index-1);
             if(text!=texts.end()&&!text->second.empty()) {
                 cppJSON message("{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\"}]}");
-                message["content"][0].insert("text",text->second);
+                message["content"][0].insert("text",text->second.c_str());
                 out.push_back(std::move(message));
             } else out.push_back(normalize(std::move(item)));
         }
@@ -135,10 +138,10 @@ static cppJSON responses(const cppJSON& input,string& id) {
     for(auto& text:texts) {
         if(text.second.empty())continue;
         auto item=items.find(text.first);
-        if(item!=items.end()&&item->second["type"].valuestring()!="message")continue;
+        if(item!=items.end()&&!(item->second["type"]=="message"))continue;
         if(item!=items.end()&&item->second["content"].IsArray()&&item->second["content"].size())continue;
         cppJSON message("{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\"}]}");
-        message["content"][0].insert("text",text.second);
+        message["content"][0].insert("text",text.second.c_str());
         out.push_back(move(message));
     }
     return out;
@@ -151,27 +154,27 @@ static cppJSON completions(const cppJSON& input,string& id) {
         cppJSON delta=event["choices"][0]["delta"];
         if(!delta.IsObject())continue;
         if(id.empty())id=event["id"].valuestring();
-        if(!delta["role"].valuestring().empty())role=delta["role"].valuestring();
+        if(*delta["role"].valuestring())role=delta["role"].valuestring();
         if(delta["content"].IsString())content+=delta["content"].valuestring();
         for(cppJSON item:delta["tool_calls"]) {
             int index=item["index"].valuedouble();
             while(calls.size()<=index)calls.push_back(cppJSON("{}"));
             cppJSON call=calls[index];
-            if(!item["id"].valuestring().empty())call.insert("id",item["id"].valuestring());
-            if(!item["type"].valuestring().empty())call.insert("type",item["type"].valuestring());
+            if(*item["id"].valuestring())call.insert("id",item["id"].valuestring());
+            if(*item["type"].valuestring())call.insert("type",item["type"].valuestring());
             cppJSON function=item["function"];
             if(!function.IsObject())continue;
             if(!call["function"].IsObject())call.insert("function",cppJSON("{}"));
-            if(!function["name"].valuestring().empty())call["function"].insert("name",function["name"].valuestring());
+            if(*function["name"].valuestring())call["function"].insert("name",function["name"].valuestring());
             cppJSON target=call["function"];
             if(function["arguments"].IsString())append(target,"arguments",function["arguments"].valuestring());
         }
     }
     if(id.empty())return cppJSON("[]");
     cppJSON message("{}");
-    message.insert("role",role);
+    message.insert("role",role.c_str());
     if(content.empty()&&calls.size())message.insert("content",(const char*)0);
-    else message.insert("content",content);
+    else message.insert("content",content.c_str());
     if(calls.size())message.insert("tool_calls",move(calls));
     return wrap(move(message));
 }
@@ -204,7 +207,7 @@ static cppJSON claude(const cppJSON& input,string& id) {
     }
     cppJSON history("{}");
     string role=message["role"].valuestring();
-    history.insert("role",role.empty()?"assistant":role);
+    history.insert("role",role.empty()?"assistant":role.c_str());
     history.insert("content",message["content"].IsArray()||message["content"].IsString()?message["content"].clone():cppJSON("[]"));
     return wrap(move(history));
 }
@@ -215,10 +218,10 @@ static bool same(const cppJSON& a,const cppJSON& b) {
 static cppJSON gemini(const cppJSON& input,string& id) {
     cppJSON parts("[]"),content("{}");
     for(cppJSON event:input) {
-        if(!event["responseId"].valuestring().empty())id=event["responseId"].valuestring();
+        if(*event["responseId"].valuestring())id=event["responseId"].valuestring();
         cppJSON chunk=event["candidates"][0]["content"];
         if(!chunk.IsObject())continue;
-        if(!chunk["role"].valuestring().empty())content.insert("role",chunk["role"].valuestring());
+        if(*chunk["role"].valuestring())content.insert("role",chunk["role"].valuestring());
         for(cppJSON part:chunk["parts"]) {
             cppJSON last=parts[parts.size()-1];
             if(!last||!same(last,part))parts.push_back(part.clone());
@@ -227,7 +230,7 @@ static cppJSON gemini(const cppJSON& input,string& id) {
         }
     }
     if(!parts.size())return cppJSON("[]");
-    if(content["role"].valuestring().empty())content.insert("role","model");
+    if(!*content["role"].valuestring())content.insert("role","model");
     content.insert("parts",move(parts));
     return wrap(move(content));
 }
@@ -335,13 +338,13 @@ static cppJSON gpt6_normal_to_history(const cppJSON& response,const string& form
     else if(format=="claude"&&response["type"]=="message") {
         response_id=response["id"].valuestring();
         history=cppJSON("{}");
-        history.insert("role",response["role"].valuestring().empty()?"assistant":response["role"].valuestring());
+        history.insert("role",!*response["role"].valuestring()?"assistant":response["role"].valuestring());
         history.insert("content",response["content"].IsArray()||response["content"].IsString()?response["content"].clone():cppJSON("[]"));
     }
     else if(format=="gemini"&&response["candidates"][0]["content"].IsObject()) {
         response_id=response["responseId"].valuestring();
         history=response["candidates"][0]["content"].clone();
-        if(history["role"].valuestring().empty())history.insert("role","model");
+        if(!*history["role"].valuestring())history.insert("role","model");
         if(!history["parts"].IsArray()||!history["parts"].size())history.clear();
     }
     if(history)output.push_back(std::move(history));
@@ -421,29 +424,29 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
         map<string,cppJSON> items;
         for(cppJSON item:a){
             if(format=="responses"&&k==1){
-                if(!responses_allow.count(item.a->string))continue;
+                if(!responses_allow.count(item.string()))continue;
                 if(item.IsArray()&&!item.size())continue;
                 if(item.IsNull())continue;
             }
             if(format=="claude"&&k==1){
-                if(!claude_allow.count(item.a->string))continue;
+                if(!claude_allow.count(item.string()))continue;
                 if(item.IsArray()&&!item.size())continue;
                 if(item.IsNull())continue;
             }
             if(format=="claude" && k==-1) {
-                if(strcmp(item.a->string,"cache_control")==0)continue;
-                if(a["type"]=="tool_use" &&!a["id"].valuestring().empty() &&strcmp(item.a->string,"input")==0)continue;
+                if(strcmp(item.string(),"cache_control")==0)continue;
+                if(a["type"]=="tool_use"&&*a["id"].valuestring()&&strcmp(item.string(),"input")==0)continue;
             }
             if((k==1||k==-1)&&format=="claude"){
-                if(strcmp(item.a->string,"content")==0&&item.IsString()){
+                if(strcmp(item.string(),"content")==0&&item.IsString()){
                     cppJSON tmp("[{}]");
                     tmp[0].insert("text",item.valuestring());
                     tmp[0].insert("type","text");
-                    items[item.a->string]=tmp;
+                    items[item.string()]=tmp;
                     continue;
                 }
             }
-            items[item.a->string]=my_format(item,format,k-1);
+            items[item.string()]=my_format(item,format,k-1);
         }
         cppJSON result("{}");
         for(auto& item:items)result.insert(item.first.c_str(),std::move(item.second));
