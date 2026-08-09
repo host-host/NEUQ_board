@@ -50,13 +50,19 @@ ndb2 ndb2_init(const char* file){
     ndb *a=malloc(sizeof(ndb));
     if(!a)return 0;
     memset(a,0,sizeof(ndb));
-    if((a->fd=open(file,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR))<0)goto out;
-    if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0){
-        ll c[BLOCK/8]={BLOCK-64};
-        if(write(a->fd,(char*)c,a->filelen=BLOCK)!=BLOCK)goto out;
+    ll c[BLOCK/8]={BLOCK-64};
+    if(file){
+        if((a->fd=open(file,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR))<0)goto out;
+        if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0)
+            if(write(a->fd,(char*)c,a->filelen=BLOCK)!=BLOCK)goto out;
+    }else {
+        a->fd=-1;
+        a->filelen=BLOCK;
+        if(!(a->a[0]=malloc(SEG)))goto out;
+        memcpy(a->a[0],(char*)c,BLOCK);
     }
     for(int i=0;i<(a->filelen+SEG-1)/SEG;i++){
-        a->a[i]=mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
+        if(a->fd!=-1)a->a[i]=mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
         if(a->a[i]==0||a->a[i]==MAP_FAILED)goto out;
         if((a->lock[i]=malloc(SEG/BLOCK))==0)goto out;
         memset(a->lock[i],0,SEG/BLOCK);
@@ -73,16 +79,17 @@ static ll ndb_new(ndb* a,int sum){
     if(l/SEG!=(l+need-1)/SEG)l=(l/SEG+1)*SEG;
     ll end=l+need,i=l/SEG;
     if(end>(ll)LIMIT*SEG)return a->lenlock=0;
-    if(posix_fallocate(a->fd,a->filelen,end-a->filelen))return a->lenlock=0;
-    if(a->a[i]==0){
-        a->a[i]=mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
-        if(a->a[i]==0||a->a[i]==MAP_FAILED)return a->lenlock=0;
+    if(a->fd!=-1&&posix_fallocate(a->fd,a->filelen,end-a->filelen))return a->lenlock=0;
+    if(a->a[i]==0||a->a[i]==MAP_FAILED){
+        a->a[i]=a->fd==-1?malloc(SEG):mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
+        if(a->a[i]==MAP_FAILED||a->a[i]==0)return a->lenlock=0;
         if((a->lock[i]=malloc(SEG/BLOCK))==0)return a->lenlock=0;
         memset(a->lock[i],0,SEG/BLOCK);
     }
     a->filelen=end;
     wmb();
     a->lenlock=0;
+    if(a->fd==-1)memset(p2p(l),0,BLOCK*sum);
     return l;
 }
 static ll ndb_newcontent(ndb* a,ll len){
@@ -212,7 +219,7 @@ void ndb2_free(ndb2 handle){
     ndb* a=(ndb*)handle;
     if(!a)return;
     for(int i=0;i<LIMIT;i++){
-        if(a->a[i]&&a->a[i]!=MAP_FAILED)munmap(a->a[i],SEG);
+        if(a->a[i]&&a->a[i]!=MAP_FAILED)a->fd==-1?free(a->a[i]):munmap(a->a[i],SEG);
         if(a->lock[i])free(a->lock[i]);
     }
     if(a->fd>=0)close(a->fd);
