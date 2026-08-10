@@ -90,7 +90,7 @@ function renderProviderChoices() {
         providers.forEach(id => {
             const option = document.createElement('option');
             const providerMultiply = Number(modelConfig.provider[id].multiply) || 0;
-            const chargedMultiply = modelMultiply * 0.5 * providerMultiply / 0.3;
+            const chargedMultiply = modelMultiply * 0.75 * providerMultiply / 0.3;
             option.value = id;
             option.textContent = `${id} · ${formatMultiply(chargedMultiply)}x`;
             select.appendChild(option);

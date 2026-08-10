@@ -20,7 +20,7 @@
 #include <string>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
-#define GPT5_TOKEN_C 0.5
+#define GPT5_TOKEN_C 0.75
 #define ll long long
 ndb2 content_db;//con_id -> content
 ndb2 index_db;//sha256(response_id) -> con_id
@@ -336,7 +336,7 @@ void gpt5_askstable(http_para* a) {
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 #define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
-static user_* gpt5_api_user(http_para* a) {
+user_* gpt5_api_user(http_para* a) {
     char *tmp=0;
     key_find("Authorization: Bearer sk-");
     if(!tmp)key_find("Authorization: sk-");
@@ -345,7 +345,7 @@ static user_* gpt5_api_user(http_para* a) {
     if(p&&tmp&&memcmp(tmp+8,p->gptapikey,19))p=0;
     return p;
 }
-static void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
+void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
     user_* p=gpt5_api_user(a);
     if(!p)return my_http_error(a,"Invalid API key.");
     cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;

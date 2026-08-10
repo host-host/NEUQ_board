@@ -31,3 +31,33 @@ size_t utf8_substr(const char *c,size_t n) {
     while(n&&(c[n]&0xC0)==0x80)n--;
     return n;
 }
+cJSON* file2j(const char*file){
+    if(!file)return 0;
+    FILE* f=fopen(file,"rb");
+    if(!f)return 0;
+    if(fseek(f,0,SEEK_END)!=0) {
+        fclose(f);
+        return 0;
+    }
+    long size=ftell(f);
+    if(size<0||fseek(f,0,SEEK_SET)!=0) {
+        fclose(f);
+        return 0;
+    }
+    char* buffer=(char*)malloc((size_t)size+1);
+    if(!buffer) {
+        fclose(f);
+        return 0;
+    }
+    size_t read_size=fread(buffer,1,(size_t)size,f);
+    fclose(f);
+    if (read_size != (size_t)size) {
+        free(buffer);
+        return 0;
+    }
+    buffer[size] = '\0';
+    cJSON_Minify(buffer);
+    cJSON* a=cJSON_Parse(buffer);
+    free(buffer);
+    return a;
+}

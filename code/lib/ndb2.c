@@ -1,3 +1,9 @@
+#if !defined(__linux__)
+#error "ndb2 requires Linux"
+#endif
+#if !defined(__x86_64__)
+#error "ndb2 requires the x86-64 architecture"
+#endif
 #include"ndb2.h"
 #include<stdlib.h>
 #include<string.h>
@@ -9,18 +15,20 @@
 #include<stdio.h>
 #define BLOCK 0x1000
 #define LIMIT 1024//128GB限制
+#define RESERVE (256*1024)
 #define ll long long
 #define SEG (1LL<<27)//128MB
 #define MAXLEN (100LL*1024*1024)
+#define mb() asm volatile("":::"memory")
 #define wmb() asm volatile("sfence":::"memory")
 #define LOCK(a) while(__sync_val_compare_and_swap(a,0,1))usleep(0)
 #define p2p(p) ((point*)(a->a[(p)>>27]+((p)&(SEG-1))))
 #define gotlock(p) (a->lock[(p)>>27]+((p)&(SEG-1))/BLOCK)
 typedef struct{
     char *a[LIMIT];
-    ll filelen,cptr;
+    ll filelen,o1[7],cptr,o2[7],cptr2,o3[7];
     int fd,lev;
-    char lenlock,ptrlock,*lock[LIMIT];
+    char lenlock,*lock[LIMIT];
 }ndb;
 typedef struct{
     ll child,next;
@@ -31,15 +39,10 @@ ndb2 ndb2_init_readonly(const char* file){
     if(!a)return 0;
     memset(a,0,sizeof(ndb));
     if((a->fd=open(file,O_RDONLY,S_IRUSR|S_IWUSR))<0)goto out;
-    if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0){
-        ll c[BLOCK/8]={BLOCK-64};
-        if(write(a->fd,(char*)c,a->filelen=BLOCK)!=BLOCK)goto out;
-    }
+    if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0)goto out;
     for(int i=0;i<(a->filelen+SEG-1)/SEG;i++){
         a->a[i]=mmap(0,SEG,PROT_READ,MAP_SHARED,a->fd,(ll)i*SEG);
         if(a->a[i]==0||a->a[i]==MAP_FAILED)goto out;
-        if((a->lock[i]=malloc(SEG/BLOCK))==0)goto out;
-        memset(a->lock[i],0,SEG/BLOCK);
     }
     return a;
     out:
@@ -67,45 +70,59 @@ ndb2 ndb2_init(const char* file){
         if((a->lock[i]=malloc(SEG/BLOCK))==0)goto out;
         memset(a->lock[i],0,SEG/BLOCK);
     }
+    a->cptr=a->cptr2=a->filelen;
     return a;
     out:
     ndb2_free(a);
     return 0;
 }
-static ll ndb_new(ndb* a,int sum){
-    if(sum>SEG/BLOCK||sum<=0)return 0;
+static inline ll min(ll a,ll b){
+    return a<b?a:b;
+}
+static ll ndb_allocate(ndb*a,ll len){
+    if(len<=0||len>SEG)return 0;
+    len=(len+15)/16*16;
+    ll cptr,cptr2,need=(len+BLOCK-1)/BLOCK*BLOCK,filelen,end,i,newptr2;
+    retry:
+    cptr=a->cptr;
+    if((cptr+BLOCK-1)/BLOCK==(cptr+len+BLOCK-1)/BLOCK){
+        if(__sync_val_compare_and_swap(&a->cptr,cptr,cptr+len)==cptr)return cptr;
+        goto retry;
+    }
+    cptr2=a->cptr2;
+    filelen=a->filelen;
+    if(cptr2+need<=filelen&&cptr2/SEG==(cptr2+need-1)/SEG){
+        if(__sync_val_compare_and_swap(&a->cptr2,cptr2,cptr2+need)==cptr2){
+            if(a->fd==-1)memset(p2p(cptr2),0,need);
+            if((len-1)%BLOCK<(cptr-1)%BLOCK)a->cptr=cptr2+len;
+            return cptr2;
+        }
+        goto retry;
+    }
     LOCK(&a->lenlock);
-    ll need=(ll)sum*BLOCK,l=a->filelen;
-    if(l/SEG!=(l+need-1)/SEG)l=(l/SEG+1)*SEG;
-    ll end=l+need,i=l/SEG;
+    if(a->filelen!=filelen){
+        a->lenlock=0;
+        goto retry;
+    }
+    end=filelen+need;
+    if((end-1)/SEG!=filelen/SEG)end=(filelen/SEG+1)*SEG+need;
+    newptr2=end;
+    end=min((end+SEG-1)/SEG*SEG,end+RESERVE);
     if(end>(ll)LIMIT*SEG)return a->lenlock=0;
-    if(a->fd!=-1&&posix_fallocate(a->fd,a->filelen,end-a->filelen))return a->lenlock=0;
+    if(a->fd!=-1)if(posix_fallocate(a->fd,filelen,end-filelen))return a->lenlock=0;
+    i=(end-1)/SEG;
     if(a->a[i]==0||a->a[i]==MAP_FAILED){
         a->a[i]=a->fd==-1?malloc(SEG):mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
         if(a->a[i]==MAP_FAILED||a->a[i]==0)return a->lenlock=0;
         if((a->lock[i]=malloc(SEG/BLOCK))==0)return a->lenlock=0;
         memset(a->lock[i],0,SEG/BLOCK);
     }
+    a->cptr2=newptr2;
+    mb();
     a->filelen=end;
-    wmb();
     a->lenlock=0;
-    if(a->fd==-1)memset(p2p(l),0,BLOCK*sum);
-    return l;
-}
-static ll ndb_newcontent(ndb* a,ll len){
-    if(len<=0)return 0;
-    LOCK(&a->ptrlock);
-    len=(len+15)/16*16;
-    ll p=a->cptr;
-    if((a->cptr+BLOCK-1)/BLOCK==(a->cptr+len+16+BLOCK-1)/BLOCK)a->cptr+=len+16;
-    else{
-        ll q=ndb_new(a,(len+16+BLOCK-1)/BLOCK);
-        if(q==0)return a->ptrlock=0;
-        a->cptr=(p=q)+len+16;
-    }
-    p2p(p)->next=len;
-    a->ptrlock=0;
-    return p;
+    if(a->fd==-1)memset(p2p(newptr2-need),0,need);
+    return newptr2-need;
 }
 static ll ndb_w(ndb* a,const char* name,ll p){
 	for(ll nex;(nex=p2p(p)->next)&&memcmp(p2p(nex)->name,name,48)<=0;p=nex);
@@ -140,7 +157,7 @@ int ndb_c(ndb *a,ll *p,const char* name,ll child){
             *tmplock=0;
             return 1;
         }
-	ll newp=ndb_new(a,1),cnt=0;
+	ll newp=ndb_allocate(a,BLOCK),cnt=0;
 	if(newp==0)return *tmplock=0;
     point*pp=p2p(newp);
     if(p[0]==1){
@@ -198,7 +215,8 @@ void* ndb2_got(ndb2 handle,const char* key,int flag){
             *tmplock=0;
             goto https;
         }
-        if(!(child=ndb_newcontent(a,nlen)))return (void*)(ll)(*tmplock=0);
+        if(!(child=ndb_allocate(a,nlen+16)))return (void*)(ll)(*tmplock=0);
+        p2p(child)->next=nlen;
         if(cont->next)memcpy(p2p(child)->name,cont->name,cont->next);
         wmb();
         p2p(p[p[0]])->child=child;
@@ -210,7 +228,7 @@ void* ndb2_got(ndb2 handle,const char* key,int flag){
         if(check(a,p,name))goto https;
         return 0;
     }
-    if(!child)child=ndb_newcontent(a,flag);
+    if(!child)if((child=ndb_allocate(a,flag+16)))p2p(child)->next=flag;
     if(!child||!(ret=ndb_c(a,p,name,child)))return 0;
     if(ret==-1)goto https;
     return p2p(child)->name;
