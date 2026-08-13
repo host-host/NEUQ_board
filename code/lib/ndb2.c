@@ -114,7 +114,11 @@ static ll ndb_allocate(ndb*a,ll len){
     if(a->a[i]==0||a->a[i]==MAP_FAILED){
         a->a[i]=a->fd==-1?malloc(SEG):mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
         if(a->a[i]==MAP_FAILED||a->a[i]==0)return a->lenlock=0;
-        if((a->lock[i]=malloc(SEG/BLOCK))==0)return a->lenlock=0;
+        if((a->lock[i]=malloc(SEG/BLOCK))==0){
+            a->fd==-1?free(a->a[i]):munmap(a->a[i],SEG);
+            a->a[i]=0;
+            return a->lenlock=0;
+        }
         memset(a->lock[i],0,SEG/BLOCK);
     }
     a->cptr2=newptr2;
