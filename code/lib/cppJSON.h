@@ -118,7 +118,7 @@ struct cppJSON{
         if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItemCaseSensitive(a, key), false);
         return cppJSON();
     }
-    cppJSON operator[](std::string key) const {
+    cppJSON operator[](const std::string& key) const {
         if (a && cJSON_IsObject(a))return cppJSON(cJSON_GetObjectItemCaseSensitive(a, key.c_str()), false);
         return cppJSON();
     }
@@ -260,6 +260,9 @@ struct cppJSON{
         if(cJSON_IsObject(a))return cJSON_GetObjectItemCaseSensitive(a,key)!=0;
         if(cJSON_IsArray(a))for(cJSON* entry=a->child; entry; entry=entry->next)if(entry->valuestring&&strcmp(entry->valuestring,key)==0)return 1;
         return 0;
+    }
+    bool has(const std::string& key) const {
+        return has(key.c_str());
     }
     bool IsArray()const{
         return a&&cJSON_IsArray(a);
