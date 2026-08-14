@@ -249,6 +249,9 @@ struct cppJSON{
             if(childNode.isroot)childNode.a=0;
         }
     }
+    void pop_back() {
+        if(a&&cJSON_IsArray(a)&&a->child)cJSON_Delete(cJSON_DetachItemViaPointer(a,a->child->prev));
+    }
     void erase(const char*x){
         if(a&&cJSON_IsObject(a))cJSON_DeleteItemFromObjectCaseSensitive(a,x);
     }
