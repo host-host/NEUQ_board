@@ -50,9 +50,9 @@ void* http_w(http_para* a){
     struct timeval timehttps={10,0};
     setsockopt(a->cl,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
     setsockopt(a->cl,SOL_SOCKET,SO_SNDTIMEO,(char*)&timehttps,sizeof(struct timeval));
-    a->get=(char*)malloc(10*1024*1000);
+    a->get=(char*)malloc(50*1024*1000);
     while(1){
-        int m=read(a->cl,a->get+n,10000000-n);
+        int m=read(a->cl,a->get+n,50000000-n);
         if(m<=0)break;
         a->get[n+m]=0;
         char* t2=strstr(a->get+max(0,n-8),"\r\n\r\n");
@@ -61,7 +61,7 @@ void* http_w(http_para* a){
             int N=t2-a->get+4,M=0;
             char *t3=strstr(a->get,"\r\nContent-Length:");
             if(t3)M=readll(t3+15);
-            if(N+M<10000000)while(n<N+M){
+            if(N+M<50000000)while(n<N+M){
                     int m=read(a->cl,a->get+n,N+M-n);
                     if(m<=0)break;
                     a->get[n+=m]=0;

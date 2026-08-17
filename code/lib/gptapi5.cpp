@@ -68,6 +68,14 @@ __attribute((constructor)) void gptapi5_init() {
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
 }
 #define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
+string gotprovider(user_*p,cppJSON& config,string& model){
+    string key=(string)p->userid+"_"+model;
+    char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
+    cppJSON pros=config["model"][model]["provider"],c_p=config["provider"];
+    if(pros.has(saved)&&c_p[saved]&&(p->admin||c_p[saved]["public"]==true))return saved;
+    for(cppJSON pro:pros)if(c_p[pro]&&(p->admin||c_p[pro]["public"]==true))return pro;
+    return "";
+}
 void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
@@ -90,9 +98,8 @@ void gpt5_apikey(http_para* a) {
     ans.insert("admin",p->admin!=0);
     cppJSON selected("{}");
     for(cppJSON item:config["model"]) {
-        string key=(string)p->userid+"_"+item.a->string;
-        char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
-        if(saved)selected.insert(item.a->string,saved);
+        string model=item.a->string,sel=gotprovider(p,config,model);
+        if(!sel.empty())selected.insert(model.c_str(),sel);
     }
     ans.insert("selected_provider",std::move(selected));
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
@@ -345,130 +352,86 @@ user_* gpt5_api_user(http_para* a) {
     if(p&&tmp&&memcmp(tmp+8,p->gptapikey,19))p=0;
     return p;
 }
-void gpt5_completion_request(http_para* a,const string& format,const char* array_name) {
+void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     user_* p=gpt5_api_user(a);
-    if(!p)return my_http_error(a,"Invalid API key.");
-    cppJSON request(a->get+a->n),config=cppJSON::from_file(CONFIG),conf;
-    string model=gpt6_request_model(a,request,format);
-    if(!config)return my_http_error(a,"can not read gpt4.json.");
-    if(!config["model"].has(model.c_str()))return my_http_error(a,"Model not found.");
-    cppJSON pros=config["model"][model]["provider"];
-    string key=(string)p->userid+"_"+model;
-    char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
-    string provider;
-    if(pros.has(saved)&&(p->admin||config["provider"][saved]["public"]==true)){
-        conf=config["provider"][saved];
-        provider=saved;
-    } else for(cppJSON pro:pros){
-        cppJSON tmp=config["provider"][pro];
-        if(tmp&&(p->admin||tmp["public"]==true)){
-            conf=tmp;
-            provider=pro;
-            break;
-        }
-    }
-    if(!conf)return my_http_error(a,"Permission denied.");
+    if(!p)return ERROR(H400,"Invalid API key.");
+    cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
+    string model=gpt6_request_model(a,req,format);
+    if(!config["model"].has(model))return ERROR(H400,"Model not found.");
+    string provider=gotprovider(p,config,model);
+    if(provider.empty())return ERROR(H500,"provider not found.");
     if(!p->token_limit)p->token_limit=10000000ULL;
-    if(p->token_used>=p->token_limit)return my_http_error(a,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    string auth=conf["Authorization"];
-    if(auth.empty())return my_http_error(a,"gpt4.json error: No Authorization");
-    cppJSON previous_new_input_format=my_format(request[array_name],format,2);
-    string hash;
-    char hash_[48],*con_id=0;
-    content*con=0;
-    bool isnew=false;
-    time_t maxtime=time(0)+5;
-    retry:
-    for(int i=previous_new_input_format.size()-1,j=0;i&&(++j)<30;i--){
-        hash=(string)"new_input_"+p->userid+previous_new_input_format.stringify_Unformatted();
-        mylib_sha256(hash.c_str(),hash.length(),hash_);
-        char* candidate_id=(char*)ndb2_got(index_db,hash_,0);
-        content* candidate=(content*)ndb2_got(content_db,candidate_id,0);
-        if(candidate&&!strcmp(candidate->format,format.c_str())&&!strcmp(candidate->hash,hash_)){
-            con_id=candidate_id;
-            con=candidate;
-            break;
+    if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
+    gpt6_ret b=gpt6_work2(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
+    if(memcmp(a->get,"POST /api",9)!=0){//网页端阻塞到标题创建完成
+        close(a->cl);
+        a->cl=0;
+    }
+    gpt5_add(model+"_"+provider,b.used_tokens>0);//稳定性统计
+    double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
+    ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
+    gpt5_log(p,model,provider,b.used_tokens,mul);//写入个人日志
+    cppJSON input=req[array_name].clone(),oldinput=my_format(input,format,2);
+    for(auto i:b.append)input.push_back(i);
+    string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format,2).stringify_Unformatted();
+    char con_id[32]={0},newhash[44],hash[44];
+    mylib_sha256(new_input.c_str(),new_input.length(),newhash);
+    for(int i=1;i<=50&&oldinput.a&&oldinput.a->child;i++){
+        string s=(string)"new_input_"+p->userid+oldinput.stringify_Unformatted();
+        mylib_sha256(s.c_str(),s.length(),hash);
+        content* cont=(content*)ndb2_got(content_db,(char*)ndb2_got(index_db,hash,0),0);
+        if(cont&&!strcmp(cont->format,format)&&!strcmp(cont->hash,hash)){
+            if(TRY(&cont->isusing))continue;
+            if(strcmp(cont->hash,hash)){
+                cont->isusing=0;
+                continue;
+            }
+            cont=(content*)ndb2_got(content_db,cont->con_id,sizeof(content)+10+inp.length());
+            if(!cont)exit(282);//DB error!
+            memcpy(cont->hash,newhash,44);
+            cont->updatetime=time(0);
+            memcpy(cont->content,inp.c_str(),inp.length()+1);
+            if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,cont->con_id);
+            insert2index_db(new_input,cont->con_id);
+            UNLOCK(cont->isusing);
+            return;
         }
-        previous_new_input_format.erase(i);
+        oldinput.pop_back();
     }
-    if(!con||strcmp(con->format,format.c_str())||memcmp(con->ownerid,p->userid,8)!=0)isnew=true;
-    else{
-        int o1=__sync_val_compare_and_swap(&con->isusing,0,1);
-        if(o1){
-            if(time(0)<maxtime){
-                previous_new_input_format=my_format(request[array_name],format,2);
-                con=0;
-                con_id=0;
-                usleep(1000000);
-                goto retry;
-            } else isnew=true;
-        } else if(strcmp(con->hash,hash_)){
-            con->isusing=0;
-            isnew=true;
-        }
+    mylib_random_string(con_id,20);
+    content*con=(content*)ndb2_got(content_db,con_id,sizeof(content)+inp.length()+10);
+    if(!con)exit(283);//DB error!
+    memset(con,0,sizeof(content));
+    memcpy(con->ownerid,p->userid,8);
+    memcpy(con->ownername,p->name,min(strlen(p->name),sizeof(con->ownername)-1));
+    con->createtime=con->updatetime=time(0);
+    memcpy(con->format,format,min(strlen(format),sizeof(con->format)-1));
+    memcpy(con->con_id,con_id,strlen(con_id));
+    memcpy(con->hash,newhash,44);
+    memcpy(con->content,inp.c_str(),inp.length()+1);
+    history* h=(history*)ndb2_got(history_db,p->userid,0);
+    int n=h?h->n+1:1;
+    h=(history*)ndb2_got(history_db,p->userid,sizeof(history)+32*n);
+    if(h){
+        h->n=n;
+        if(n==1)memcpy(h->user_id,p->userid,8);
+        memcpy(h->con_id[n-1],con_id,32);
     }
-    if(isnew){
-        con_id=(char*)malloc(32);
-        memset(con_id,0,32);
-        mylib_random_string(con_id,20);
-        con=(content*)ndb2_got(content_db,con_id,sizeof(content)+10);
-        if(!con)return my_http_error(a,"content_db error");
-        memset(con,0,sizeof(content)+3);
-        memcpy(con->ownerid,p->userid,8);
-        memcpy(con->ownername,p->name,min(strlen(p->name),sizeof(con->ownername)-1));
-        con->createtime=con->updatetime=time(0);
-        memcpy(con->format,format.data(),min(format.size(),sizeof(con->format)-1));
-        memcpy(con->con_id,con_id,strlen(con_id));
-        memcpy(con->content,"[]",3);
-        con->isusing=true;
-        history* h=(history*)ndb2_got(history_db,p->userid,0);
-        int n=h?h->n+1:1;
-        h=(history*)ndb2_got(history_db,p->userid,sizeof(history)+32*n);
-        if(h){
-            h->n=n;
-            if(n==1)memcpy(h->user_id,p->userid,8);
-            memcpy(h->con_id[n-1],con_id,32);
-        }
-    }
-    string response_id;
-    unsigned long long used_tokens=0;
-    int returncode=0;
-    cppJSON output=gpt6_work(a,conf["url"],auth,(string)(a->get+a->n),format,response_id,&used_tokens,&returncode);
-    // if(returncode<400||returncode>499||returncode==429)
-    gpt5_add(model+"_"+provider,used_tokens>0);
-    double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*conf["multiply"].valuedouble()/0.3;
-    ADD(&p->token_used,(long long)ceil(used_tokens*mul));
-    gpt5_log(p,model,provider,used_tokens,mul);
-    if(!response_id.empty())insert2index_db("response_id_"+response_id,con_id);
-    cppJSON input=request[array_name].clone();
-    for(cppJSON i:output)input.push_back(i);
-    string new_input=input.stringify_Unformatted();
-    cppJSON new_input_format=my_format(input,format,2);
-    string new_input_key=(string)"new_input_"+p->userid+new_input_format.stringify_Unformatted();
-    char new_hash[44];
-    mylib_sha256(new_input_key.c_str(),new_input_key.length(),new_hash);
-    insert2index_db(new_input_key,con_id);
-    con=(content*)ndb2_got(content_db,con_id,sizeof(content)+new_input.length()+10);
-    if(con){
-        memcpy(con->content,new_input.c_str(),new_input.length()+1);
-        memcpy(con->hash,new_hash,44);
-        con->isusing=0;
-        con->updatetime=time(0);
-        if(!con->name[0])maketitle(con->name,output.stringify_Unformatted(),config);
-    }
-    if(isnew)free(con_id);
+    maketitle(con->name,b.append.stringify_Unformatted(),config);
+    if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
+    insert2index_db(new_input,con_id);
 }
 void gpt5_responses(http_para* a) {
-    gpt5_completion_request(a,"responses","input");
+    gpt5_coreapi(a,"responses","input");
 }
 void gpt5_chat_completions(http_para* a) {
-    gpt5_completion_request(a,"completions","messages");
+    gpt5_coreapi(a,"completions","messages");
 }
 void gpt5_claude_messages(http_para* a) {
-    gpt5_completion_request(a,"claude","messages");
+    gpt5_coreapi(a,"claude","messages");
 }
 void gpt5_gemini_generate_content(http_para* a) {
-    gpt5_completion_request(a,"gemini","contents");
+    gpt5_coreapi(a,"gemini","contents");
 }
 void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);

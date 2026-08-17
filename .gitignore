@@ -1,5 +1,6 @@
 build/
 nohup.out
+*.log
 __pycache__
 cdn
 cl.cpp

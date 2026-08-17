@@ -35,4 +35,12 @@ cppJSON gpt6_work(
 );
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
 cppJSON my_format(const cppJSON& a,const std::string& format,int);
+struct gpt6_ret{
+    cppJSON append;
+    long long used_tokens;
+    long long input,output,cache,makecache;
+    int curlcode;
+    std::string response_id;
+};
+gpt6_ret gpt6_work2(http_para* a,const char*message,const char*model,cppJSON conf,const char*format);
 #endif

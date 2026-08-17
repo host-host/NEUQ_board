@@ -397,6 +397,14 @@ cppJSON gpt6_work(http_para* a,string url,string Authorization,const string& mes
     if(result!=CURLE_OK||!parsed)return cppJSON("[]");
     return output;
 }
+gpt6_ret gpt6_work2(http_para* a,const char* message,const char* model,cppJSON conf,const char* format) {
+    gpt6_ret result{};
+    unsigned long long used_tokens=0;
+    result.append=gpt6_work(a,conf["url"],conf["Authorization"],message,format,result.response_id,&used_tokens,&result.curlcode);
+    result.used_tokens=used_tokens;
+    (void)model;
+    return result;
+}
 ///////////
 string gpt6_request_model(http_para* a,const cppJSON& request,const string& format) {
     if(format!="gemini")return request["model"].valuestring();
