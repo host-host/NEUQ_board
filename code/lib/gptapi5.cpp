@@ -53,7 +53,8 @@ struct reslog{
     int used_tokens;
     double multiply;
     long long time;
-    char other[256];//保留为未来增加功能
+    int input,output,cache,makecache;
+    char other[256-4*4];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -90,7 +91,7 @@ void gpt5_apikey(http_para* a) {
         if(saved)memcpy(saved,provider.c_str(),provider.size()+1);
     }
     if(!p->gptapikey[0]||rotate)mylib_random_string(p->gptapikey,19);
-    if(!p->token_limit)p->token_limit=10000000ULL;
+    if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     cppJSON ans("{}");
     ans.insert("api_key",(string)"sk-"+p->userid+p->gptapikey);
     ans.insert("token_limit",(double)p->token_limit);
@@ -117,13 +118,17 @@ void gpt5_log_list(http_para* a) {
         item.insert("model",logs->a[i].model);
         item.insert("provider",logs->a[i].provider);
         item.insert("used_tokens",(double)logs->a[i].used_tokens);
+        item.insert("input",(double)logs->a[i].input);
+        item.insert("output",(double)logs->a[i].output);
+        item.insert("cache",(double)logs->a[i].cache);
+        item.insert("makecache",(double)logs->a[i].makecache);
         item.insert("multiply",logs->a[i].multiply);
         item.insert("time",(double)logs->a[i].time);
         ans.push_back(std::move(item));
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-static void gpt5_log(user_* p,const string& model,const string& provider,unsigned long long used_tokens,double multiply) {
+static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply) {
     reslogs* logs;
     retry:
     logs=(reslogs*)ndb2_got(log_db,p->userid,0);
@@ -134,7 +139,11 @@ static void gpt5_log(user_* p,const string& model,const string& provider,unsigne
     reslog& item=logs->a[n-1];
     memcpy(item.model,model.data(),min(model.size(),sizeof(item.model)-1));
     memcpy(item.provider,provider.data(),min(provider.size(),sizeof(item.provider)-1));
-    item.used_tokens=used_tokens;
+    item.used_tokens=b.used_tokens;
+    item.input=b.input;
+    item.output=b.output;
+    item.cache=b.cache;
+    item.makecache=b.makecache;
     item.multiply=multiply;
     item.time=time(0);
     UNLOCK(logs->lock);
@@ -360,7 +369,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(!config["model"].has(model))return ERROR(H400,"Model not found.");
     string provider=gotprovider(p,config,model);
     if(provider.empty())return ERROR(H500,"provider not found.");
-    if(!p->token_limit)p->token_limit=10000000ULL;
+    if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     gpt6_ret b=gpt6_work2(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
     if(memcmp(a->get,"POST /api",9)!=0){//网页端阻塞到标题创建完成
@@ -370,7 +379,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     gpt5_add(model+"_"+provider,b.used_tokens>0);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
-    gpt5_log(p,model,provider,b.used_tokens,mul);//写入个人日志
+    gpt5_log(p,model,provider,b,mul);//写入个人日志
     cppJSON input=req[array_name].clone(),oldinput=my_format(input,format,2);
     for(auto i:b.append)input.push_back(i);
     string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format,2).stringify_Unformatted();

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API 日志</title>
-    <link rel="stylesheet" href="style.css?v=0804v1">
+    <link rel="stylesheet" href="style.css?v=0817v2">
 </head>
 <body>
     <main class="usage-page">
@@ -32,7 +32,14 @@
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr><th>时间</th><th>模型</th><th>Provider</th><th>实际 Token</th><th>倍率</th><th>扣除额度</th></tr>
+                            <tr>
+                                <th scope="col">时间</th>
+                                <th scope="col">模型</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">实际 Token</th>
+                                <th scope="col">倍率</th>
+                                <th scope="col">扣除额度</th>
+                            </tr>
                         </thead>
                         <tbody id="usageLogBody"></tbody>
                     </table>
@@ -55,6 +62,14 @@
             <div id="errorState" class="state-message error" hidden></div>
         </section>
     </main>
-    <script src="app.js?v=0804v1"></script>
+    <div id="tokenBreakdownTooltip" class="token-breakdown-tooltip" role="tooltip" hidden>
+        <dl>
+            <div><dt>输入</dt><dd id="tooltipInput">0</dd></div>
+            <div><dt>输出</dt><dd id="tooltipOutput">0</dd></div>
+            <div><dt>缓存读取</dt><dd id="tooltipCache">0</dd></div>
+            <div><dt>缓存创建</dt><dd id="tooltipMakecache">0</dd></div>
+        </dl>
+    </div>
+    <script src="app.js?v=0817v3"></script>
 </body>
 </html>

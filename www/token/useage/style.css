@@ -22,6 +22,13 @@ th { padding:10px 12px; background:#f5f5f4; color:var(--muted); font-size:12px; 
 td { padding:12px; border-top:1px solid var(--line); white-space:nowrap; }
 td:nth-child(2) { max-width:240px; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
 th:nth-child(n+4), td:nth-child(n+4) { text-align:right; }
+.token-total { border-bottom:1px dotted #a8a29e; outline:0; cursor:help; }
+.token-total:hover, .token-total:focus { border-color:var(--accent); color:var(--accent); }
+.token-breakdown-tooltip { position:fixed; z-index:100; width:196px; padding:10px 12px; border:1px solid #44403c; border-radius:6px; background:#292524; color:#fafaf9; box-shadow:0 10px 24px rgba(28,25,23,.22); font-size:12px; font-variant-numeric:tabular-nums; pointer-events:none; }
+.token-breakdown-tooltip dl { display:grid; gap:6px; margin:0; }
+.token-breakdown-tooltip dl div { display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.token-breakdown-tooltip dt { color:#d6d3d1; }
+.token-breakdown-tooltip dd { margin:0; color:#fff; font-weight:600; }
 .pagination { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px; min-height:36px; }
 .page-buttons { display:flex; gap:6px; }
 .page-buttons button { width:36px; height:36px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); font-size:20px; line-height:1; cursor:pointer; }

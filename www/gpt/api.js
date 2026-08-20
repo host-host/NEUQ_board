@@ -215,24 +215,20 @@ async function fetchModels() {//获取 AI 模型列表
         }
         Models = [...modelCatalog.values()];
         const container = document.getElementById('modelsContainer');
-        const container2 = document.getElementById('modelsContainer2');
         container.innerHTML = '';
-        container2.innerHTML = '';
         const appendModelOption = (model, target) => {
+            const variants = availableModelVariants(model.name);
             const li = document.createElement('li');
             li.textContent = model.name;
-            li.title = [...new Set(model.variants.map(variant => variant.format))].join(' / ');
+            li.title = [...new Set(variants.map(variant => variant.format))].join(' / ');
             li.onclick = () => {
                 setSelectedModel(model.name);
                 document.getElementById('selectionModal').style.display = 'none';
             };
             target.appendChild(li);
         };
-        Models.filter(model => model.hasPublic).forEach(model => appendModelOption(model, container));
-        Models.filter(model => !model.hasPublic && model.hasPrivate)
-            .forEach(model => appendModelOption(model, container2));
-
         const accessibleModels = Models.filter(model => availableModelVariants(model.name).length > 0);
+        accessibleModels.forEach(model => appendModelOption(model, container));
         const defaultModel = accessibleModels.find(model => availableModelVariants(model.name)
             .some(variant => variant.format === 'responses'))
             || accessibleModels[0];
