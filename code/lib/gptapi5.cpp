@@ -53,8 +53,9 @@ struct reslog{
     int used_tokens;
     double multiply;
     long long time;
-    int input,output,cache,makecache;
-    char other[256-4*4];//保留为未来增加功能
+    long long input,output,cache,makecache;
+    time_t first,total;
+    char other[256-4*sizeof(long long)-2*sizeof(time_t)];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -122,6 +123,8 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
+        item.insert("first",(double)logs->a[i].first);
+        item.insert("total",(double)logs->a[i].total);
         item.insert("multiply",logs->a[i].multiply);
         item.insert("time",(double)logs->a[i].time);
         ans.push_back(std::move(item));
@@ -144,6 +147,8 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.output=b.output;
     item.cache=b.cache;
     item.makecache=b.makecache;
+    item.first=b.first>=b.start?b.first-b.start:0;
+    item.total=b.end>=b.start?b.end-b.start:0;
     item.multiply=multiply;
     item.time=time(0);
     UNLOCK(logs->lock);
@@ -351,6 +356,50 @@ void gpt5_askstable(http_para* a) {
     }
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
+void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,string&provider){
+    if(!ans||!ans->format||!ans->format[0])return;
+    time_t now=time(0);
+    struct tm local_time;
+    if(!localtime_r(&now,&local_time))return;
+    char timestamp[32];
+    if(!strftime(timestamp,sizeof(timestamp),"%Y-%m-%d_%H-%M-%S.txt",&local_time))return;
+    string directory="/web/log/"+string(ans->format);
+    string filename=directory+"/"+timestamp;
+    mkdir(directory.c_str(),0700);
+    string content;
+    content.reserve(256+ans->header.size()+ans->body.size()+ans->bodydelta.size());
+    auto field=[&content](const char* name,const string& value){
+        content+=name;
+        content+='=';
+        content+=value;
+        content+='\n';
+    };
+    field("format",ans->format);
+    field("append",ans->append.stringify_Unformatted());
+    field("used_tokens",to_string(ans->used_tokens));
+    field("input",to_string(ans->input));
+    field("output",to_string(ans->output));
+    field("cache",to_string(ans->cache));
+    field("makecache",to_string(ans->makecache));
+    field("start",to_string((long long)ans->start));
+    field("first",to_string((long long)ans->first));
+    field("last",to_string((long long)ans->last));
+    field("end",to_string((long long)ans->end));
+    field("curlcode",to_string(ans->curlcode));
+    field("httpcode",to_string(ans->httpcode));
+    field("issse",to_string(ans->issse));
+    field("response_id",ans->response_id);
+    field("model",model);
+    field("user",name);
+    field("provider",provider);
+    field("req",message);
+    field("res",'\n'+ans->header+ans->body);
+    FILE* fout=fopen(filename.c_str(),"a");
+    if(fout){
+        fwrite(content.data(),1,content.size(),fout);
+        fclose(fout);
+    }
+}
 #define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
 user_* gpt5_api_user(http_para* a) {
     char *tmp=0;
@@ -371,11 +420,14 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(provider.empty())return ERROR(H500,"provider not found.");
     if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    gpt6_ret b=gpt6_work2(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
+    gpt6_ret b=strcmp(format,"responses")==0
+        ?gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format)
+        :gpt6_work2(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
     if(memcmp(a->get,"POST /api",9)!=0){//网页端阻塞到标题创建完成
         close(a->cl);
         a->cl=0;
     }
+    if(b.used_tokens<=0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
     gpt5_add(model+"_"+provider,b.used_tokens>0);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
@@ -431,6 +483,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     insert2index_db(new_input,con_id);
 }
 void gpt5_responses(http_para* a) {
+    // LOG("%.*s\n",a->n,a->get);
     gpt5_coreapi(a,"responses","input");
 }
 void gpt5_chat_completions(http_para* a) {

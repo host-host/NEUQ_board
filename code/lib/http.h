@@ -35,12 +35,15 @@ extern "C"{
 #define Hwebp "Content-Type: image/webp\r\n"
 #define Htxt  "Content-Type: text/plain\r\n"
 #define Hmp4  "Content-Type: video/mp4\r\n"
+#define Hsse  "Content-Type: text/event-stream\r\n"
 
 #define Hgzip "Content-Encoding: gzip\r\n"
 #define Hbr   "Content-Encoding: br\r\n"
 #define Hzstd "Content-Encoding: zstd\r\n"
 
 #define Hdown "Content-Disposition: form-data\r\n"
+
+#define Hclo  "Connection: close\r\n"
 
 #define my_http_error(a,message) http_send((a),Hok Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
 

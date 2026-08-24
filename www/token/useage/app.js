@@ -27,6 +27,23 @@ function formatMultiply(value) {
     return `${Number(number.toFixed(6))}x`;
 }
 
+function formatDuration(value) {
+    const seconds = Number(value);
+    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1e6) return '-';
+    return Number(seconds.toFixed(2));
+}
+
+function formatTps(log) {
+    const output = Math.max(0, Number(log.output) || 0);
+    const firstValue = Number(log.first);
+    const totalValue = Number(log.total);
+    const first = Number.isFinite(firstValue) && firstValue >= 0 && firstValue <= 1e6 ? firstValue : 0;
+    const total = Number.isFinite(totalValue) && totalValue >= 0 && totalValue <= 1e6 ? totalValue : 0;
+    const generationTime = total - first;
+    if (generationTime <= 0 || output <= 0) return '-';
+    return Number((output / generationTime).toFixed(2));
+}
+
 function formatTime(value) {
     const date = new Date(Number(value) * 1000);
     if (!Number.isFinite(date.getTime())) return '-';
@@ -93,6 +110,8 @@ function renderRows(items) {
         usageCell.appendChild(usageTarget);
         row.appendChild(usageCell);
 
+        appendTextCell(row, formatDuration(log.first));
+        appendTextCell(row, formatTps(log));
         appendTextCell(row, formatMultiply(multiply));
         appendTextCell(row, formatTokens(Math.ceil(used * multiply)));
         body.appendChild(row);

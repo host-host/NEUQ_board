@@ -17,7 +17,7 @@ select { border:1px solid var(--line); border-radius:6px; background:var(--surfa
 select { padding:8px 30px 8px 10px; }
 select:focus { border-color:var(--accent); }
 .table-wrap { overflow-x:auto; border:1px solid var(--line); }
-table { width:100%; min-width:760px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+table { width:100%; min-width:900px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
 th { padding:10px 12px; background:#f5f5f4; color:var(--muted); font-size:12px; font-weight:600; text-align:left; white-space:nowrap; }
 td { padding:12px; border-top:1px solid var(--line); white-space:nowrap; }
 td:nth-child(2) { max-width:240px; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
