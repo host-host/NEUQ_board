@@ -19,9 +19,11 @@ extern "C"{
 #define H422  "HTTP/1.1 422 Unprocessable Entity\r\n"
 #define H429  "HTTP/1.1 429 Too Many Requests\r\n"
 #define H500  "HTTP/1.1 500 Internal Server Error\r\n"
+#define H501  "HTTP/1.1 501 Not Implemented\r\n"
 #define H502  "HTTP/1.1 502 Bad Gateway\r\n"
 #define H503  "HTTP/1.1 503 Service Unavailable\r\n"
 #define H504  "HTTP/1.1 504 Gateway Timeout\r\n"
+const char* httpcode(int x);
 
 #define Hc0   "Cache-Control: no-cache\r\n"
 #define Hc1h  "Cache-Control: max-age=3600, public\r\n"

@@ -39,9 +39,8 @@ function formatTps(log) {
     const totalValue = Number(log.total);
     const first = Number.isFinite(firstValue) && firstValue >= 0 && firstValue <= 1e6 ? firstValue : 0;
     const total = Number.isFinite(totalValue) && totalValue >= 0 && totalValue <= 1e6 ? totalValue : 0;
-    const generationTime = total - first;
-    if (generationTime <= 0 || output <= 0) return '-';
-    return Number((output / generationTime).toFixed(2));
+    if (total <= 0 || output <= 0) return '-';
+    return Number((output / total).toFixed(2));
 }
 
 function formatTime(value) {

@@ -24,11 +24,29 @@ static inline ll readll(const char* a){
     while(*a>='0'&&*a<='9')x=x*10+*a++-'0';
 	return x;
 }
-
-__attribute((constructor)) void http_INIT(){
-    signal(SIGPIPE,SIG_IGN);
+const char* httpcode(int x){
+    switch(x){
+        case 200:return Hok;
+        case 400:return H400;
+        case 401:return H401;
+        case 402:return H402;
+        case 403:return H403;
+        case 404:return H404;
+        case 405:return H405;
+        case 408:return H408;
+        case 409:return H409;
+        case 422:return H422;
+        case 429:return H429;
+        case 500:return H500;
+        case 501:return H501;
+        case 502:return H502;
+        case 503:return H503;
+        case 504:return H504;
+    }
+    return H500;
 }
 void http_init(struct http *a){
+    signal(SIGPIPE,SIG_IGN);
     a->plen=0;
     a->p=malloc(16*16);
     a->stop=0;

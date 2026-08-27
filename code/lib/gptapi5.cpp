@@ -18,6 +18,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <curl/curl.h>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
 #define GPT5_TOKEN_C 0.75
@@ -61,13 +62,17 @@ struct reslogs{
     int lock,n;
     reslog a[];
 };
-__attribute((constructor)) void gptapi5_init() {
+void gptapi5_init() {
     content_db=ndb2_init("/web/res/pri/gpt5content.ndb2");
     index_db=ndb2_init("/web/res/pri/gpt5sha256.ndb2");
     history_db=ndb2_init("/web/res/pri/gpt5userhistory.ndb2");
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
     stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    pthread_t thread_id;
+    if(!pthread_create(&thread_id,0,gpt5_probe_loop,0))pthread_detach(thread_id);
+    else exit(-98);
 }
 #define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
 string gotprovider(user_*p,cppJSON& config,string& model){
@@ -256,18 +261,11 @@ void insert2index_db(const string&a,const string&b){
 }
 void maketitle(char*name,string b,const cppJSON& config){
     if(!name[0]){
-        cppJSON title_request("{\"stream\":false}");
-        cppJSON title_config=config["title"];
-        title_request.insert("model",title_config["model"].valuestring());
-        cppJSON title_messages("[]");
-        cppJSON title_message("{\"role\":\"user\"}");
-        string prompt="将以下回复的内容取一个简短的标题：\n"+b;
-        title_message.insert("content",prompt.c_str());
-        title_messages.push_back(std::move(title_message));
-        title_request.insert("messages",std::move(title_messages));
-        string _;
-        cppJSON title_reply=gpt6_work(0,title_config["url"],title_config["Authorization"],title_request.stringify_Unformatted(),"completions",_);
-        string title=title_reply[0]["content"];
+        cppJSON req(R"({"model":0,"messages":[{"role":"user","content":0}]})");
+        req["model"]=config["model"].valuestring();
+        req["messages"][0]["content"]="将以下回复的内容取一个简短的标题：\n"+b;
+        gpt6_ret a=gpt6_work3(0,req.stringify_Unformatted().c_str(),config["model"].valuestring().c_str(),config,"completions");
+        string title=a.append[0]["content"];
         if(title.size()>4&&title.substr(0,2)=="**"&&title.substr(title.size()-2)=="**")title=title.substr(2,title.size()-4);
         if(title.size()>60)title=title.substr(0,utf8_substr(title.c_str(),56))+"...";
         if(!title.empty())strcpy(name,title.c_str());
@@ -306,16 +304,11 @@ static bool gpt5_should_probe(const string& key) {
     return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
 }
 static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
-    string url=conf["url"],auth=conf["Authorization"];
-    if(url.empty()||auth.empty())return;
-    cppJSON request("{\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}");
+    cppJSON request("{\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}");
     request.insert("model",model);
-    string response_id;
-    int returncode=0;
-    unsigned long long used_tokens=0;
-    cppJSON output=gpt6_work(0,url,auth,request.stringify_Unformatted(),"completions",response_id,&used_tokens,&returncode);
+    gpt6_ret a=gpt6_work3(0,request.stringify_Unformatted().c_str(),model.c_str(),conf,"completions");
     string key=model+"_"+provider;
-    gpt5_add(key,used_tokens>0);
+    gpt5_add(key,a.used_tokens>0);
 }
 void* gpt5_probe_loop(void*) {
     const time_t interval=2*60*60;
@@ -420,14 +413,13 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(provider.empty())return ERROR(H500,"provider not found.");
     if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    gpt6_ret b=strcmp(format,"responses")==0
-        ?gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format)
-        :gpt6_work2(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
+    gpt6_ret b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
     if(memcmp(a->get,"POST /api",9)!=0){//网页端阻塞到标题创建完成
         close(a->cl);
         a->cl=0;
     }
-    if(b.used_tokens<=0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
+    // if(b.used_tokens<=0)
+    makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
     gpt5_add(model+"_"+provider,b.used_tokens>0);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
@@ -478,7 +470,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         if(n==1)memcpy(h->user_id,p->userid,8);
         memcpy(h->con_id[n-1],con_id,32);
     }
-    maketitle(con->name,b.append.stringify_Unformatted(),config);
+    maketitle(con->name,b.append.stringify_Unformatted(),config["title"]);
     if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
     insert2index_db(new_input,con_id);
 }

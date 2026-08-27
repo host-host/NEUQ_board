@@ -8,7 +8,7 @@
 std::map<unsigned ll,int>check48_mp;
 int rand_base,rand_base1;
 pthread_mutex_t check48_lock;
-__attribute((constructor)) void check48_init(){
+void check48_init(){
     struct timespec timeSeed;
     clock_gettime(CLOCK_REALTIME,&timeSeed);
     srand(timeSeed.tv_sec * 1000000 + timeSeed.tv_nsec);

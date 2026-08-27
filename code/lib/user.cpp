@@ -8,7 +8,7 @@
 #define ll long long
 #include"check48.h"
 ndb2 user/*id(8B字符串)->user_*/,name2id/*char[24]->id(8B字符串)*/;
-__attribute((constructor)) void user_init(){
+void user_init(){
 	user=ndb2_init("/web/res/pri/user.ndb2");
 	name2id=ndb2_init("/web/res/pri/name2id.ndb2");//id:8
 }

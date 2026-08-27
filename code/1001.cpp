@@ -19,11 +19,12 @@ void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
     http_stop(a->f);
 }
 int main() {
+    chat_init();
+    check48_init();
+    gptapi5_init();
+    user_init();
     http a;
     http_init(&a);
-    pthread_t thread_id;
-    if(!pthread_create(&thread_id,0,gpt5_probe_loop,0))pthread_detach(thread_id);
-    else return -98;
     http_add(&a,"POST /api/chat_list ",chat_list);
     http_add(&a,"POST /api/chat_content ",chat_content);
     http_add(&a,"POST /api/chat_send ",chat_send);

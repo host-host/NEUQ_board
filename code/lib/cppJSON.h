@@ -88,7 +88,7 @@ struct cppJSON{
     bool replace(const cppJSON& other){
         if(!a)return false;
         cJSON* replacement=other.a?cJSON_Duplicate(other.a,1):0;
-        if(other.a&&!replacement)return false;
+        if(!replacement)return false;
         move_a_item_content(a,replacement);
         return true;
     }
@@ -303,6 +303,9 @@ struct cppJSON{
     }
     double valuedouble() const {
         return a?a->valuedouble:0;
+    }
+    std::string namestring() const {
+        return a&&a->string?(std::string)a->string:"";
     }
     std::string valuestring() const {
         return a&&a->valuestring?(std::string)a->valuestring:"";

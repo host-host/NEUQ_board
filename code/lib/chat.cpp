@@ -12,7 +12,7 @@ using std::string;
 ndb2 chatdb;
 int *next_id;
 pthread_mutex_t chat_mutex;
-__attribute((constructor)) void chat_init(){
+void chat_init(){
     pthread_mutex_init(&chat_mutex,0);
     chat*p=(chat*)ndb2_got(chatdb=ndb2_init("/web/res/pri/chat.ndb2"),"1",sizeof(chat)+2);
     next_id=(int*)ndb2_got(chatdb,"next_id",8);
