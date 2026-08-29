@@ -470,9 +470,12 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         if(n==1)memcpy(h->user_id,p->userid,8);
         memcpy(h->con_id[n-1],con_id,32);
     }
-    maketitle(con->name,b.append.stringify_Unformatted(),config["title"]);
     if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
     insert2index_db(new_input,con_id);
+    char title[64]={0};
+    maketitle(title,b.append.stringify_Unformatted(),config["title"]);
+    con=(content*)ndb2_got(content_db,con_id,0);
+    if(con&&!con->name[0]&&title[0])memcpy(con->name,title,strlen(title)+1);
 }
 void gpt5_responses(http_para* a) {
     // LOG("%.*s\n",a->n,a->get);
