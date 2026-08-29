@@ -55,7 +55,7 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
         ans->output=max(ans->output,usage["completion_tokens"].valuedouble());
         ans->cache=max(ans->cache,usage["prompt_tokens_details"]["cached_tokens"].valuedouble());
         ans->makecache=max(ans->makecache,usage["prompt_tokens_details"]["cache_write_tokens"].valuedouble());
-        ans->used_tokens=max(ans->used_tokens,usage["total_tokens"].valuedouble());
+        ans->used_tokens=max(ans->used_tokens,max(usage["total_tokens"].valuedouble(),ans->input+ans->output));
     };
     if(issse&&tmp.find("data: ")==0){
         cppJSON res(tmp.data()+6);

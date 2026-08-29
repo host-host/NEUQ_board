@@ -1,14 +1,42 @@
 let currentClaudeMessages = [];
 
-function claudeText(content) {
-    if (typeof content === 'string') return content;
-    if (!Array.isArray(content)) return '';
-    return content.filter(part => part?.type === 'text').map(part => part.text || '').join('\n');
+function claudeIsToolUse(part) {
+    return part?.type === 'tool_use' || part?.type === 'server_tool_use';
 }
 
-function claudeThinking(content) {
-    if (!Array.isArray(content)) return '';
-    return content.filter(part => part?.type === 'thinking').map(part => part.thinking || '').join('\n');
+function claudeIsToolResult(part) {
+    return part?.type === 'tool_result' || part?.type === 'web_search_tool_result';
+}
+
+function claudeToolInputText(part) {
+    const input = part?.input;
+    if (input == null || input === '') return '';
+    return typeof input === 'string' ? input : JSON.stringify(input, null, 2);
+}
+
+function claudeToolResultText(part) {
+    if (!part) return '';
+    const content = part.content;
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+        const text = content.map(item => typeof item === 'string' ? item
+            : item?.type === 'text' ? item.text || ''
+            : item?.type === 'image' ? '[图片]' : '').filter(Boolean).join('\n');
+        if (text) return text;
+    }
+    return content == null ? '' : JSON.stringify(content, null, 2);
+}
+
+// tool_result 在紧随其后的 user 消息里，按 tool_use_id 与 tool_use 配对。
+function claudeToolOutputs(messages) {
+    const outputs = new Map();
+    messages.forEach(message => {
+        if (message?.role !== 'user' || !Array.isArray(message.content)) return;
+        message.content.forEach(part => {
+            if (claudeIsToolResult(part) && part.tool_use_id) outputs.set(part.tool_use_id, part);
+        });
+    });
+    return outputs;
 }
 
 function claudeAttachment(raw) {
@@ -61,6 +89,7 @@ function renderClaudeHistory(data) {
     chatBox.innerHTML = '';
     currentClaudeMessages = Array.isArray(data.content)
         ? JSON.parse(JSON.stringify(data.content)) : [];
+    const toolOutputs = claudeToolOutputs(currentClaudeMessages);
     currentClaudeMessages.forEach((message, messageIndex) => {
         const content = message?.content;
         if (message?.role === 'user') {
@@ -74,12 +103,44 @@ function renderClaudeHistory(data) {
                 else if (part?.type === 'image' && part.source?.type === 'base64') {
                     const url = `data:${part.source.media_type || 'image/jpeg'};base64,${part.source.data || ''}`;
                     wrapper = renderUserMessage(`<!--IMAGE_ATTACHMENT:{"id":"","name":"历史图片"}-->${url}`);
+                } else if (claudeIsToolResult(part) && !part.tool_use_id) {
+                    // 没有 tool_use_id 无法配对，单独渲染，避免内容凭空消失。
+                    wrapper = renderToolCall({name: '工具输出'}, claudeToolResultText(part));
                 }
                 if (wrapper) bindClaudeItem(wrapper, messageIndex, partIndex);
             });
         } else if (message?.role === 'assistant') {
-            const wrapper = renderAssistantMessage(claudeText(content), claudeThinking(content));
-            bindClaudeItem(wrapper, messageIndex);
+            if (typeof content === 'string') {
+                bindClaudeItem(renderAssistantMessage(content), messageIndex);
+                return;
+            }
+            // thinking 挂到它后面第一个 text / tool_use 上，保持块的原始顺序。
+            let pendingThinking = '';
+            let rendered = 0;
+            (Array.isArray(content) ? content : []).forEach((part, partIndex) => {
+                let wrapper = null;
+                if (part?.type === 'thinking' || part?.type === 'redacted_thinking') {
+                    const text = part.thinking || part.data || '';
+                    if (text) pendingThinking += `${pendingThinking ? '\n' : ''}${text}`;
+                    return;
+                }
+                if (part?.type === 'text') wrapper = renderAssistantMessage(part.text || '', pendingThinking);
+                else if (claudeIsToolUse(part)) {
+                    const output = part.id ? toolOutputs.get(part.id) : null;
+                    wrapper = renderToolCall(
+                        {name: part.name, input: claudeToolInputText(part),
+                         status: output?.is_error ? '出错' : output ? 'completed' : ''},
+                        claudeToolResultText(output),
+                        pendingThinking
+                    );
+                }
+                if (!wrapper) return;
+                pendingThinking = '';
+                rendered++;
+                bindClaudeItem(wrapper, messageIndex, partIndex);
+            });
+            // 整条消息只有 thinking，仍要把思考过程显示出来。
+            if (pendingThinking || !rendered) bindClaudeItem(renderAssistantMessage('', pendingThinking), messageIndex);
         }
     });
 }
@@ -201,7 +262,9 @@ async function callClaudeStreamingApi(response, wrapper, contentDiv, thinkTextar
         contentDiv.textContent = text;
         contentDiv.style.display = 'block';
     } else if (!rawContent) {
-        wrapper.dataset.raw = 'Claude 没有返回文本内容';
+        // 只调用工具、没有文本的一轮，别报成「没有返回内容」。
+        const names = nativeBlocks.filter(claudeIsToolUse).map(block => block.name).filter(Boolean);
+        wrapper.dataset.raw = names.length ? `调用工具：${names.join('、')}` : 'Claude 没有返回文本内容';
         contentDiv.textContent = wrapper.dataset.raw;
         contentDiv.style.display = 'block';
     }
