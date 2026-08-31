@@ -37,6 +37,18 @@ function formatNumber(value) {
     return new Intl.NumberFormat('zh-CN').format(value);
 }
 
+function formatAverage(total, count, unit) {
+    if (!count) return '--';
+    const value = total / count;
+    const formatted = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 2}).format(value);
+    return `${formatted} ${unit}`;
+}
+
+function normalizeStatValue(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
 function bucketLevel(bucket) {
     if (!bucket.total) return 'empty';
     const rate = bucket.stable / bucket.total;
@@ -65,6 +77,23 @@ function normalizeBuckets(raw, currentBucket) {
         const physicalIndex = ((number % BUCKET_COUNT) + BUCKET_COUNT) % BUCKET_COUNT;
         return {...physical[physicalIndex], number, start: number * BUCKET_MS};
     });
+}
+
+function normalizeStats(raw) {
+    const data = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return {
+        buckets: Array.isArray(raw) ? raw : data.buckets,
+        s: normalizeStatValue(data.s),
+        input: normalizeStatValue(data.input),
+        output: normalizeStatValue(data.output),
+        cache: normalizeStatValue(data.cache),
+        makecache: normalizeStatValue(data.makecache),
+        tokens: normalizeStatValue(data.tokens),
+        latency: normalizeStatValue(data.latency),
+        latency_n: normalizeStatValue(data.latency_n),
+        alltime: normalizeStatValue(data.alltime),
+        alltime_tokens: normalizeStatValue(data.alltime_tokens)
+    };
 }
 
 function classifyItem(buckets) {
@@ -123,11 +152,12 @@ async function loadData() {
         const currentBucket = finalBucketNumber();
 
         state.items = catalog.map(entry => {
-            const buckets = normalizeBuckets(stats?.[entry.key], currentBucket);
+            const usage = normalizeStats(stats?.[entry.key]);
+            const buckets = normalizeBuckets(usage.buckets, currentBucket);
             const total = sumBuckets(buckets);
             const hour = sumBuckets(buckets.slice(-4));
             const status = classifyItem(buckets);
-            return {...entry, buckets, total, hour, status};
+            return {...entry, ...usage, buckets, total, hour, status};
         });
 
         elements.notice.hidden = true;
@@ -249,6 +279,25 @@ function createProviderRow(item) {
     fragment.querySelector('.hour-rate').textContent = formatRate(item.hour.stable, item.hour.total);
     fragment.querySelector('.sample-count').textContent = formatNumber(item.total.total);
     fragment.querySelector('.failure-count').textContent = formatNumber(item.total.total - item.total.stable);
+    const usageFields = [
+        ['.usage-s', item.s],
+        ['.usage-input', item.input],
+        ['.usage-output', item.output],
+        ['.usage-cache', item.cache],
+        ['.usage-makecache', item.makecache],
+        ['.usage-tokens', item.tokens]
+    ];
+    usageFields.forEach(([selector, value]) => {
+        const element = fragment.querySelector(selector);
+        element.textContent = formatNumber(value);
+        element.title = String(value);
+    });
+    const latency = fragment.querySelector('.usage-latency');
+    latency.textContent = formatAverage(item.latency, item.latency_n, 's');
+    latency.title = `${item.latency} s / ${item.latency_n}`;
+    const tps = fragment.querySelector('.usage-tps');
+    tps.textContent = formatAverage(item.alltime_tokens, item.alltime, 'token/s');
+    tps.title = `${item.alltime_tokens} tokens / ${item.alltime} s`;
     makeHeatmap(item, fragment.querySelector('.heatmap'));
     return fragment;
 }

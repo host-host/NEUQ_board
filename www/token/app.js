@@ -131,7 +131,7 @@ async function saveProvider(model, select) {
 }
 
 function renderStability(row, raw) {
-    const values = Array.isArray(raw) ? raw : [];
+    const values = Array.isArray(raw) ? raw : Array.isArray(raw?.buckets) ? raw.buckets : [];
     const now = Math.floor(Date.now() / STABILITY_BUCKET_MS);
     const bars = row.querySelectorAll('.provider-stability-bar');
     for (let group = 0; group < 12; group++) {

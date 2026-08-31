@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <title>Provider 稳定性 - NEUQ Board</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0802v1">
+    <link rel="stylesheet" href="style.css?v=0831v4">
 </head>
 <body>
     <header class="topbar">
@@ -131,12 +131,48 @@
                 </dl>
             </div>
             <div class="heatmap-scroll" tabindex="0" aria-label="72 小时稳定性时间线">
-                <div class="heatmap"></div>
+                <div class="provider-detail">
+                    <dl class="provider-usage" aria-label="累计用量">
+                        <div>
+                            <dt>累计请求</dt>
+                            <dd class="usage-s">--</dd>
+                        </div>
+                        <div>
+                            <dt>输入 Token</dt>
+                            <dd class="usage-input">--</dd>
+                        </div>
+                        <div>
+                            <dt>输出 Token</dt>
+                            <dd class="usage-output">--</dd>
+                        </div>
+                        <div>
+                            <dt>缓存读取</dt>
+                            <dd class="usage-cache">--</dd>
+                        </div>
+                        <div>
+                            <dt>缓存写入</dt>
+                            <dd class="usage-makecache">--</dd>
+                        </div>
+                        <div>
+                            <dt>Token 总量</dt>
+                            <dd class="usage-tokens">--</dd>
+                        </div>
+                        <div>
+                            <dt>平均首字延迟</dt>
+                            <dd class="usage-latency">--</dd>
+                        </div>
+                        <div>
+                            <dt>平均 TPS</dt>
+                            <dd class="usage-tps">--</dd>
+                        </div>
+                    </dl>
+                    <div class="heatmap"></div>
+                </div>
             </div>
         </article>
     </template>
 
     <div id="heatTooltip" class="heat-tooltip" role="tooltip" hidden></div>
-    <script src="app.js?v=0806v1"></script>
+    <script src="app.js?v=0831v4"></script>
 </body>
 </html>

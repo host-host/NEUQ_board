@@ -272,24 +272,47 @@ void maketitle(char*name,string b,const cppJSON& config){
     }
 }
 #define ST_D (3*24*4)
-void gpt5_add(string a,bool stable){
-    int (*c)[2] = (int (*)[2])ndb2_got(stable_db,a.c_str(),(ST_D*2+2)*4);
-    if(!c)return;
-    LOCK(&c[ST_D][1]);
-    int t=time(0)/(15*60),l=c[ST_D][0];
-    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
-    c[t%ST_D][0]+=stable;
-    c[t%ST_D][1]++;
-    c[ST_D][0]=t;
-    UNLOCK(c[ST_D][1]);
+struct stablelog{
+    int c[ST_D][2];
+    int uptime,lock;
+    long long s,input,output,cache,makecache,tokens;
+    long long latency,latency_n,alltime,alltime_tokens;
+};
+void gpt5_add(string a,bool stable,gpt6_ret* b){
+    stablelog* c=(stablelog*)ndb2_got(stable_db,a.c_str(),sizeof(stablelog));
+    if(!c)return;//DB ERROR
+    LOCK(&c->lock);
+    int t=time(0)/(15*60),l=c->uptime;
+    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c->c[i%ST_D][0]=c->c[i%ST_D][1]=0;
+    c->c[t%ST_D][0]+=stable;
+    c->c[t%ST_D][1]++;
+    c->uptime=t;
+    if(b&&b->used_tokens>0){
+        c->s++;
+        c->input+=b->input;
+        c->output+=b->output;
+        c->cache+=b->cache;
+        c->makecache+=b->makecache;
+        c->tokens+=b->used_tokens;
+        if(b->first>=b->start){
+            c->latency+=b->first-b->start;
+            c->latency_n++;
+        }
+        if(b->end>=b->start){
+            c->alltime+=b->end-b->start;
+            c->alltime_tokens+=b->output;
+        }
+    }
+    UNLOCK(c->lock);
 }
 static bool gpt5_should_probe(const string& key) {
-    int (*c)[2]=(int (*)[2])ndb2_got(stable_db,key.c_str(),0);
-    if(!c)return false;
-    LOCK(&c[ST_D][1]);
-    int t=time(0)/(15*60),l=c[ST_D][0];
+    stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),sizeof(stablelog));
+    if(!cc)return false;
+    LOCK(&cc->lock);
+    int (*c)[2]=cc->c;
+    int t=time(0)/(15*60),l=cc->uptime;
     for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
-    c[ST_D][0]=t;
+    cc->uptime=t;
     int stable2=0,total2=0,stable4=0,total4=0;
     for(int i=t-15;i<=t;i++) {
         int index=(i+ST_D)%ST_D;
@@ -300,7 +323,7 @@ static bool gpt5_should_probe(const string& key) {
             total2+=c[index][1];
         }
     }
-    UNLOCK(c[ST_D][1]);
+    UNLOCK(cc->lock);
     return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
 }
 static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
@@ -308,7 +331,7 @@ static void gpt5_probe(const string& model,const string& provider,const cppJSON&
     request.insert("model",model);
     gpt6_ret a=gpt6_work3(0,request.stringify_Unformatted().c_str(),model.c_str(),conf,"completions");
     string key=model+"_"+provider;
-    gpt5_add(key,a.used_tokens>0);
+    gpt5_add(key,a.used_tokens>0,0);
 }
 void* gpt5_probe_loop(void*) {
     const time_t interval=2*60*60;
@@ -333,19 +356,32 @@ void gpt5_askstable(http_para* a) {
     cppJSON ask(a->get+a->n),ans("{}");
     for(cppJSON i:ask){
         string tp=i;
-        int (*c)[2] = (int (*)[2])ndb2_got(stable_db,tp.c_str(),0);
-        if(!c)continue;
-        int t=time(0)/(15*60),l=c[ST_D][0];
-        if(l<t)LOCK(&c[ST_D][1]);
+        stablelog* cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),0);
+        if(!cc)continue;
+        if((unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),sizeof(stablelog));
+        if(!cc)continue;//db error
+        stablelog c1=*cc;
+        int (*c)[2]=c1.c;
+        int t=time(0)/(15*60),l=c1.uptime;
         for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
-        c[ST_D][0]=t;
         cppJSON tmp("[]");
         for(int i=0;i<ST_D;i++){
             tmp.push_back((double)c[i][0]);
             tmp.push_back((double)c[i][1]);
         }
-        if(l<t)UNLOCK(c[ST_D][1]);
-        ans.insert(i.valuestring().c_str(),std::move(tmp));
+        cppJSON stats("{}");
+        stats.insert("buckets",std::move(tmp));
+        stats.insert("s",(double)c1.s);
+        stats.insert("input",(double)c1.input);
+        stats.insert("output",(double)c1.output);
+        stats.insert("cache",(double)c1.cache);
+        stats.insert("makecache",(double)c1.makecache);
+        stats.insert("tokens",(double)c1.tokens);
+        stats.insert("latency",(double)c1.latency);
+        stats.insert("latency_n",(double)c1.latency_n);
+        stats.insert("alltime",(double)c1.alltime);
+        stats.insert("alltime_tokens",(double)c1.alltime_tokens);
+        ans.insert(i.valuestring().c_str(),std::move(stats));
     }
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
@@ -420,7 +456,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     }
     // if(b.used_tokens<=0)
     makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    gpt5_add(model+"_"+provider,b.used_tokens>0);//稳定性统计
+    gpt5_add(model+"_"+provider,b.used_tokens>0,&b);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
     gpt5_log(p,model,provider,b,mul);//写入个人日志

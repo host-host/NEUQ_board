@@ -3,6 +3,7 @@
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 #include <string.h>
+#include <unistd.h>
 
 size_t mylib_random_string(char* out,size_t n){
     static const char chars[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

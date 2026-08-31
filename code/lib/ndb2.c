@@ -215,7 +215,7 @@ void* ndb2_got(ndb2 handle,const char* key,int flag){
         if(flag>nlen)nlen=flag;
         char*tmplock=gotlock(p[p[0]]);
         LOCK(tmplock);
-        if(check(a,p,name)){
+        if(check(a,p,name)||p2p(p[p[0]])->child!=child){
             *tmplock=0;
             goto https;
         }
