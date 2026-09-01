@@ -53,6 +53,21 @@ function formatMultiply(value) {
     return Number(value.toFixed(6)).toString();
 }
 
+function normalizeStatValue(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+function formatAverage(total, count) {
+    const totalValue = normalizeStatValue(total);
+    const countValue = normalizeStatValue(count);
+    if (!countValue) return '--';
+    const value = totalValue / countValue;
+    if (!Number.isFinite(value)) return '--';
+    const formatted = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 2}).format(value);
+    return formatted;
+}
+
 function createProviderStability() {
     const element = document.createElement('div');
     element.className = 'provider-stability';
@@ -64,6 +79,13 @@ function createProviderStability() {
         bar.title = '成功率 100%';
         bars.appendChild(bar);
     }
+    return element;
+}
+
+function createProviderPerformance() {
+    const element = document.createElement('dl');
+    element.className = 'provider-performance';
+    element.innerHTML = '<div><dt>延迟(s)</dt><dd class="provider-latency usage-latency">--</dd></div><div><dt>平均 TPS</dt><dd class="provider-tps usage-tps">--</dd></div>';
     return element;
 }
 
@@ -98,7 +120,7 @@ function renderProviderChoices() {
         select.value = providers.includes(accountData.selected_provider?.[model])
             ? accountData.selected_provider[model] : providers[0];
         select.addEventListener('change', () => saveProvider(model, select));
-        row.append(name, select, createProviderStability());
+        row.append(name, select, createProviderStability(), createProviderPerformance());
         container.appendChild(row);
     }
     if (!container.children.length) container.innerHTML = '<div class="provider-choice"><span class="provider-model">暂无可选 Provider</span></div>';
@@ -147,6 +169,16 @@ function renderStability(row, raw) {
         bar.style.height = total && rate === 0 ? '2px' : `${rate}%`;
         bar.className = `provider-stability-bar ${total ? rate < 20 ? 'bad' : rate < 50 ? 'warn' : 'good' : ''}`.trim();
         bar.title = `成功率 ${rate === 100 ? '100' : rate.toFixed(1)}%`;
+    }
+    const latency = row.querySelector('.provider-latency');
+    const tps = row.querySelector('.provider-tps');
+    if (latency) {
+        latency.textContent = formatAverage(raw?.latency, raw?.latency_n);
+        latency.title = `${raw?.latency ?? 0} s / ${raw?.latency_n ?? 0}`;
+    }
+    if (tps) {
+        tps.textContent = formatAverage(raw?.alltime_tokens, raw?.alltime);
+        tps.title = `${raw?.alltime_tokens ?? 0} tokens / ${raw?.alltime ?? 0} s`;
     }
 }
 

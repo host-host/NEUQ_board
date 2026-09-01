@@ -454,9 +454,8 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         close(a->cl);
         a->cl=0;
     }
-    // if(b.used_tokens<=0)
-    makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    gpt5_add(model+"_"+provider,b.used_tokens>0,&b);//稳定性统计
+    if(b.used_tokens<=0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
+    if(b.httpcode!=404)gpt5_add(model+"_"+provider,b.used_tokens>0,&b);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
     gpt5_log(p,model,provider,b,mul);//写入个人日志
