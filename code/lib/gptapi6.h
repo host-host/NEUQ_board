@@ -13,7 +13,7 @@ struct gpt6_ret{
     cppJSON append;
     long long used_tokens;
     long long input,output,cache,makecache;
-    time_t start,first,last,end;
+    long long start_ns,first_ns,last_ns,end_ns;
     int curlcode;
     long long httpcode;
     std::string response_id,header,body,bodydelta;

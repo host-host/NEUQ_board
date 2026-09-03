@@ -7,6 +7,16 @@
 #include <unistd.h>
 using namespace std;
 #define ll long long
+static const ll NANOSECONDS_PER_SECOND=1000000000LL;
+static ll gpt6_now_ns(){
+    timespec now;
+    if(clock_gettime(CLOCK_REALTIME,&now))return (ll)time(0)*NANOSECONDS_PER_SECOND;
+    return (ll)now.tv_sec*NANOSECONDS_PER_SECOND+now.tv_nsec;
+}
+static void gpt6_mark_first(gpt6_ret* ans){
+    if(ans->first_ns)return;
+    ans->first_ns=gpt6_now_ns();
+}
 static void append(cppJSON& object,const char* key,const string& text) {
     if(object.IsObject()&&!text.empty())object.insert(key,object[key].valuestring()+text);
 }
@@ -28,10 +38,10 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
     if(issse&&tmp.find("data: ")==0){
         cppJSON a(&tmp[6]);
         string type=a["type"];
-        if(type=="response.output_item.added")if(!ans->first)ans->first=time(0);
-        if(type=="response.output_item.done")if(!ans->first)ans->first=time(0);
-        if(type=="response.output_text.delta")if(!ans->first)ans->first=time(0);
-        if(type=="response.output_text.done")if(!ans->first)ans->first=time(0);
+        if(type=="response.output_item.added")gpt6_mark_first(ans);
+        if(type=="response.output_item.done")gpt6_mark_first(ans);
+        if(type=="response.output_text.delta")gpt6_mark_first(ans);
+        if(type=="response.output_text.done")gpt6_mark_first(ans);
         if(type=="response.output_item.done")ans->append.push_back(a["item"].clone());
         if(type=="response.completed"){
             ans->response_id=a["response"]["id"];
@@ -64,7 +74,7 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
         if(ans->response_id.empty())ans->response_id=res["id"].valuestring();
         cppJSON delta=res["choices"][0]["delta"];
         if(!delta.IsObject())return;
-        if(!ans->first&&(!delta["content"].valuestring().empty()||!delta["reasoning_content"].valuestring().empty()||!delta["reasoning"].valuestring().empty()))ans->first=time(0);
+        if(!delta["content"].valuestring().empty()||!delta["reasoning_content"].valuestring().empty()||!delta["reasoning"].valuestring().empty())gpt6_mark_first(ans);
         if(!ans->append[0].IsObject())ans->append=cppJSON("[{\"role\":\"assistant\",\"content\":\"\"}]");
         string tmp=delta["content"];
         if(!tmp.empty())ans->append[0]["content"]=ans->append[0]["content"].valuestring()+tmp;
@@ -119,8 +129,9 @@ void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
         append=ans->append[0]["content"];
         if(type=="content_block_start")append.push_back(res["content_block"].clone());
         tmp=append[int(res["index"].valuedouble())];
+        if(type=="content_block_start")gpt6_mark_first(ans);
         if(type=="content_block_delta"){
-            if(!ans->first)ans->first=time(0);
+            gpt6_mark_first(ans);
             for(cppJSON i:res["delta"]){
                 string name=i.namestring();
                 if(name=="type")continue;
@@ -162,7 +173,7 @@ void gpt6_parse_gemini(gpt6_ret* ans,string& tmp,bool issse){//未验证
         if(!res["responseId"].valuestring().empty())ans->response_id=res["responseId"].valuestring();
         cppJSON chunk=res["candidates"][0]["content"];
         if(!chunk["parts"].size())return;
-        if(!ans->first)ans->first=time(0);
+        gpt6_mark_first(ans);
         if(!ans->append.size())ans->append=cppJSON(R"([{"role":"model","parts":[]}])");
         if(!chunk["role"].valuestring().empty())ans->append[0].insert("role",chunk["role"].valuestring());
         parts=ans->append[0]["parts"];
@@ -224,7 +235,10 @@ static size_t gpt6body(void* ptr,size_t size,size_t count,void* userdata) {
             ans->bodydelta=ans->bodydelta.substr(u+1);
         }
     }
-    ans->last=time(0);
+    for(char i:tmp)if(i!='\r'&&i!='\n'&&i!=' '){
+        ans->last_ns=gpt6_now_ns();
+        break;
+    }
     return n;
 }
 gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON conf,const char* format){
@@ -233,7 +247,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     ans.a=a;
     ans.format=format;
     ans.append=cppJSON("[]");
-    ans.start=time(0);
+    ans.start_ns=gpt6_now_ns();
     CURL* curl=curl_easy_init();
     if(!curl) {
         ans.curlcode=CURLE_FAILED_INIT;
@@ -266,7 +280,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_setopt(curl,CURLOPT_TIMEOUT,3600L);
     curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1L);
     ans.curlcode=curl_easy_perform(curl);
-    ans.end=time(0);
+    ans.end_ns=gpt6_now_ns();
     if(!ans.issse)gpt6body(0,0,0,&ans);
     curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&ans.httpcode);
     curl_slist_free_all(headers);

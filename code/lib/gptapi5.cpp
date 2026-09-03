@@ -55,8 +55,9 @@ struct reslog{
     double multiply;
     long long time;
     long long input,output,cache,makecache;
-    time_t first,total;
-    char other[256-4*sizeof(long long)-2*sizeof(time_t)];//保留为未来增加功能
+    time_t first_deprecated,total_deprecated;
+    long long start,first,last,end;
+    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(ll)];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -128,8 +129,16 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
-        item.insert("first",(double)logs->a[i].first);
-        item.insert("total",(double)logs->a[i].total);
+        long long first,total;
+        if(logs->a[i].start>0){
+            first=(logs->a[i].first-logs->a[i].start)/1000000000LL;
+            total=(logs->a[i].end-logs->a[i].start)/1000000000LL;
+        }else{
+            first=logs->a[i].first_deprecated;
+            total=logs->a[i].total_deprecated;
+        }
+        item.insert("first",(double)(first>0?first:0));
+        item.insert("total",(double)(total>0?total:0));
         item.insert("multiply",logs->a[i].multiply);
         item.insert("time",(double)logs->a[i].time);
         ans.push_back(std::move(item));
@@ -152,8 +161,10 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.output=b.output;
     item.cache=b.cache;
     item.makecache=b.makecache;
-    item.first=b.first>=b.start?b.first-b.start:0;
-    item.total=b.end>=b.start?b.end-b.start:0;
+    item.start=b.start_ns;
+    item.first=b.first_ns;
+    item.last=b.last_ns;
+    item.end=b.end_ns;
     item.multiply=multiply;
     item.time=time(0);
     UNLOCK(logs->lock);
@@ -294,12 +305,12 @@ void gpt5_add(string a,bool stable,gpt6_ret* b){
         c->cache+=b->cache;
         c->makecache+=b->makecache;
         c->tokens+=b->used_tokens;
-        if(b->first>=b->start){
-            c->latency+=b->first-b->start;
+        if(b->start_ns>0&&b->first_ns>=b->start_ns){
+            c->latency+=(b->first_ns-b->start_ns)/1000000000LL;
             c->latency_n++;
         }
-        if(b->end>=b->start){
-            c->alltime+=b->end-b->start;
+        if(b->start_ns>0&&b->end_ns>=b->start_ns){
+            c->alltime+=(b->end_ns-b->start_ns)/1000000000LL;
             c->alltime_tokens+=b->output;
         }
     }
@@ -410,10 +421,10 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     field("output",to_string(ans->output));
     field("cache",to_string(ans->cache));
     field("makecache",to_string(ans->makecache));
-    field("start",to_string((long long)ans->start));
-    field("first",to_string((long long)ans->first));
-    field("last",to_string((long long)ans->last));
-    field("end",to_string((long long)ans->end));
+    field("start",to_string(ans->start_ns/1000000000LL));
+    field("first",to_string(ans->first_ns/1000000000LL));
+    field("last",to_string(ans->last_ns/1000000000LL));
+    field("end",to_string(ans->end_ns/1000000000LL));
     field("curlcode",to_string(ans->curlcode));
     field("httpcode",to_string(ans->httpcode));
     field("issse",to_string(ans->issse));
@@ -507,6 +518,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     }
     if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
     insert2index_db(new_input,con_id);
+    if(b.used_tokens<=0)return;
     char title[64]={0};
     maketitle(title,b.append.stringify_Unformatted(),config["title"]);
     con=(content*)ndb2_got(content_db,con_id,0);
