@@ -255,7 +255,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     }
     string Authorization=conf["Authorization"],url=conf["url"],mm;
     struct curl_slist* headers=curl_slist_append(0,"Content-Type: application/json");
-    if(strcmp(format,"responses")==0||strcmp(format,"completions")==0)Authorization="Authorization: Bearer "+Authorization;
+    if(strcmp(format,"responses")==0||strcmp(format,"completions")==0||strcmp(format,"image")==0)Authorization="Authorization: Bearer "+Authorization;
     if(strcmp(format,"claude")==0)Authorization="x-api-key: "+Authorization;
     if(strcmp(format,"gemini")==0)Authorization="x-goog-api-key: "+Authorization;
     headers=curl_slist_append(headers,Authorization.c_str());
@@ -269,6 +269,10 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
     cppJSON u(message);
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
+    if(strcmp(format,"completions")==0&&u["stream"]==true){
+        if(!u["stream_options"].IsObject())u.insert("stream_options",cppJSON("{}"));
+        u["stream_options"].insert("include_usage",true);
+    }
     if(strcmp(format,"gemini"))u["model"]=model;//执行名字map映射
     mm=u.stringify_Unformatted();
     curl_easy_setopt(curl,CURLOPT_POSTFIELDS,mm.c_str());

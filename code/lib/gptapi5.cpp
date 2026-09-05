@@ -21,6 +21,7 @@
 #include <curl/curl.h>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
+#define IMAGE_CONFIG "/web/res/pri/image.json"
 #define GPT5_TOKEN_C 0.75
 #define ll long long
 ndb2 content_db;//con_id -> content
@@ -57,7 +58,8 @@ struct reslog{
     long long input,output,cache,makecache;
     time_t first_deprecated,total_deprecated;
     long long start,first,last,end;
-    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(ll)];//保留为未来增加功能
+    int isimage;
+    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(ll)-sizeof(int)];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -124,6 +126,7 @@ void gpt5_log_list(http_para* a) {
         cppJSON item("{}");
         item.insert("model",logs->a[i].model);
         item.insert("provider",logs->a[i].provider);
+        item.insert("isimage",logs->a[i].isimage==1);
         item.insert("used_tokens",(double)logs->a[i].used_tokens);
         item.insert("input",(double)logs->a[i].input);
         item.insert("output",(double)logs->a[i].output);
@@ -145,7 +148,7 @@ void gpt5_log_list(http_para* a) {
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply) {
+static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply,bool isimage=false) {
     reslogs* logs;
     retry:
     logs=(reslogs*)ndb2_got(log_db,p->userid,0);
@@ -154,6 +157,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     int n=++logs->n;
     logs=(reslogs*)ndb2_got(log_db,p->userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
     reslog& item=logs->a[n-1];
+    memset(&item,0,sizeof(item));
     memcpy(item.model,model.data(),min(model.size(),sizeof(item.model)-1));
     memcpy(item.provider,provider.data(),min(provider.size(),sizeof(item.provider)-1));
     item.used_tokens=b.used_tokens;
@@ -167,6 +171,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.end=b.end_ns;
     item.multiply=multiply;
     item.time=time(0);
+    item.isimage=isimage?1:0;
     UNLOCK(logs->lock);
 }
 void gpt5_resolve(http_para* a) {
@@ -536,6 +541,28 @@ void gpt5_claude_messages(http_para* a) {
 }
 void gpt5_gemini_generate_content(http_para* a) {
     gpt5_coreapi(a,"gemini","contents");
+}
+void gpt5_image_generations(http_para* a) {
+    user_* p=gpt5_api_user(a);
+    if(!p)return ERROR(H400,"Invalid API key.");
+    if(!p->admin)return ERROR(H400,"Permission denied.");
+    cppJSON request(a->get+a->n),config=cppJSON::from_file(IMAGE_CONFIG);
+    string model=request["model"];
+    if(!config["model"].has(model))return ERROR(H400,"Model not found.");
+    string provider=gotprovider(p,config,model);
+    if(provider.empty())return ERROR(H400,"provider not found.");
+    if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
+    if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
+    gpt6_ret result=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],"image");
+    bool success=result.curlcode==CURLE_OK&&result.httpcode>=200&&result.httpcode<300;
+    double price=config["model"][model]["price"].valuedouble();
+    double provider_multiply=config["provider"][provider]["multiply"].valuedouble();
+    double mul=price/0.3*1000000.0*provider_multiply;
+    result.used_tokens=success?1:0;
+    if(success)ADD(&p->token_used,(long long)ceil(result.used_tokens*mul));
+    gpt5_log(p,model,provider,result,mul,true);
+    if(!success)LOG("image request failed: curl=%d http=%lld model=%s provider=%s",
+        result.curlcode,result.httpcode,model.c_str(),provider.c_str());
 }
 void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);

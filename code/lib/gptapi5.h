@@ -22,6 +22,7 @@ void gpt5_responses(http_para* a);
 void gpt5_chat_completions(http_para* a);
 void gpt5_claude_messages(http_para* a);
 void gpt5_gemini_generate_content(http_para* a);
+void gpt5_image_generations(http_para* a);
 void gpt5_model_list(http_para *a);
 
 #ifdef __cplusplus

@@ -108,6 +108,14 @@ POST /v1/chat/completions
 返回值：透传上游
 
 
+POST /v1/images/generations
+POST /api/v1/images/generations
+鉴权：请求头需包含站内 Authorization，当前仅管理员可用。
+返回值：透传上游。
+成功判定：上游 HTTP 状态码为 2xx 且代理请求未发生 curl 错误。
+计费：成功调用按次计费，used_tokens 记为 1，失败调用记为 0；计费倍率为 image.json 中模型 price / 0.3 * 1000000 * Provider multiply。
+
+
 POST /api/gpt5_apikey
 鉴权：Cookie 登录
 请求示例1：{}
@@ -122,7 +130,7 @@ POST /api/gpt5_apikey
 POST /api/gpt5_log_list
 鉴权：Cookie 登录
 请求示例：{"start":1,"end":100}
-返回值：按从新到旧的位置返回 start 到 end 的用量记录，两端均包含。used_tokens 为上游实际 Token 总用量；input 和 output 分别为输入、输出 Token 数；cache 为缓存读取 Token 数；makecache 为缓存创建 Token 数；multiply 为最终计费倍率。上游未提供某项明细时，该字段为 0。各供应商对缓存 Token 是否包含在 input 中的定义不同，不应将明细字段直接相加推算 used_tokens。
+返回值：按从新到旧的位置返回 start 到 end 的用量记录，两端均包含。普通文本记录中，used_tokens 为上游实际 Token 总用量；图片记录通过 isimage=true 标识，used_tokens 表示成功的图片调用次数（成功为 1，失败为 0）。input 和 output 分别为输入、输出 Token 数；cache 为缓存读取 Token 数；makecache 为缓存创建 Token 数；multiply 为最终计费倍率，实际扣除额度为 ceil(used_tokens * multiply)。上游未提供某项明细时，该字段为 0。各供应商对缓存 Token 是否包含在 input 中的定义不同，不应将明细字段直接相加推算 used_tokens。
 返回示例：[{"model":"gpt-5.6-sol","provider":"C","used_tokens":1200,"input":1000,"output":200,"cache":800,"makecache":0,"multiply":1.995,"time":1785830400}]
 
 

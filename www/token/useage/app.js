@@ -27,6 +27,10 @@ function formatMultiply(value) {
     return `${Number(number.toFixed(6))}x`;
 }
 
+function isImageLog(log) {
+    return log?.isimage === true || Number(log?.isimage) === 1;
+}
+
 function formatDuration(value) {
     const seconds = Number(value);
     if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1e6) return '-';
@@ -91,8 +95,10 @@ function renderRows(items) {
     hideTokenBreakdown();
     body.innerHTML = '';
     items.forEach(log => {
+        const image = isImageLog(log);
         const used = Math.max(0, Math.floor(Number(log.used_tokens) || 0));
         const multiply = Math.max(0, Number(log.multiply) || 0);
+        const charged = Math.max(0, Math.ceil(used * multiply));
         const row = document.createElement('tr');
         [formatTime(log.time), log.model || '-', log.provider || '-'].forEach(value => appendTextCell(row, value));
 
@@ -100,19 +106,25 @@ function renderRows(items) {
         const usageTarget = document.createElement('span');
         usageTarget.className = 'token-total';
         usageTarget.tabIndex = 0;
-        usageTarget.textContent = formatTokens(used);
-        usageTarget.setAttribute('aria-label', `实际 Token ${formatTokens(used)}，输入 ${formatTokenDetail(log.input)}，输出 ${formatTokenDetail(log.output)}，缓存读取 ${formatTokenDetail(log.cache)}，缓存创建 ${formatTokenDetail(log.makecache)}`);
-        usageTarget.addEventListener('mouseenter', () => showTokenBreakdown(usageTarget, log));
-        usageTarget.addEventListener('mouseleave', hideTokenBreakdown);
-        usageTarget.addEventListener('focus', () => showTokenBreakdown(usageTarget, log));
-        usageTarget.addEventListener('blur', hideTokenBreakdown);
+        if (image) {
+            usageTarget.textContent = used ? `${formatTokens(used)} 次` : '失败';
+            usageTarget.className = 'token-total image-total';
+            usageTarget.setAttribute('aria-label', used ? '图片调用成功 1 次' : '图片调用失败，未扣除额度');
+        } else {
+            usageTarget.textContent = formatTokens(used);
+            usageTarget.setAttribute('aria-label', `实际 Token ${formatTokens(used)}，输入 ${formatTokenDetail(log.input)}，输出 ${formatTokenDetail(log.output)}，缓存读取 ${formatTokenDetail(log.cache)}，缓存创建 ${formatTokenDetail(log.makecache)}`);
+            usageTarget.addEventListener('mouseenter', () => showTokenBreakdown(usageTarget, log));
+            usageTarget.addEventListener('mouseleave', hideTokenBreakdown);
+            usageTarget.addEventListener('focus', () => showTokenBreakdown(usageTarget, log));
+            usageTarget.addEventListener('blur', hideTokenBreakdown);
+        }
         usageCell.appendChild(usageTarget);
         row.appendChild(usageCell);
 
-        appendTextCell(row, formatDuration(log.first));
+        appendTextCell(row, formatDuration(image ? log.total : log.first));
         appendTextCell(row, formatTps(log));
         appendTextCell(row, formatMultiply(multiply));
-        appendTextCell(row, formatTokens(Math.ceil(used * multiply)));
+        appendTextCell(row, formatTokens(charged));
         body.appendChild(row);
     });
 }

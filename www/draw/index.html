@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 画图 · NEUQ_board</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="style.css?v=0903v1">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/"><img src="/favicon.ico" alt=""> <span>NEUQ_board</span></a>
+        <nav>
+            <a href="/chat">留言社区</a>
+            <a href="/gpt">AI 助手</a>
+            <a class="active" href="/draw">AI 画图</a>
+            <a href="/token">API 用量</a>
+        </nav>
+        <div class="account" id="accountText">正在检查登录状态…</div>
+    </header>
+
+    <main class="page-shell">
+        <section class="intro">
+            <p class="eyebrow">IMAGE GENERATION</p>
+            <h1>把想法变成图片</h1>
+            <p class="subtitle">通过本站图片接口生成图片。当前页面仅开放给管理员，结果只在本页展示，不会保存为历史记录。</p>
+        </section>
+
+        <section class="workspace">
+            <form id="drawForm" class="control-card">
+                <div class="card-heading">
+                    <div>
+                        <h2>生成设置</h2>
+                        <p>请求会发送到 <code>/api/v1/images/generations</code></p>
+                    </div>
+                    <span class="status-pill" id="accessStatus">检查权限中</span>
+                </div>
+
+                <label class="field prompt-field" for="prompt">
+                    <span>提示词 <b>*</b></span>
+                    <textarea id="prompt" name="prompt" rows="6" required maxlength="8000" placeholder="例如：雨后的校园小路，暖色路灯倒映在水洼里，电影感，细节丰富"></textarea>
+                    <small><span id="promptCount">0</span> / 8000</small>
+                </label>
+
+                <div class="field-grid">
+                    <label class="field" for="model">
+                        <span>模型</span>
+                        <input id="model" name="model" value="gpt-image-2" autocomplete="off">
+                    </label>
+                    <label class="field" for="size">
+                        <span>尺寸</span>
+                        <select id="size" name="size">
+                            <option value="1024x1024">1024 × 1024</option>
+                            <option value="1536x1024">1536 × 1024</option>
+                            <option value="1024x1536">1024 × 1536</option>
+                            <option value="auto">auto</option>
+                        </select>
+                    </label>
+                    <label class="field" for="count">
+                        <span>生成张数</span>
+                        <select id="count" name="n">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </label>
+                    <label class="field" for="quality">
+                        <span>质量 <em>可选</em></span>
+                        <select id="quality" name="quality">
+                            <option value="">使用上游默认</option>
+                            <option value="low">low</option>
+                            <option value="medium">medium</option>
+                            <option value="high">high</option>
+                        </select>
+                    </label>
+                </div>
+
+                <details class="advanced">
+                    <summary>附加 JSON 参数（可选）</summary>
+                    <p>不确定上游支持哪些字段时可留空；内容必须是 JSON 对象，例如 <code>{&quot;background&quot;:&quot;transparent&quot;}</code>。</p>
+                    <textarea id="extraJson" rows="4" spellcheck="false" placeholder='{"background":"transparent"}'></textarea>
+                </details>
+
+                <div class="form-actions">
+                    <button class="secondary-button" type="button" id="clearButton">清空</button>
+                    <button class="primary-button" id="generateButton" type="submit" disabled>
+                        <span class="button-spinner" aria-hidden="true"></span>
+                        <span id="generateLabel">生成图片</span>
+                    </button>
+                </div>
+                <p class="hint" id="formMessage" role="status">正在读取管理员权限…</p>
+            </form>
+
+            <section class="result-card" aria-live="polite">
+                <div class="card-heading result-heading">
+                    <div>
+                        <h2>生成结果</h2>
+                        <p id="resultMeta">提交请求后，图片会显示在这里</p>
+                    </div>
+                    <button class="text-button" id="copyRequestButton" type="button" hidden>复制请求 JSON</button>
+                </div>
+                <div id="resultState" class="result-state">
+                    <div class="empty-art" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span></div>
+                    <p>还没有生成结果</p>
+                    <small>先输入提示词，然后点击“生成图片”</small>
+                </div>
+                <div id="imageGrid" class="image-grid"></div>
+                <details class="raw-response" id="rawResponseDetails" hidden>
+                    <summary>查看原始响应</summary>
+                    <pre id="rawResponse"></pre>
+                </details>
+            </section>
+        </section>
+
+        <section class="request-preview" id="requestPreviewSection" hidden>
+            <div class="card-heading">
+                <div><h2>本次请求</h2><p>便于检查前端实际发送的参数</p></div>
+                <span id="requestStatus" class="request-status"></span>
+            </div>
+            <pre id="requestPreview"></pre>
+        </section>
+    </main>
+
+    <footer><a href="/">NEUQ_board</a><span>·</span><a href="/gpt">返回 AI 助手</a></footer>
+    <script src="app.js?v=0903v1"></script>
+</body>
+</html>

@@ -53,6 +53,10 @@ int main() {
     http_add(&a,"POST /v1/chat/completions?",gpt5_chat_completions);
     http_add(&a,"POST /api/v1/chat/completions ",gpt5_chat_completions);
 
+    http_add(&a,"POST /v1/images/generations ",gpt5_image_generations);
+    http_add(&a,"POST /v1/images/generations?",gpt5_image_generations);
+    http_add(&a,"POST /api/v1/images/generations ",gpt5_image_generations);
+
     http_add(&a,"POST /v1/messages ",gpt5_claude_messages);
     http_add(&a,"POST /v1/messages?",gpt5_claude_messages);
     http_add(&a,"POST /v1/v1/messages ",gpt5_claude_messages);

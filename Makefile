@@ -19,10 +19,10 @@ all: $(BINS)
 build:
 	@mkdir -p build
 
-build/%.o: code/lib/%.c | build
+build/%.o: code/lib/%.c $(LIB_HDRS) | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/%.o: code/lib/%.cpp | build
+build/%.o: code/lib/%.cpp $(LIB_HDRS) | build
 	$(CXX) $(CFLAGS) -c $< -o $@
 
 build/%: code/%.cpp $(OBJS) $(LIB_HDRS) | build
