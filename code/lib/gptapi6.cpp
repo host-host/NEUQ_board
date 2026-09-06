@@ -47,12 +47,21 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
             ans->response_id=a["response"]["id"];
             f(ans,a["response"]["usage"]);
         }
-    }
-    if(!issse){
-        cppJSON r(tmp.c_str());
-        ans->append=r["output"].clone();
-        ans->response_id=r["id"].valuestring();
-        f(ans,r["usage"]);
+        if(type=="response.failed")ans->stable=3;
+        if(type=="error")ans->stable=3;
+    }else {
+        if(!issse){
+            cppJSON r(tmp.c_str());
+            ans->append=r["output"].clone();
+            ans->response_id=r["id"].valuestring();
+            f(ans,r["usage"]);
+        }
+        cppJSON a(&tmp[0]);
+        string p=a["error"]["type"];
+        if(p=="rate_limit_error")ans->stable=3;
+        if(p=="model_not_found")ans->stable=3;
+        if(p=="upstream_error")ans->stable=3;
+        if(p=="invalid_request_error")ans->stable=2;
     }
 }
 static inline ll max(ll a,ll b){
@@ -143,20 +152,24 @@ void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
             if(input)tmp.insert("input",std::move(input));
             tmp.erase("partial_json");
         }
-        return;
-    }
-    if(!issse){//未验证
-        cppJSON res(tmp.c_str(),(int)tmp.size());
-        f(ans,res["usage"]);
-        ans->response_id=res["id"].valuestring();
-        if(!(res["type"]=="message"))return;
-        cppJSON history("{}");
-        string role=res["role"].valuestring();
-        history.insert("role",role.empty()?"assistant":role);
-        history.insert("content",res["content"].IsArray()||res["content"].IsString()?res["content"].clone():cppJSON("[]"));
-        ans->append=cppJSON("[]");
-        ans->append.push_back(std::move(history));
-        return;
+        if(type=="error")ans->stable=3;
+    }else{
+        if(!issse){//未验证
+            cppJSON res(tmp.c_str(),(int)tmp.size());
+            f(ans,res["usage"]);
+            ans->response_id=res["id"].valuestring();
+            if(!(res["type"]=="message"))return;
+            cppJSON history("{}");
+            string role=res["role"].valuestring();
+            history.insert("role",role.empty()?"assistant":role);
+            history.insert("content",res["content"].IsArray()||res["content"].IsString()?res["content"].clone():cppJSON("[]"));
+            ans->append=cppJSON("[]");
+            ans->append.push_back(std::move(history));
+            return;
+        }
+        // cppJSON a(&tmp[0]);
+        // string p=a["error"]["type"];
+        // if(p=="error")ans->stable=3;
     }
 }
 void gpt6_parse_gemini(gpt6_ret* ans,string& tmp,bool issse){//未验证
@@ -291,6 +304,8 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_cleanup(curl);
     if(ans.issse==1)gpt6_parse(&ans,ans.body,false);
     if(!ans.bodydelta.empty())gpt6_parse(&ans,ans.bodydelta,true);
+    if(ans.used_tokens)ans.stable=1;
+    else if(ans.httpcode/100==5||ans.curlcode!=0)ans.stable=3;
     return ans;
 }
 string gpt6_request_model(http_para* a,const cppJSON& request,const string& format) {

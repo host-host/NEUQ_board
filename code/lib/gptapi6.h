@@ -18,6 +18,7 @@ struct gpt6_ret{
     long long httpcode;
     std::string response_id,header,body,bodydelta;
     int issse;//0 1no 2yes
+    int stable;//0不知道 1正常 2用户请求有问题 3上游炸了
 };
 gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format);
 #endif

@@ -437,6 +437,7 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     field("model",model);
     field("user",name);
     field("provider",provider);
+    field("stable",to_string(ans->stable));
     field("req",message);
     field("res",'\n'+ans->header+ans->body);
     FILE* fout=fopen(filename.c_str(),"a");
@@ -470,8 +471,8 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         close(a->cl);
         a->cl=0;
     }
-    if(b.used_tokens<=0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    if(b.httpcode!=404)gpt5_add(model+"_"+provider,b.used_tokens>0,&b);//稳定性统计
+    if(b.stable==0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
+    if(b.stable!=2)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
     gpt5_log(p,model,provider,b,mul);//写入个人日志
@@ -559,7 +560,9 @@ void gpt5_image_generations(http_para* a) {
     double provider_multiply=config["provider"][provider]["multiply"].valuedouble();
     double mul=price/0.3*1000000.0*provider_multiply;
     result.used_tokens=success?1:0;
-    if(success)ADD(&p->token_used,(long long)ceil(result.used_tokens*mul));
+    long long charge=success?(long long)ceil(result.used_tokens*mul):0;
+    if(charge<=0)makelog(&result,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
+    if(charge>0)ADD(&p->token_used,charge);
     gpt5_log(p,model,provider,result,mul,true);
     if(!success)LOG("image request failed: curl=%d http=%lld model=%s provider=%s",
         result.curlcode,result.httpcode,model.c_str(),provider.c_str());
