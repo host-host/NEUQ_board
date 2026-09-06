@@ -9,6 +9,7 @@
 #include"ndb2.h"
 #include"cppJSON.h"
 using std::string;
+#define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
 ndb2 chatdb;
 int *next_id;
 pthread_mutex_t chat_mutex;
@@ -62,6 +63,7 @@ void chat_send(http_para* a){
     cppJSON req(a->get+a->n);
     if(!req)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"message\":\"Bad JSON format.\"}",0);
     string title=req["title"].valuestring(),content=req["content"].valuestring(),pid=req["parentId"].valuestring();
+    if(pid=="next_id")return ERROR(H400,"这是个服务器曾经的bug");
     int ltitle=title.length();
     if(ltitle>200||ltitle==0)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"message\":\"The title is too long or empty.\"}",0);
     chat* parent=(chat*)ndb2_got(chatdb,pid.c_str(),0);
