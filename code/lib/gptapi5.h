@@ -5,7 +5,21 @@ extern "C"{
 #endif
 
 #include "http.h"
-
+struct content{
+    bool publish;
+    char deleted;//0没删，1软删除但保留，2即将硬删除
+    bool isusing;
+    char ownerid[10];
+    char ownername[24];
+    long long createtime;
+    long long updatetime;
+    char name[64];
+    char format[20];
+    char con_id[32];
+    char hash[44];
+    char other[1024-44];
+    char content[0];
+};
 void gptapi5_init();
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);

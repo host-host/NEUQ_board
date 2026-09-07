@@ -229,10 +229,8 @@ async function fetchModels() {//获取 AI 模型列表
         };
         const accessibleModels = Models.filter(model => availableModelVariants(model.name).length > 0);
         accessibleModels.forEach(model => appendModelOption(model, container));
-        const defaultModel = accessibleModels.find(model => availableModelVariants(model.name)
-            .some(variant => variant.format === 'responses'))
-            || accessibleModels[0];
-        if (defaultModel) setSelectedModel(defaultModel.name, 'responses');
+        const defaultModel = accessibleModels[0];
+        if (defaultModel) setSelectedModel(defaultModel.name);
         else document.getElementById('selectButton').textContent = '暂无可用模型';
     } catch (error) {
         document.getElementById('modelsContainer').innerHTML = '<li style="color: red">模型加载失败</li>';

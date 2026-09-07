@@ -58,6 +58,9 @@ ndb2 ndb2_init(const char* file){
         if((a->fd=open(file,O_RDWR|O_CREAT,S_IRUSR|S_IWUSR))<0)goto out;
         if((a->filelen=lseek(a->fd,0,SEEK_END)/BLOCK*BLOCK)==0)
             if(write(a->fd,(char*)c,a->filelen=BLOCK)!=BLOCK)goto out;
+        a->a[0]=mmap(0,(a->filelen+SEG-1)/SEG*SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,0);
+        if(a->a[0]==0||a->a[0]==MAP_FAILED)goto out;
+        for(int i=1;i<(a->filelen+SEG-1)/SEG;i++)a->a[i]=a->a[i-1]+SEG;
     }else {
         a->fd=-1;
         a->filelen=BLOCK;
@@ -65,8 +68,6 @@ ndb2 ndb2_init(const char* file){
         memcpy(a->a[0],(char*)c,BLOCK);
     }
     for(int i=0;i<(a->filelen+SEG-1)/SEG;i++){
-        if(a->fd!=-1)a->a[i]=mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
-        if(a->a[i]==0||a->a[i]==MAP_FAILED)goto out;
         if((a->lock[i]=malloc(SEG/BLOCK))==0)goto out;
         memset(a->lock[i],0,SEG/BLOCK);
     }

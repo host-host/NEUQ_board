@@ -23,11 +23,16 @@ void chat_init(){
         *next_id=1;
     }
 }
+static bool chat_id_ok(const string& id){
+    if(id.empty()||id.length()>15)return false;
+    for(char c:id)if(c<'0'||c>'9')return false;
+    return true;
+}
 void chat_list(http_para* a){
     cppJSON req(a->get+a->n);
     string id=req["id"].valuestring();
     chat* nd=(chat*)ndb2_got(chatdb,id.c_str(),0);
-    if(!nd)return http_send(a,Hok Hc0 Hjson,"[]",2);
+    if(!nd||!chat_id_ok(id))return http_send(a,Hok Hc0 Hjson,"[]",2);
     cppJSON ans("[]");
     for(int s=0;s<50&&strcmp(nd->next,"1");s+=(nd->deep==0)){
         cppJSON item("{}");
@@ -46,7 +51,7 @@ void chat_content(http_para* a){
     cppJSON req(a->get+a->n);
     string id=req["id"].valuestring();
     chat* nd=(chat*)ndb2_got(chatdb,id.c_str(),0);
-    if(!nd)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"content\":\"未找到内容\"}",0);
+    if(!nd||!chat_id_ok(id))return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"content\":\"未找到内容\"}",0);
     cppJSON ans("{\"status\":\"ok\"}");
     ans.insert("content",nd->content+strlen(nd->content)+1);
     http_send(a,Hok Hc0 Hjson,ans.stringify_Unformatted().c_str(),0);
@@ -63,7 +68,7 @@ void chat_send(http_para* a){
     cppJSON req(a->get+a->n);
     if(!req)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"message\":\"Bad JSON format.\"}",0);
     string title=req["title"].valuestring(),content=req["content"].valuestring(),pid=req["parentId"].valuestring();
-    if(pid=="next_id")return ERROR(H400,"这是个服务器曾经的bug");
+    if(!chat_id_ok(pid))return ERROR(H400,"这是个服务器曾经的bug");
     int ltitle=title.length();
     if(ltitle>200||ltitle==0)return http_send(a,Hok Hc0 Hjson,"{\"status\":\"error\",\"message\":\"The title is too long or empty.\"}",0);
     chat* parent=(chat*)ndb2_got(chatdb,pid.c_str(),0);

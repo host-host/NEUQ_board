@@ -30,21 +30,6 @@ ndb2 history_db;//user_id -> history
 ndb2 provider_db;//userid_model -> preferred provider
 ndb2 stable_db;//model_provider -> [3*24*4][2]
 ndb2 log_db;//userid -> reslogs
-struct content{
-    bool publish;
-    bool deleted;
-    bool isusing;
-    char ownerid[10];
-    char ownername[24];
-    ll createtime;
-    ll updatetime;
-    char name[64];
-    char format[20];
-    char con_id[32];
-    char hash[44];
-    char other[1024-44];
-    char content[0];
-};
 struct history{
     int n;
     char user_id[10];
@@ -243,7 +228,7 @@ void gpt5_history_delete(http_para* a) {
     content* con=(content*)ndb2_got(content_db,con_id.c_str(),0);
     if(!con)return my_http_error(a,"conversation not found.");
     if(strcmp(con->ownerid,p->userid)!=0)return my_http_error(a,"Permission denied.");
-    con->deleted=true;
+    con->deleted=1;
     history* h=(history*)ndb2_got(history_db,p->userid,0);
     if(h){
         int l=0;
@@ -476,9 +461,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
     gpt5_log(p,model,provider,b,mul);//写入个人日志
-    cppJSON input=req[array_name].clone(),oldinput=my_format(input,format,2);
+    cppJSON input=req[array_name].clone(),oldinput=my_format(input,format);
     for(auto i:b.append)input.push_back(i);
-    string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format,2).stringify_Unformatted();
+    string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format).stringify_Unformatted();
     char con_id[32]={0},newhash[44],hash[44];
     mylib_sha256(new_input.c_str(),new_input.length(),newhash);
     for(int i=1;i<=50&&oldinput.a&&oldinput.a->child;i++){

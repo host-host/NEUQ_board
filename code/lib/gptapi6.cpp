@@ -49,6 +49,7 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
         }
         if(type=="response.failed")ans->stable=3;
         if(type=="error")ans->stable=3;
+        if(type=="codex.rate_limits")ans->stable=3;
     }else {
         if(!issse){
             cppJSON r(tmp.c_str());

@@ -6,7 +6,7 @@
 #include<map>
 #include<string>
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
-cppJSON my_format(const cppJSON& a,const std::string& format,int);
+cppJSON my_format(const cppJSON& a,const std::string& format,int k=2);
 struct gpt6_ret{
     http_para*a;
     const char* format;
