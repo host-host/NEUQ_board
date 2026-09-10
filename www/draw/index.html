@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI 画图 · NEUQ_board</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0910v1">
+    <link rel="stylesheet" href="style.css?v=0910v5">
 </head>
 <body>
     <header class="topbar">
@@ -16,28 +16,45 @@
             <a class="active" href="/draw">AI 画图</a>
             <a href="/token">控制台</a>
         </nav>
-        <div class="account" id="accountText">正在检查登录状态…</div>
+        <div class="account">
+            <span class="account-name" id="accountText">正在检查登录状态…</span>
+            <a class="text-button" id="loginLink" href="/login" data-login-link hidden>登录</a>
+            <button class="text-button" id="logoutButton" type="button" hidden>退出</button>
+        </div>
     </header>
 
     <main class="page-shell">
         <section class="intro">
             <p class="eyebrow">IMAGE GENERATION</p>
             <h1>把想法变成图片</h1>
-            <p class="subtitle">AI 图像生成</p>
+            <p class="subtitle">输入描述生成图片，或上传原图进行编辑。</p>
         </section>
 
         <section class="workspace">
             <form id="drawForm" class="control-card">
                 <div class="card-heading">
                     <div>
-                        <h2>生成设置</h2>
-                        <p>请求会发送到 <code>/api/v1/images/generations</code></p>
+                        <h2>创作设置</h2>
+                        <p>添加原图后，可按提示词修改图片。</p>
                     </div>
                     <span class="status-pill" id="accessStatus">检查权限中</span>
                 </div>
 
+                <div class="login-notice" id="loginNotice" hidden>
+                    <span>登录后即可生成或编辑图片。</span>
+                    <a class="text-button" href="/login" data-login-link>去登录</a>
+                </div>
+
+                <div class="field source-image-field">
+                    <label class="source-image-label" for="sourceImageInput">原图 <em>可选</em></label>
+                    <input id="sourceImageInput" type="file" accept="image/*" multiple aria-describedby="sourceImageHelp">
+                    <p id="sourceImageHelp" class="source-image-help">可选择多张图片，或多次粘贴追加。图片按添加顺序编号，可在修改要求中指定图 1、图 2。</p>
+                    <div class="source-image-preview" id="sourceImagePreview" hidden></div>
+                    <p id="sourceImageStatus" class="hint" role="status"></p>
+                </div>
+
                 <label class="field prompt-field" for="prompt">
-                    <span>提示词 <b>*</b></span>
+                    <span><span id="promptLabel">提示词</span> <b>*</b></span>
                     <textarea id="prompt" name="prompt" rows="6" required maxlength="8000" placeholder="例如：雨后的校园小路，暖色路灯倒映在水洼里，电影感，细节丰富"></textarea>
                     <small><span id="promptCount">0</span> / 8000</small>
                 </label>
@@ -117,7 +134,7 @@
 
         <section class="request-preview" id="requestPreviewSection" hidden>
             <div class="card-heading">
-                <div><h2>本次请求</h2><p>便于检查前端实际发送的参数</p></div>
+                <div><h2>本次请求</h2><p>图片内容在预览中缩略显示，复制请求可获取完整 JSON。</p></div>
                 <span id="requestStatus" class="request-status"></span>
             </div>
             <pre id="requestPreview"></pre>
@@ -125,6 +142,7 @@
     </main>
 
     <footer><a href="/">NEUQ_board</a><span>·</span><a href="/gpt">返回 AI 助手</a></footer>
-    <script src="app.js?v=0910v2"></script>
+    <script src="/auth.js?v=0910v2"></script>
+    <script src="app.js?v=0910v6"></script>
 </body>
 </html>

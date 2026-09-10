@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>控制台</title>
-    <link rel="stylesheet" href="style.css?v=0910v2">
+    <link rel="stylesheet" href="style.css?v=0910v3">
+    <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
     <main class="token-page">
@@ -55,6 +56,17 @@
                         <span>按 Token：用量 × 倍率；按次：额度/次</span>
                     </div>
                     <div id="providerChoices" class="provider-choices"></div>
+                    <details id="imageProviderSection" class="image-provider-section" hidden>
+                        <summary>
+                            <span>图像模型 <span id="imageProviderCount" class="image-provider-count"></span></span>
+                            <span class="image-provider-summary-action">展开查看</span>
+                        </summary>
+                        <div class="image-provider-heading">
+                            <span>图像模型按次计费</span>
+                            <a href="/draw/">前往 AI 画图</a>
+                        </div>
+                        <div id="imageProviderChoices" class="provider-choices"></div>
+                    </details>
                     <div id="providerStatus" class="provider-status" aria-live="polite"></div>
                 </section>
                 <!-- <p class="balance-notice">本站为非商业用途，不提供付费充值服务</p> -->
@@ -71,6 +83,6 @@
         </div>
         <ul id="noticeDialogList" class="notice-list notice-dialog-list"></ul>
     </dialog>
-    <script src="app.js?v=0910v4"></script>
+    <script src="app.js?v=0910v5"></script>
 </body>
 </html>

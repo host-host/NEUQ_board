@@ -4,10 +4,6 @@ fetch('/navbar.html')
 .then(data => {
     document.getElementById("navbar-container").innerHTML = data;
     setTimeout(function() {
-        sessionStorage.setItem(
-            'login_next',
-            window.location.pathname + window.location.search + window.location.hash
-        );
         document.getElementById('drop').href='/login';
         loaduser();
         window.addEventListener('scroll', function() {

@@ -142,38 +142,56 @@ function createProviderPerformance() {
     return element;
 }
 
+function availableProviders(config) {
+    if (!Array.isArray(config?.provider)) return [];
+    return config.provider.filter(id => {
+        const provider = modelConfig.provider?.[id];
+        return provider && (accountData.admin === true || provider.public === true);
+    });
+}
+
+function createProviderChoice(model, config, providers) {
+    const row = document.createElement('label');
+    row.className = 'provider-choice';
+    const name = document.createElement('span');
+    name.className = 'provider-model';
+    name.textContent = model;
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', `${model} Provider`);
+    select.dataset.model = model;
+    providers.forEach(id => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${id} · ${formatProviderPrice(config.price, modelConfig.provider[id].multiply)}`;
+        select.appendChild(option);
+    });
+    select.value = providers.includes(accountData.selected_provider?.[model])
+        ? accountData.selected_provider[model] : providers[0];
+    select.addEventListener('change', () => saveProvider(model, select));
+    row.append(name, select, createProviderStability(), createProviderPerformance());
+    return row;
+}
+
 function renderProviderChoices() {
-    const container = document.getElementById('providerChoices');
-    container.innerHTML = '';
+    const textContainer = document.getElementById('providerChoices');
+    const imageContainer = document.getElementById('imageProviderChoices');
+    const imageSection = document.getElementById('imageProviderSection');
+    textContainer.replaceChildren();
+    imageContainer.replaceChildren();
+    let imageCount = 0;
     for (const [model, config] of Object.entries(modelConfig?.model || {})) {
-        const providerIds = config?.provider;
-        if (!Array.isArray(providerIds)) continue;
-        const providers = providerIds.filter(id => {
-            const provider = modelConfig.provider?.[id];
-            return provider && (accountData.admin === true || provider.public === true);
-        });
-        if (providers.length === 0) continue;
-        const row = document.createElement('label');
-        row.className = 'provider-choice';
-        const name = document.createElement('span');
-        name.className = 'provider-model';
-        name.textContent = model;
-        const select = document.createElement('select');
-        select.setAttribute('aria-label', `${model} Provider`);
-        select.dataset.model = model;
-        providers.forEach(id => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = `${id} · ${formatProviderPrice(config.price, modelConfig.provider[id].multiply)}`;
-            select.appendChild(option);
-        });
-        select.value = providers.includes(accountData.selected_provider?.[model])
-            ? accountData.selected_provider[model] : providers[0];
-        select.addEventListener('change', () => saveProvider(model, select));
-        row.append(name, select, createProviderStability(), createProviderPerformance());
-        container.appendChild(row);
+        const providers = availableProviders(config);
+        if (!providers.length) continue;
+        const isImage = config?.suggest_format === 'image';
+        const container = isImage ? imageContainer : textContainer;
+        container.appendChild(createProviderChoice(model, config, providers));
+        if (isImage) imageCount++;
     }
-    if (!container.children.length) container.innerHTML = '<div class="provider-choice"><span class="provider-model">暂无可选 Provider</span></div>';
+    if (!textContainer.children.length) {
+        textContainer.innerHTML = '<div class="provider-choice"><span class="provider-model">暂无可选 Provider</span></div>';
+    }
+    imageSection.hidden = imageCount === 0;
+    document.getElementById('imageProviderCount').textContent = imageCount ? `(${imageCount})` : '';
 }
 
 async function saveProvider(model, select) {
@@ -234,7 +252,10 @@ function renderStability(row, raw) {
 
 async function loadProviderStability() {
     const requestId = ++stabilityRequestId;
-    const rows = [...document.querySelectorAll('#providerChoices .provider-choice')]
+    const imageSection = document.getElementById('imageProviderSection');
+    const visibleChoices = [document.getElementById('providerChoices')];
+    if (imageSection.open) visibleChoices.push(document.getElementById('imageProviderChoices'));
+    const rows = visibleChoices.flatMap(container => [...container.querySelectorAll('.provider-choice')])
         .map(row => {
             const select = row.querySelector('select[data-model]');
             return select ? {row, select, key: `${select.dataset.model}_${select.value}`} : null;
@@ -256,6 +277,12 @@ async function loadProviderStability() {
         });
     } catch (_) {}
 }
+
+document.getElementById('imageProviderSection').addEventListener('toggle', event => {
+    const action = event.currentTarget.querySelector('.image-provider-summary-action');
+    action.textContent = event.currentTarget.open ? '收起' : '展开查看';
+    if (event.currentTarget.open) loadProviderStability();
+});
 
 document.getElementById('copyApiKeyButton').addEventListener('click', async () => {
     const input = document.getElementById('apiKeyValue');

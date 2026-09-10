@@ -514,7 +514,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     }
     if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
     insert2index_db(new_input,con_id);
-    if(b.used_tokens<=0)return;
+    if(b.used_tokens<=0||(b.append.IsArray()&&b.append.size()==0))return;
     char title[64]={0};
     maketitle(title,b.append.stringify_Unformatted(),config["title"]);
     con=(content*)ndb2_got(content_db,con_id,0);

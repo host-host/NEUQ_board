@@ -153,10 +153,6 @@ document.addEventListener('click', () => {
     document.getElementById('requestSettingsPopover')?.classList.remove('active');
 });
 function loaduser() {//加载用户信息
-    sessionStorage.setItem(
-        'login_next',
-        window.location.pathname + window.location.search + window.location.hash
-    );
     document.getElementById('drop').href = "/login";
     return fetch('/api/user')
     .then(response => {
