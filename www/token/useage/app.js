@@ -109,7 +109,7 @@ function renderRows(items) {
         if (image) {
             usageTarget.textContent = used ? `${formatTokens(used)} 次` : '失败';
             usageTarget.className = 'token-total image-total';
-            usageTarget.setAttribute('aria-label', used ? '图片调用成功 1 次' : '图片调用失败，未扣除额度');
+            usageTarget.setAttribute('aria-label', used ? `调用成功 ${formatTokens(used)} 次` : '调用失败，未扣除额度');
         } else {
             usageTarget.textContent = formatTokens(used);
             usageTarget.setAttribute('aria-label', `实际 Token ${formatTokens(used)}，输入 ${formatTokenDetail(log.input)}，输出 ${formatTokenDetail(log.output)}，缓存读取 ${formatTokenDetail(log.cache)}，缓存创建 ${formatTokenDetail(log.makecache)}`);
@@ -123,7 +123,7 @@ function renderRows(items) {
 
         appendTextCell(row, formatDuration(image ? log.total : log.first));
         appendTextCell(row, formatTps(log));
-        appendTextCell(row, formatMultiply(multiply));
+        appendTextCell(row, image ? `${formatTokens(Math.ceil(multiply))}/次` : formatMultiply(multiply));
         appendTextCell(row, formatTokens(charged));
         body.appendChild(row);
     });

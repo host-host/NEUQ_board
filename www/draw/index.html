@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI 画图 · NEUQ_board</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0903v1">
+    <link rel="stylesheet" href="style.css?v=0910v1">
 </head>
 <body>
     <header class="topbar">
@@ -14,7 +14,7 @@
             <a href="/chat">留言社区</a>
             <a href="/gpt">AI 助手</a>
             <a class="active" href="/draw">AI 画图</a>
-            <a href="/token">API 用量</a>
+            <a href="/token">控制台</a>
         </nav>
         <div class="account" id="accountText">正在检查登录状态…</div>
     </header>
@@ -23,7 +23,7 @@
         <section class="intro">
             <p class="eyebrow">IMAGE GENERATION</p>
             <h1>把想法变成图片</h1>
-            <p class="subtitle">通过本站图片接口生成图片。当前页面仅开放给管理员，结果只在本页展示，不会保存为历史记录。</p>
+            <p class="subtitle">AI 图像生成</p>
         </section>
 
         <section class="workspace">
@@ -45,7 +45,9 @@
                 <div class="field-grid">
                     <label class="field" for="model">
                         <span>模型</span>
-                        <input id="model" name="model" value="gpt-image-2" autocomplete="off">
+                        <select id="model" name="model" required disabled>
+                            <option value="">正在加载模型...</option>
+                        </select>
                     </label>
                     <label class="field" for="size">
                         <span>尺寸</span>
@@ -89,7 +91,7 @@
                         <span id="generateLabel">生成图片</span>
                     </button>
                 </div>
-                <p class="hint" id="formMessage" role="status">正在读取管理员权限…</p>
+                <p class="hint" id="formMessage" role="status">正在加载账户和模型...</p>
             </form>
 
             <section class="result-card" aria-live="polite">
@@ -123,6 +125,6 @@
     </main>
 
     <footer><a href="/">NEUQ_board</a><span>·</span><a href="/gpt">返回 AI 助手</a></footer>
-    <script src="app.js?v=0903v1"></script>
+    <script src="app.js?v=0910v2"></script>
 </body>
 </html>

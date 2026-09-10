@@ -10,6 +10,24 @@ h1 { margin:0; font-size:24px; font-weight:650; }
 .panel-heading p { margin:8px 0 0; color:var(--muted); font-size:14px; }
 .back-link { color:var(--accent); font-size:14px; text-decoration:none; white-space:nowrap; }
 .back-link:hover { text-decoration:underline; }
+.notice-section { margin-bottom:24px; padding:16px; border:1px solid #fed7aa; border-radius:6px; background:var(--accent-soft); }
+.notice-section h2 { margin:0 0 12px; color:var(--accent); font-size:14px; font-weight:650; }
+.notice-list { margin:0; padding:0; list-style:none; }
+.notice-list li + li { margin-top:12px; padding-top:12px; border-top:1px solid #fed7aa; }
+.notice-time { display:block; margin-bottom:4px; color:var(--muted); font-size:12px; }
+.notice-content { margin:0; font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.notice-more { margin-top:12px; padding:6px 0; border:0; background:none; color:var(--accent); font:inherit; font-size:13px; cursor:pointer; }
+.notice-more:hover { text-decoration:underline; }
+body:has(.notice-dialog[open]) { overflow:hidden; }
+.notice-dialog { width:min(100% - 32px,640px); max-height:80vh; max-height:80dvh; padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); box-shadow:0 16px 48px rgba(28,25,23,.18); }
+.notice-dialog[open] { display:flex; flex-direction:column; }
+.notice-dialog::backdrop { background:rgba(28,25,23,.4); }
+.notice-dialog-heading { display:flex; flex-shrink:0; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border-bottom:1px solid var(--line); }
+.notice-dialog-heading h2 { margin:0; font-size:16px; }
+.notice-dialog-heading button { padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--muted); font:inherit; font-size:13px; cursor:pointer; }
+.notice-dialog-heading button:hover { background:var(--accent-soft); color:var(--accent); }
+.notice-dialog-list { min-height:0; padding:20px; overflow-y:auto; overscroll-behavior:contain; }
+.notice-dialog-list li + li { border-color:var(--line); }
 .usage-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin:0 0 24px; border:1px solid var(--line); background:var(--line); }
 .usage-summary > div { padding:16px; background:var(--surface); }
 dt { color:var(--muted); font-size:12px; }

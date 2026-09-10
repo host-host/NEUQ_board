@@ -110,10 +110,19 @@ POST /v1/chat/completions
 
 POST /v1/images/generations
 POST /api/v1/images/generations
-鉴权：请求头需包含站内 Authorization，当前仅管理员可用。
+鉴权：请求头需包含站内 Authorization；与文本模型一致，管理员可用所有 Provider，普通用户仅可用 public=true 的 Provider。
 返回值：透传上游。
-成功判定：上游 HTTP 状态码为 2xx 且代理请求未发生 curl 错误。
-计费：成功调用按次计费，used_tokens 记为 1，失败调用记为 0；计费倍率为 image.json 中模型 price / 0.3 * 1000000 * Provider multiply。
+配置：统一读取 gpt4.json，图像模型使用 suggest_format="image"；不再读取 image.json。
+Provider url 填写上游基础地址（如 https://example.com/draw），去掉末尾一个 / 后自动追加 /v1/images/generations；不要填写已包含该路径的完整地址。
+图像用量与成功判定：仅解析非流式 JSON，响应中存在 data 字段时 used_tokens 记为 1，并在稳定性统计中记为成功，否则用量为 0。当前只检查字段存在，data 为 [] 或 null 也会计次，不额外检查 HTTP 状态码或 curl 是否成功；一次请求最多计一次，不按 n 张图片重复计次。
+流式图像响应：SSE 内容仍透传，但当前不解析图像事件，用量保持为 0。不读取图像响应中的 usage，input、output、cache、makecache 均为 0。
+图像请求与 responses、completions、claude、gemini 共用鉴权、Provider 选择、额度扣除、稳定性统计及个人用量日志；图像不保存聊天历史，也不执行文本自动探测。
+
+五种格式共用额度扣除逻辑，模型 price 的 JSON 类型决定计费倍率，与 suggest_format 无关：
+price 为数组：使用 Token 计费倍率 price[0] * 0.75 * Provider multiply / 0.3。
+price 为数字：使用按次计费倍率 price / 0.3 * 1000000 * Provider multiply。
+price 为对象：保留其他计费方式，当前与其他非数字、非数组类型一样，倍率为 0；通过鉴权、Provider 和额度检查后仍调用上游，扣费为 0。
+实际扣除额度统一为 ceil(used_tokens * 倍率)。used_tokens 由各格式解析器提供：四种文本格式读取上游 Token 用量，image 按上述 data 字段规则记为 1 或 0，当前不会根据 price 类型转换用量。因此当前配置应为文本模型使用数组价格、image 使用数字价格；文本使用数字价格会将 Token 数当作调用次数，image 使用数组价格则将 1 次当作 1 Token。
 
 
 POST /api/gpt5_apikey
@@ -124,13 +133,14 @@ POST /api/gpt5_apikey
 返回值：JSON 对象，api_key 为当前用户的 API 密钥；token_limit 和 token_used 分别为总额度与已用 token 数；admin 表示管理员权限；selected_provider 表示当前有效的 Provider 选择。
 返回示例：{"api_key":"sk-12345678abcdefghijklmnopqrs","token_limit":10000000,"token_used":1234,"admin":false,"selected_provider":{"gpt-5.6-sol":"C"}}
 解释：无密钥时初始化密钥；rotate 为 true 时轮换并立即废止旧密钥。
-计费：token_used 增加 ceil(used_tokens * model[model].price[0] * 0.75 * provider[provider].multiply / 0.3)。
+计费：token_used 按上述 price 类型规则累计扣除的额度。
 
 
 POST /api/gpt5_log_list
 鉴权：Cookie 登录
 请求示例：{"start":1,"end":100}
-返回值：按从新到旧的位置返回 start 到 end 的用量记录，两端均包含。普通文本记录中，used_tokens 为上游实际 Token 总用量；图片记录通过 isimage=true 标识，used_tokens 表示成功的图片调用次数（成功为 1，失败为 0）。input 和 output 分别为输入、输出 Token 数；cache 为缓存读取 Token 数；makecache 为缓存创建 Token 数；multiply 为最终计费倍率，实际扣除额度为 ceil(used_tokens * multiply)。上游未提供某项明细时，该字段为 0。各供应商对缓存 Token 是否包含在 input 中的定义不同，不应将明细字段直接相加推算 used_tokens。
+返回值：按从新到旧的位置返回 start 到 end 的用量记录，两端均包含。新记录的 isimage 由调用时 price 是否为数字决定，数字为 true，其他类型为 false；日志页据此显示计费单位：true 显示次数，false 显示 Token。
+used_tokens 保存格式解析器提供的用量：四种文本格式为上游 Token 用量，image 为上述 data 字段规则得到的 1 或 0，不随 price 类型转换。input 和 output 分别为输入、输出 Token 数；cache 为缓存读取 Token 数；makecache 为缓存创建 Token 数；multiply 为最终计费倍率，实际扣除额度为 ceil(used_tokens * multiply)。上游未提供某项明细时，该字段为 0；当前 image 不读取 Token 明细，这四项均为 0。各供应商对缓存 Token 是否包含在 input 中的定义不同，不应将明细字段直接相加推算 used_tokens。
 返回示例：[{"model":"gpt-5.6-sol","provider":"C","used_tokens":1200,"input":1000,"output":200,"cache":800,"makecache":0,"multiply":1.995,"time":1785830400}]
 
 

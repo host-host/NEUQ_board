@@ -212,12 +212,22 @@ void gpt6_parse_gemini(gpt6_ret* ans,string& tmp,bool issse){//未验证
         return;
     }
 }
+void gpt6_parse_image(gpt6_ret* ans,string& tmp,bool issse) {
+    if(issse)return;//图像好像都是非流
+    cppJSON res(tmp.c_str());
+    if(res["data"]){
+        ans->used_tokens=1;
+        ans->stable=1;
+        gpt6_mark_first(ans);
+    }
+}
 void gpt6_parse(gpt6_ret* ans,string tmp,bool issse){//处理 append used_tokens input output cache makecache first response_id
     while(!tmp.empty()&&tmp.back()=='\r')tmp.pop_back();
     if(strcmp(ans->format,"responses")==0)gpt6_parse_responses(ans,tmp,issse);
     if(strcmp(ans->format,"completions")==0)gpt6_parse_completions(ans,tmp,issse);
     if(strcmp(ans->format,"claude")==0)gpt6_parse_claude(ans,tmp,issse);
     if(strcmp(ans->format,"gemini")==0)gpt6_parse_gemini(ans,tmp,issse);
+    if(strcmp(ans->format,"image")==0)gpt6_parse_image(ans,tmp,issse);
 }
 static size_t gpt6header(char* ptr,size_t size,size_t count,void* userdata) {
     gpt6_ret* p=(gpt6_ret*)userdata;
@@ -278,6 +288,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(strcmp(format,"responses")==0)url+="/v1/responses";
     if(strcmp(format,"completions")==0)url+="/v1/chat/completions";
     if(strcmp(format,"claude")==0)url+="/v1/messages";
+    if(strcmp(format,"image")==0)url+="/v1/images/generations";
     if(strcmp(format,"gemini")==0)url=url+"/v1beta/models/"+model+":streamGenerateContent?alt=sse";
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
     curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);

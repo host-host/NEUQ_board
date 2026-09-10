@@ -16,6 +16,44 @@ function showState(element) {
     [accountContent, loadingState, loginState, errorState].forEach(item => { item.hidden = item !== element; });
 }
 
+function renderNotices(notices) {
+    const section = document.getElementById('noticeSection');
+    const list = document.getElementById('noticeList');
+    const dialogList = document.getElementById('noticeDialogList');
+    const viewAllButton = document.getElementById('viewAllNoticesButton');
+    list.replaceChildren();
+    dialogList.replaceChildren();
+    for (const notice of Array.isArray(notices) ? notices : []) {
+        if (typeof notice?.content !== 'string' || !notice.content.trim()) continue;
+        const item = document.createElement('li');
+        if (typeof notice.time === 'string' && notice.time.trim()) {
+            const time = document.createElement('span');
+            time.className = 'notice-time';
+            time.textContent = notice.time;
+            item.appendChild(time);
+        }
+        const content = document.createElement('p');
+        content.className = 'notice-content';
+        content.textContent = notice.content;
+        item.appendChild(content);
+        if (list.children.length < 2) list.appendChild(item.cloneNode(true));
+        dialogList.appendChild(item);
+    }
+    section.hidden = !list.children.length;
+    viewAllButton.hidden = dialogList.children.length <= 2;
+    viewAllButton.textContent = `查看全部公告（${dialogList.children.length} 条）`;
+}
+
+const noticeDialog = document.getElementById('noticeDialog');
+document.getElementById('viewAllNoticesButton').addEventListener('click', () => {
+    noticeDialog.showModal();
+    document.getElementById('noticeDialogList').scrollTop = 0;
+});
+document.getElementById('closeNoticeDialogButton').addEventListener('click', () => noticeDialog.close());
+noticeDialog.addEventListener('click', event => {
+    if (event.target === noticeDialog) noticeDialog.close();
+});
+
 async function loadTokenAccount() {
     try {
         const [response, modelResponse] = await Promise.all([
@@ -32,6 +70,7 @@ async function loadTokenAccount() {
         }
         if (!modelResponse.ok) throw new Error(`模型列表加载失败（HTTP ${modelResponse.status}）`);
         modelConfig = await modelResponse.json();
+        renderNotices(modelConfig?.notice);
         accountData = data;
         if (typeof data.api_key !== 'string' || !data.api_key.startsWith('sk-')) throw new Error('服务器没有返回有效的 API Key');
         const used = Number(data.token_used) || 0;
@@ -51,6 +90,20 @@ async function loadTokenAccount() {
 
 function formatMultiply(value) {
     return Number(value.toFixed(6)).toString();
+}
+
+function formatProviderPrice(price, providerMultiply) {
+    const perToken = Array.isArray(price);
+    if (!perToken && price !== null && typeof price === 'object') return '其他计费';
+    const basePrice = perToken ? price[0] : price;
+    if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(providerMultiply) || providerMultiply < 0) {
+        return '价格未配置';
+    }
+    const charge = perToken
+        ? basePrice * 0.75 * providerMultiply / 0.3
+        : basePrice / 0.3 * 1000000 * providerMultiply;
+    if (!Number.isFinite(charge)) return '价格未配置';
+    return perToken ? `${formatMultiply(charge)}x` : `${formatTokens(Math.ceil(charge))}/次`;
 }
 
 function normalizeStatValue(value) {
@@ -108,13 +161,10 @@ function renderProviderChoices() {
         const select = document.createElement('select');
         select.setAttribute('aria-label', `${model} Provider`);
         select.dataset.model = model;
-        const modelMultiply = Number(config.price?.[0]) || 0;
         providers.forEach(id => {
             const option = document.createElement('option');
-            const providerMultiply = Number(modelConfig.provider[id].multiply) || 0;
-            const chargedMultiply = modelMultiply * 0.75 * providerMultiply / 0.3;
             option.value = id;
-            option.textContent = `${id} · ${formatMultiply(chargedMultiply)}x`;
+            option.textContent = `${id} · ${formatProviderPrice(config.price, modelConfig.provider[id].multiply)}`;
             select.appendChild(option);
         });
         select.value = providers.includes(accountData.selected_provider?.[model])

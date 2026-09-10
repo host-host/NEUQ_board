@@ -35,9 +35,45 @@
 
     function setAccess(allowed, message) {
         generateButton.disabled = !allowed;
-        accessStatus.textContent = allowed ? '管理员可用' : '暂不可用';
+        accessStatus.textContent = allowed ? '可用' : '暂不可用';
         accessStatus.className = `status-pill ${allowed ? 'ok' : 'error'}`;
         if (message) setMessage(message, allowed ? 'success' : 'error');
+    }
+
+    function setModelState(message) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = message;
+        model.replaceChildren(option);
+        model.disabled = true;
+    }
+
+    async function loadModels(isAdmin) {
+        try {
+            const response = await fetch('/api/gpt5_model_list', {method: 'POST'});
+            const {data: config} = await readJson(response);
+            if (!config?.model || typeof config.model !== 'object' || Array.isArray(config.model)) {
+                throw new Error('无法读取模型列表');
+            }
+            model.replaceChildren();
+            for (const [name, entry] of Object.entries(config.model)) {
+                if (entry?.suggest_format !== 'image' || !Array.isArray(entry.provider)) continue;
+                if (!entry.provider.some(id => config.provider?.[id] && (isAdmin || config.provider[id].public === true))) continue;
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                model.appendChild(option);
+            }
+            if (!model.options.length) {
+                setModelState('暂无可用图像模型');
+                return false;
+            }
+            model.disabled = false;
+            return true;
+        } catch (error) {
+            setModelState('模型列表加载失败');
+            throw error;
+        }
     }
 
     async function readJson(response) {
@@ -60,15 +96,11 @@
             const user = await userResponse.json();
             if (!user?.name) {
                 accountText.textContent = '未登录';
-                setAccess(false, '请先登录；图片接口需要管理员权限。');
+                setModelState('请先登录');
+                setAccess(false, '请先登录后生成图片。');
                 return;
             }
             accountText.textContent = user.admin === true ? `${user.name} · 管理员` : `${user.name} · 普通用户`;
-            if (user.admin !== true) {
-                setAccess(false, '当前账号不是管理员，图片生成暂未开放。');
-                return;
-            }
-
             const keyResponse = await fetch('/api/gpt5_apikey', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -79,10 +111,15 @@
             if (typeof data?.api_key !== 'string' || !data.api_key.startsWith('sk-')) {
                 throw new Error('服务器没有返回有效的站内 API Key');
             }
+            if (!await loadModels(data.admin === true)) {
+                setAccess(false, '暂无可用图像模型');
+                return;
+            }
             siteApiKey = data.api_key;
             setAccess(true, '权限检查通过，可以开始生成。');
         } catch (error) {
             accountText.textContent = '状态读取失败';
+            if (!model.value) setModelState('加载失败');
             setAccess(false, error.message || '无法读取登录状态');
         }
     }
@@ -94,8 +131,9 @@
     function createPayload() {
         const text = prompt.value.trim();
         if (!text) throw new Error('请先输入提示词');
+        if (model.disabled || !model.value) throw new Error('请选择可用的图像模型');
         const payload = {
-            model: model.value.trim() || 'gpt-image-2',
+            model: model.value,
             prompt: text,
             size: size.value,
             n: Number(count.value)
@@ -108,6 +146,7 @@
             if (!extra || Array.isArray(extra) || typeof extra !== 'object') throw new Error('附加 JSON 参数必须是对象');
             Object.assign(payload, extra);
         }
+        payload.model = model.value;
         return payload;
     }
 
@@ -230,7 +269,7 @@
         requestSection.hidden = true;
         requestStatus.textContent = '';
         clearResult();
-        setMessage(siteApiKey ? '已清空，可以输入新的提示词。' : '正在读取管理员权限…');
+        if (siteApiKey) setMessage('已清空，可以输入新的提示词。');
     });
     copyRequestButton.addEventListener('click', async () => {
         if (!latestRequest) return;

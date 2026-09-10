@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API 用量</title>
-    <link rel="stylesheet" href="style.css?v=0831v4">
+    <title>控制台</title>
+    <link rel="stylesheet" href="style.css?v=0910v2">
 </head>
 <body>
     <main class="token-page">
         <a class="brand" href="/gpt"><img src="/newintown.png" alt="newintown"></a>
         <section class="token-panel" aria-labelledby="pageTitle">
             <div class="panel-heading">
-                <div><h1 id="pageTitle">API 用量</h1><p>查看当前 API Key 与额度使用情况</p></div>
+                <div><h1 id="pageTitle">控制台</h1></div>
                 <a class="back-link" href="/gpt">返回对话</a>
                 <a class="back-link" href="/token/useage/">日志</a>
             </div>
             <div id="accountContent" hidden>
+                <section id="noticeSection" class="notice-section" aria-labelledby="noticeTitle" hidden>
+                    <h2 id="noticeTitle">公告</h2>
+                    <ul id="noticeList" class="notice-list"></ul>
+                    <button id="viewAllNoticesButton" class="notice-more" type="button" aria-haspopup="dialog" aria-controls="noticeDialog" hidden>查看全部公告</button>
+                </section>
                 <dl class="usage-summary">
                     <div><dt>已用</dt><dd id="tokenUsed">-</dd></div>
                     <div><dt>总额度</dt><dd id="tokenLimit">-</dd></div>
@@ -47,7 +52,7 @@
                 <section class="provider-section" aria-labelledby="providerTitle">
                     <div class="provider-heading">
                         <h2 id="providerTitle">Provider</h2>
-                        <span>扣除额度 = 实际 Token 用量 × 倍率</span>
+                        <span>按 Token：用量 × 倍率；按次：额度/次</span>
                     </div>
                     <div id="providerChoices" class="provider-choices"></div>
                     <div id="providerStatus" class="provider-status" aria-live="polite"></div>
@@ -59,6 +64,13 @@
             <div id="errorState" class="state-message" hidden></div>
         </section>
     </main>
-    <script src="app.js?v=0831v3"></script>
+    <dialog id="noticeDialog" class="notice-dialog" aria-labelledby="noticeDialogTitle">
+        <div class="notice-dialog-heading">
+            <h2 id="noticeDialogTitle">全部公告</h2>
+            <button id="closeNoticeDialogButton" type="button" autofocus>关闭</button>
+        </div>
+        <ul id="noticeDialogList" class="notice-list notice-dialog-list"></ul>
+    </dialog>
+    <script src="app.js?v=0910v4"></script>
 </body>
 </html>

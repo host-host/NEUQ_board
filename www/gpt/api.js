@@ -206,6 +206,7 @@ async function fetchModels() {//获取 AI 模型列表
             else model.variants.push({provider, format, isPublic});
         };
         for (const [name, modelConfig] of Object.entries(configs.model || {})) {
+            if (modelConfig?.suggest_format === 'image') continue;
             const providers = modelConfig?.provider;
             if (!Array.isArray(providers)) continue;
             providers.forEach(provider => {

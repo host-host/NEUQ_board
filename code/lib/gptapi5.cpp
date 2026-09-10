@@ -21,7 +21,6 @@
 #include <curl/curl.h>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
-#define IMAGE_CONFIG "/web/res/pri/image.json"
 #define GPT5_TOKEN_C 0.75
 #define ll long long
 ndb2 content_db;//con_id -> content
@@ -342,6 +341,7 @@ void* gpt5_probe_loop(void*) {
         cppJSON config=cppJSON::from_file(CONFIG);
         if(!config)continue;
         for(cppJSON item:config["model"]) {
+            if(item["suggest_format"]=="image")continue;
             string model=item.a->string;
             for(cppJSON value:item["provider"]) {
                 string provider=value;
@@ -449,6 +449,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(!config["model"].has(model))return ERROR(H400,"Model not found.");
     string provider=gotprovider(p,config,model);
     if(provider.empty())return ERROR(H500,"provider not found.");
+    cppJSON price=config["model"][model]["price"];
     if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     gpt6_ret b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
@@ -458,9 +459,13 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     }
     if(b.stable==0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
     if(b.stable!=2)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
-    double mul=config["model"][model]["price"][0].valuedouble()*GPT5_TOKEN_C*config["provider"][provider]["multiply"].valuedouble()/0.3;
+    double mul=config["provider"][provider]["multiply"].valuedouble();
+    if(price.IsNumber())mul*=price.valuedouble()/0.3*1000000.0;//按次
+    else if(price.IsArray())mul*=price[0].valuedouble()*GPT5_TOKEN_C/0.3;//按token
+    else mul=0;//price error
     ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
-    gpt5_log(p,model,provider,b,mul);//写入个人日志
+    gpt5_log(p,model,provider,b,mul,price.IsNumber());//写入个人日志
+    if(!array_name)return;//image 不进历史记录功能
     cppJSON input=req[array_name].clone(),oldinput=my_format(input,format);
     for(auto i:b.append)input.push_back(i);
     string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format).stringify_Unformatted();
@@ -529,28 +534,7 @@ void gpt5_gemini_generate_content(http_para* a) {
     gpt5_coreapi(a,"gemini","contents");
 }
 void gpt5_image_generations(http_para* a) {
-    user_* p=gpt5_api_user(a);
-    if(!p)return ERROR(H400,"Invalid API key.");
-    if(!p->admin)return ERROR(H400,"Permission denied.");
-    cppJSON request(a->get+a->n),config=cppJSON::from_file(IMAGE_CONFIG);
-    string model=request["model"];
-    if(!config["model"].has(model))return ERROR(H400,"Model not found.");
-    string provider=gotprovider(p,config,model);
-    if(provider.empty())return ERROR(H400,"provider not found.");
-    if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
-    if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    gpt6_ret result=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],"image");
-    bool success=result.curlcode==CURLE_OK&&result.httpcode>=200&&result.httpcode<300;
-    double price=config["model"][model]["price"].valuedouble();
-    double provider_multiply=config["provider"][provider]["multiply"].valuedouble();
-    double mul=price/0.3*1000000.0*provider_multiply;
-    result.used_tokens=success?1:0;
-    long long charge=success?(long long)ceil(result.used_tokens*mul):0;
-    if(charge<=0)makelog(&result,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    if(charge>0)ADD(&p->token_used,charge);
-    gpt5_log(p,model,provider,result,mul,true);
-    if(!success)LOG("image request failed: curl=%d http=%lld model=%s provider=%s",
-        result.curlcode,result.httpcode,model.c_str(),provider.c_str());
+    gpt5_coreapi(a,"image",nullptr);
 }
 void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);
