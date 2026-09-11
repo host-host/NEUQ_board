@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全用户 API 日志</title>
+    <link rel="stylesheet" href="style.css?v=0911v4">
+    <script src="/auth.js?v=0910v2" defer></script>
+</head>
+<body>
+    <main class="logs-page">
+        <header class="page-header">
+            <a class="brand" href="/gpt"><img src="/newintown.png" alt="newintown"></a>
+            <nav class="page-nav" aria-label="页面导航">
+                <a class="back-link" href="/stable/">稳定性概览</a>
+                <a class="back-link" href="/token">控制台</a>
+            </nav>
+        </header>
+
+        <section class="logs-panel" aria-labelledby="pageTitle">
+            <div class="panel-heading">
+                <div>
+                    <h1 id="pageTitle">全用户日志</h1>
+                    <p id="recordSummary">所有用户 · 按时间倒序</p>
+                </div>
+                <div class="list-controls">
+                    <button id="openGrantDialogButton" class="grant-open-button" type="button"><span aria-hidden="true">+</span> 调整额度</button>
+                    <button id="refreshButton" type="button">刷新</button>
+                    <label class="page-size-control">每页
+                        <select id="pageSize" aria-label="每页记录数">
+                            <option value="20">20 条</option>
+                            <option value="50">50 条</option>
+                            <option value="100">100 条</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+
+            <form id="filterForm" class="filter-bar">
+                <label class="filter-control user-filter">用户
+                    <input id="userFilter" type="search" maxlength="64" placeholder="用户名或用户 ID" autocomplete="off">
+                </label>
+                <label class="filter-control">开始时间
+                    <input id="fromFilter" type="datetime-local" step="1">
+                </label>
+                <label class="filter-control">结束时间
+                    <input id="toFilter" type="datetime-local" step="1">
+                </label>
+                <div class="filter-actions">
+                    <button id="applyFilterButton" class="primary-button" type="submit">筛选</button>
+                    <button id="clearFilterButton" type="button">清空</button>
+                </div>
+            </form>
+
+            <div id="tableContent" hidden>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">时间</th>
+                                <th scope="col">用户</th>
+                                <th scope="col">状态</th>
+                                <th scope="col">模型</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">实际 Token</th>
+                                <th scope="col">首字延迟</th>
+                                <th scope="col">TPS</th>
+                                <th scope="col">扣除额度</th>
+                                <th scope="col">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logBody"></tbody>
+                    </table>
+                </div>
+                <nav class="pagination" aria-label="日志分页">
+                    <div class="page-buttons">
+                        <button id="firstPage" type="button" title="第一页" aria-label="第一页">&#171;</button>
+                        <button id="previousPage" type="button" title="上一页" aria-label="上一页">&#8249;</button>
+                    </div>
+                    <span id="pageIndicator">第 1 页</span>
+                    <div class="page-buttons">
+                        <button id="nextPage" type="button" title="下一页" aria-label="下一页">&#8250;</button>
+                    </div>
+                </nav>
+            </div>
+
+            <div id="loadingState" class="state-message">正在加载日志...</div>
+            <div id="emptyState" class="state-message" hidden>暂无日志记录</div>
+            <div id="loginState" class="state-message" hidden><p>请先登录后查看日志。</p><a class="login-button" href="/login">登录</a></div>
+            <div id="permissionState" class="state-message error" hidden>当前账号没有查看全用户日志的权限。</div>
+            <div id="errorState" class="state-message error" hidden></div>
+        </section>
+    </main>
+
+    <div id="tokenBreakdownTooltip" class="token-breakdown-tooltip" role="tooltip" hidden>
+        <dl>
+            <div><dt>输入</dt><dd id="tooltipInput">0</dd></div>
+            <div><dt>输出</dt><dd id="tooltipOutput">0</dd></div>
+            <div><dt>缓存读取</dt><dd id="tooltipCache">0</dd></div>
+            <div><dt>缓存创建</dt><dd id="tooltipMakecache">0</dd></div>
+        </dl>
+    </div>
+
+    <dialog id="grantDialog" class="grant-dialog" aria-labelledby="grantDialogTitle">
+        <form id="grantForm">
+            <header class="grant-dialog-header">
+                <div>
+                    <h2 id="grantDialogTitle">调整用户额度</h2>
+                    <p id="grantDialogSubtitle">调整账户的 API 可用额度</p>
+                </div>
+                <button id="closeGrantDialogButton" class="dialog-close-button" type="button" title="关闭" aria-label="关闭">&#215;</button>
+            </header>
+            <div class="grant-dialog-body">
+                <label class="grant-field">
+                    <span>用户 ID</span>
+                    <input id="grantUserId" type="text" maxlength="8" minlength="8" pattern="[A-Za-z0-9]{8}" autocomplete="off" required>
+                </label>
+
+                <fieldset class="grant-mode-field">
+                    <legend>调整方式</legend>
+                    <div class="grant-mode-control">
+                        <label><input type="radio" name="grantMode" value="convert" checked><span>按金额换算</span></label>
+                        <label><input type="radio" name="grantMode" value="direct"><span>直接额度</span></label>
+                    </div>
+                </fieldset>
+
+                <label class="grant-field">
+                    <span id="grantAmountLabel">金额</span>
+                    <input id="grantAmount" type="number" step="any" inputmode="decimal" placeholder="0.30" required>
+                </label>
+
+                <div class="grant-preview" aria-live="polite">
+                    <div><span>预计调整</span><strong id="grantPreviewValue">-</strong></div>
+                    <p id="grantFormula">每 0.3 换算为 1,000,000 额度</p>
+                </div>
+
+                <div id="grantStatus" class="grant-status" role="status" hidden></div>
+                <dl id="grantResult" class="grant-result" hidden>
+                    <div><dt>用户</dt><dd id="grantResultUser">-</dd></div>
+                    <div><dt>本次调整</dt><dd id="grantResultAdded">-</dd></div>
+                    <div><dt>最新总额度</dt><dd id="grantResultLimit">-</dd></div>
+                </dl>
+            </div>
+            <footer class="grant-dialog-actions">
+                <button id="cancelGrantButton" type="button">取消</button>
+                <button id="submitGrantButton" class="primary-button" type="submit">确认调整</button>
+            </footer>
+        </form>
+    </dialog>
+    <script src="app.js?v=0911v4"></script>
+</body>
+</html>

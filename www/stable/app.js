@@ -15,6 +15,7 @@ const elements = {
     template: document.getElementById('providerTemplate'),
     tooltip: document.getElementById('heatTooltip'),
     refresh: document.getElementById('refreshButton'),
+    adminLink: document.getElementById('adminLink'),
     updatedAt: document.getElementById('updatedAt'),
     search: document.getElementById('searchInput'),
     filters: document.getElementById('statusFilter'),
@@ -132,6 +133,13 @@ async function fetchJson(url, options) {
     if (!response.ok) throw new Error(data?.error?.message || `请求失败（HTTP ${response.status}）`);
     if (data?.error) throw new Error(data.error?.message || data.error || '接口返回错误');
     return data;
+}
+
+async function updateAdminLink() {
+    try {
+        const user = await fetchJson('/api/user');
+        elements.adminLink.hidden = user?.admin !== true;
+    } catch (_) {}
 }
 
 async function loadData() {
@@ -371,4 +379,5 @@ elements.sort.addEventListener('change', event => {
     render();
 });
 
+updateAdminLink();
 loadData();

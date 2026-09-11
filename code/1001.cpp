@@ -2,6 +2,7 @@
 #include"lib/user.h"
 #include"lib/chat.h"
 #include"lib/check48.h"
+#include"lib/admin.h"
 // #include"lib/word.h"
 #include"lib/gptapi5.h"
 #include"lib/mylib.h"
@@ -68,6 +69,8 @@ int main() {
 
     http_add(&a,"POST /api/gpt5_apikey ",gpt5_apikey);
     http_add(&a,"POST /api/gpt5_log_list ",gpt5_log_list);
+    http_add(&a,"POST /api/gpt5_admin_log_list ",admin_log_list);
+    http_add(&a,"POST /api/gpt5_admin_add_token ",admin_add_token);
     http_add(&a,"POST /api/gpt5_resolve ",gpt5_resolve);
     http_add(&a,"POST /api/gpt5_history_list ",gpt5_history_list);
     http_add(&a,"POST /api/gpt5_history_get ",gpt5_history_get);
