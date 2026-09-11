@@ -46,7 +46,7 @@ code { padding: 2px 5px; border-radius: 5px; background: #f0f1f6; color: #5143bd
 .status-pill.ok { background: #eaf8f0; color: #1d8051; }
 .status-pill.error { background: #fff0f2; color: var(--danger); }
 
-.field { display: block; position: relative; margin-bottom: 17px; }
+.field { display: block; position: relative; min-width: 0; margin-bottom: 17px; }
 .field > span { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: #344054; font-size: 13px; font-weight: 650; }
 .field b { color: var(--danger); }
 .field em { color: #98a2b3; font-size: 11px; font-style: normal; font-weight: 400; }
@@ -57,6 +57,15 @@ code { padding: 2px 5px; border-radius: 5px; background: #f0f1f6; color: #5143bd
 .field textarea:focus, .field input:focus, .field select:focus, .advanced textarea:focus { border-color: #988eff; box-shadow: 0 0 0 4px rgba(109,93,252,.1); }
 .prompt-field small { position: absolute; right: 11px; bottom: 9px; color: #98a2b3; font-size: 11px; }
 .field-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); column-gap: 12px; }
+.custom-size-fields { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.size-field { grid-column: 1 / -1; }
+.provider-info { margin-bottom: 17px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.provider-metrics { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.provider-metrics dt { color: var(--muted); font-size: 11px; }
+.provider-metrics dd { margin: 5px 0 0; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.provider-visibility { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
+.hint.provider-status { margin: -7px 0 17px; }
+.provider-status:empty, .provider-info .hint:empty { display: none; }
 .source-image-label { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: #344054; font-size: 13px; font-weight: 650; }
 .source-image-field input[type="file"] { height: auto; padding: 6px; font-size: 12px; }
 .source-image-field input::file-selector-button { margin-right: 10px; padding: 8px 11px; border: 0; border-radius: 7px; color: var(--accent-dark); background: var(--accent-soft); font: inherit; cursor: pointer; }
@@ -86,7 +95,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .primary-button.loading .button-spinner { display: inline-block; }
 .primary-button.loading { pointer-events: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.hint { min-height: 19px; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.hint { min-height: 19px; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .hint.error { color: var(--danger); }
 .hint.success { color: #1d8051; }
 
@@ -96,7 +105,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .text-button:hover { background: #e4e0ff; }
 .result-state { min-height: 365px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); text-align: center; }
 .result-state p { margin: 17px 0 4px; color: #475467; font-size: 14px; }
-.result-state small { font-size: 12px; }
+.result-state small { max-width: 100%; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .empty-art { position: relative; width: 112px; height: 112px; display: grid; place-items: center; border-radius: 33px; color: var(--accent); background: linear-gradient(140deg, #f0eeff, #fff); font-size: 33px; box-shadow: inset 0 0 0 1px #e5e1ff; }
 .empty-art span { position: absolute; animation: float 3s ease-in-out infinite; }
 .empty-art span:nth-child(1) { transform: translate(-28px, 20px) scale(.55); animation-delay: -.7s; }
@@ -140,5 +149,8 @@ footer a:hover { color: var(--accent-dark); }
     h1 { font-size: 35px; }
     .control-card, .result-card, .request-preview { padding: 18px; border-radius: 16px; }
     .field-grid { grid-template-columns: 1fr 1fr; }
+    .provider-metrics { gap: 5px; }
+    .provider-metrics dt { font-size: 10px; }
+    .provider-metrics dd { font-size: 12px; }
     .card-heading { margin-bottom: 19px; }
 }

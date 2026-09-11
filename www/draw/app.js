@@ -10,7 +10,18 @@
     const sourceImagePreview = document.getElementById('sourceImagePreview');
     const sourceImageStatus = document.getElementById('sourceImageStatus');
     const model = document.getElementById('model');
+    const provider = document.getElementById('provider');
+    const providerInfo = document.getElementById('providerInfo');
+    const providerPrice = document.getElementById('providerPrice');
+    const providerLatency = document.getElementById('providerLatency');
+    const providerVisibility = document.getElementById('providerVisibility');
+    const providerSuccessRate = document.getElementById('providerSuccessRate');
+    const providerStatsStatus = document.getElementById('providerStatsStatus');
+    const providerStatus = document.getElementById('providerStatus');
     const size = document.getElementById('size');
+    const customSizeFields = document.getElementById('customSizeFields');
+    const customWidth = document.getElementById('customWidth');
+    const customHeight = document.getElementById('customHeight');
     const count = document.getElementById('count');
     const quality = document.getElementById('quality');
     const extraJson = document.getElementById('extraJson');
@@ -40,6 +51,12 @@
     let isSubmitting = false;
     let accessAllowed = false;
     let accountLoading = false;
+    let accountData = null;
+    let modelConfig = null;
+    let providerSaving = false;
+    let stabilityRequestId = 0;
+    const STABILITY_BUCKETS = 3 * 24 * 4;
+    const STABILITY_BUCKET_MS = 15 * 60 * 1000;
 
     function setMessage(message, type) {
         formMessage.textContent = message || '';
@@ -60,19 +77,28 @@
         option.textContent = message;
         model.replaceChildren(option);
         model.disabled = true;
+        renderProviders();
     }
 
-    async function loadModels(isAdmin) {
+    function availableProviders(name) {
+        const ids = modelConfig?.model?.[name]?.provider;
+        return Array.isArray(ids) ? ids.filter(id => {
+            const config = modelConfig.provider?.[id];
+            return config && (accountData?.admin === true || config.public === true);
+        }) : [];
+    }
+
+    async function loadModels() {
         try {
             const response = await fetch('/api/gpt5_model_list', {method: 'POST'});
             const {data: config} = await readJson(response);
             if (!config?.model || typeof config.model !== 'object' || Array.isArray(config.model)) {
                 throw new Error('无法读取模型列表');
             }
+            modelConfig = config;
             model.replaceChildren();
             for (const [name, entry] of Object.entries(config.model)) {
-                if (entry?.suggest_format !== 'image' || !Array.isArray(entry.provider)) continue;
-                if (!entry.provider.some(id => config.provider?.[id] && (isAdmin || config.provider[id].public === true))) continue;
+                if (entry?.suggest_format !== 'image' || !availableProviders(name).length) continue;
                 const option = document.createElement('option');
                 option.value = name;
                 option.textContent = name;
@@ -83,6 +109,7 @@
                 return false;
             }
             model.disabled = false;
+            renderProviders();
             return true;
         } catch (error) {
             setModelState('模型列表加载失败');
@@ -90,12 +117,141 @@
         }
     }
 
+    function formatProviderPrice(price, multiply) {
+        const perToken = Array.isArray(price);
+        if (!perToken && price !== null && typeof price === 'object') return '其他计费';
+        const basePrice = perToken ? price[0] : price;
+        if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(multiply) || multiply < 0) return '价格未配置';
+        const charge = perToken ? basePrice * 0.75 * multiply / 0.3 : basePrice / 0.3 * 1000000 * multiply;
+        if (!Number.isFinite(charge)) return '价格未配置';
+        return perToken ? `${Number(charge.toFixed(6))}x` : `${new Intl.NumberFormat('zh-CN').format(Math.ceil(charge))}/次`;
+    }
+
+    function formatAverage(total, count) {
+        const value = Number(total) / Number(count);
+        return Number(count) > 0 && Number(total) >= 0 && Number.isFinite(value)
+            ? new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 2}).format(value) : '--';
+    }
+
+    function renderProviders() {
+        const ids = availableProviders(model.value);
+        provider.replaceChildren();
+        for (const id of ids) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = `${id} · ${formatProviderPrice(modelConfig.model[model.value].price, modelConfig.provider[id].multiply)}`;
+            provider.appendChild(option);
+        }
+        if (!ids.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '暂无可用 Provider';
+            provider.appendChild(option);
+        } else {
+            const saved = accountData?.selected_provider?.[model.value];
+            provider.value = ids.includes(saved) ? saved : ids[0];
+        }
+        providerInfo.hidden = !ids.length;
+        if (ids.length) {
+            const config = modelConfig.provider[provider.value];
+            providerPrice.textContent = formatProviderPrice(modelConfig.model[model.value].price, config.multiply);
+            providerVisibility.textContent = config.public === true ? '公开' : '仅管理员';
+        }
+        syncFormState();
+        loadProviderStability();
+    }
+
+    async function saveProvider() {
+        if (providerSaving || isSubmitting || accountLoading || !provider.value) return;
+        const selectedModel = model.value;
+        const selectedProvider = provider.value;
+        providerSaving = true;
+        providerStatus.className = 'hint provider-status';
+        providerStatus.textContent = '正在保存 Provider...';
+        syncFormState();
+        try {
+            const response = await fetch('/api/gpt5_apikey', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({model: selectedModel, provider: selectedProvider})
+            });
+            const {data} = await readJson(response);
+            if (data?.selected_provider?.[selectedModel] !== selectedProvider) throw new Error('Provider 未保存，请重试');
+            accountData = data;
+            if (typeof data.api_key === 'string' && data.api_key.startsWith('sk-')) siteApiKey = data.api_key;
+            providerStatus.textContent = 'Provider 已保存';
+        } catch (error) {
+            providerStatus.className = 'hint provider-status error';
+            providerStatus.textContent = error.message || 'Provider 保存失败';
+        } finally {
+            providerSaving = false;
+            renderProviders();
+        }
+    }
+
+    function renderProviderStability(raw) {
+        const values = Array.isArray(raw) ? raw : Array.isArray(raw?.buckets) ? raw.buckets : [];
+        const now = Math.floor(Date.now() / STABILITY_BUCKET_MS);
+        let stable = 0, total = 0;
+        for (let offset = 0; offset < 96; offset++) {
+            const index = ((now - offset) % STABILITY_BUCKETS + STABILITY_BUCKETS) % STABILITY_BUCKETS;
+            stable += Number(values[index * 2]) || 0;
+            total += Number(values[index * 2 + 1]) || 0;
+        }
+        const rate = total ? Math.max(0, Math.min(100, stable / total * 100)) : null;
+        providerSuccessRate.textContent = rate === null ? '--' : `${Number(rate.toFixed(1))}%`;
+        providerSuccessRate.title = total ? `${stable} / ${total}` : '暂无请求数据';
+        providerLatency.textContent = formatAverage(raw?.latency, raw?.latency_n);
+    }
+
+    async function loadProviderStability() {
+        const requestId = ++stabilityRequestId;
+        renderProviderStability(null);
+        providerStatsStatus.textContent = '';
+        if (!model.value || !provider.value) return;
+        const key = `${model.value}_${provider.value}`;
+        providerStatsStatus.textContent = '正在加载统计...';
+        try {
+            const response = await fetch('/api/gpt5_askstable', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify([key])
+            });
+            const {data} = await readJson(response);
+            if (requestId !== stabilityRequestId) return;
+            renderProviderStability(data?.[key]);
+            providerStatsStatus.textContent = data?.[key] ? '' : '暂无统计数据';
+        } catch (_) {
+            if (requestId === stabilityRequestId) providerStatsStatus.textContent = '统计暂不可用';
+        }
+    }
+
+    function syncCustomSize() {
+        const custom = size.value === 'custom';
+        customSizeFields.hidden = !custom;
+        for (const input of [customWidth, customHeight]) {
+            input.disabled = !custom;
+            input.required = custom;
+        }
+    }
+
+    function selectedSize() {
+        if (size.value !== 'custom') return size.value;
+        const width = Number(customWidth.value);
+        const height = Number(customHeight.value);
+        if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
+            throw new Error('自定义尺寸的宽度和高度必须为正整数');
+        }
+        return `${width}x${height}`;
+    }
+
     async function readJson(response) {
         const text = await response.text();
         let data = null;
         try { data = text ? JSON.parse(text) : {}; } catch (_) { data = null; }
-        if (!response.ok || data?.error?.message) {
-            const detail = data?.error?.message || text || `请求失败（HTTP ${response.status}）`;
+        if (!response.ok || data?.error) {
+            const detail = data?.error?.message || (typeof data?.error === 'string' ? data.error : '') || text || `请求失败（HTTP ${response.status}）`;
             const error = new Error(detail);
             error.status = response.status;
             error.raw = text;
@@ -107,6 +263,10 @@
     async function loadAccount() {
         accountLoading = true;
         siteApiKey = '';
+        accountData = null;
+        modelConfig = null;
+        providerStatus.textContent = '';
+        setModelState('正在加载模型...');
         setAccess(false);
         try {
             const userResponse = await fetch('/api/user', {credentials: 'same-origin'});
@@ -132,7 +292,8 @@
             if (typeof data?.api_key !== 'string' || !data.api_key.startsWith('sk-')) {
                 throw new Error('服务器没有返回有效的站内 API Key');
             }
-            if (!await loadModels(data.admin === true)) {
+            accountData = data;
+            if (!await loadModels()) {
                 setAccess(false, '暂无可用图像模型');
                 return;
             }
@@ -151,7 +312,7 @@
     }
 
     async function logout() {
-        if (isSubmitting || accountLoading) return;
+        if (isSubmitting || accountLoading || providerSaving) return;
         accountLoading = true;
         logoutButton.textContent = '退出中…';
         syncFormState();
@@ -173,13 +334,16 @@
     }
 
     function syncFormState() {
-        generateButton.disabled = !accessAllowed || accountLoading || isSubmitting || sourceImageLoading;
-        logoutButton.disabled = accountLoading || isSubmitting;
+        const busy = accountLoading || isSubmitting || providerSaving;
+        model.disabled = busy || !model.value;
+        provider.disabled = busy || !provider.value;
+        generateButton.disabled = !accessAllowed || busy || sourceImageLoading || !model.value || !provider.value;
+        logoutButton.disabled = busy;
         sourceImageInput.disabled = isSubmitting;
         sourceImagePreview.querySelectorAll('button').forEach(button => {
             button.disabled = isSubmitting;
         });
-        clearButton.disabled = isSubmitting;
+        clearButton.disabled = isSubmitting || providerSaving;
         imageGrid.querySelectorAll('[data-edit-image]').forEach(button => {
             button.disabled = isSubmitting || sourceImageLoading;
         });
@@ -326,10 +490,11 @@
         const text = prompt.value.trim();
         if (!text) throw new Error('请先输入提示词');
         if (model.disabled || !model.value) throw new Error('请选择可用的图像模型');
+        if (provider.disabled || !provider.value) throw new Error('请选择可用的 Provider');
         const payload = {
             model: model.value,
             prompt: text,
-            size: size.value,
+            size: selectedSize(),
             n: Number(count.value)
         };
         // 暂按上游接受 image 为单个 Data URL 或 Data URL 数组处理。
@@ -363,8 +528,10 @@
     function clearResult() {
         imageGrid.replaceChildren();
         rawDetails.hidden = true;
+        rawDetails.open = false;
         rawResponse.textContent = '';
         resultState.hidden = false;
+        resultState.innerHTML = '<p>还没有生成结果</p>';
         resultMeta.textContent = '提交请求后，图片会显示在这里';
     }
 
@@ -382,7 +549,7 @@
         imageGrid.replaceChildren();
         if (!images.length) {
             resultState.hidden = false;
-            resultState.innerHTML = '<p class="no-image">请求已返回，但响应中没有识别到图片 URL 或 Base64。</p><small>请展开“查看原始响应”检查上游返回格式。</small>';
+            resultState.innerHTML = '<p class="no-image">请求已返回，但响应中没有识别到图片 URL 或 Base64。</p>';
             return 0;
         }
         resultState.hidden = true;
@@ -421,7 +588,7 @@
 
     async function submit(event) {
         event.preventDefault();
-        if (isSubmitting || sourceImageLoading || accountLoading) return;
+        if (isSubmitting || sourceImageLoading || accountLoading || providerSaving) return;
         if (!siteApiKey) return setMessage('没有可用的站内 API Key，请刷新页面重试。', 'error');
         let payload;
         try { payload = createPayload(); } catch (error) { return setMessage(error.message, 'error'); }
@@ -445,6 +612,7 @@
             rawResponse.textContent = text || JSON.stringify(data, null, 2);
             rawDetails.hidden = false;
             const amount = renderImages(data);
+            rawDetails.open = !amount;
             resultMeta.textContent = `HTTP ${response.status} · ${elapsed} ms · 识别到 ${amount} 张图片`;
             requestStatus.textContent = `HTTP ${response.status} · ${elapsed} ms`;
             requestStatus.className = 'request-status ok';
@@ -453,6 +621,7 @@
             const elapsed = Math.round(performance.now() - started);
             rawResponse.textContent = error.raw || error.message || String(error);
             rawDetails.hidden = false;
+            rawDetails.open = true;
             resultState.hidden = false;
             resultState.innerHTML = `<p class="no-image">${action}失败</p><small>${escapeHtml(error.message || '未知错误')}</small>`;
             resultMeta.textContent = `${error.status ? `HTTP ${error.status}` : '请求错误'} · ${elapsed} ms`;
@@ -473,6 +642,12 @@
     }
 
     logoutButton.addEventListener('click', logout);
+    model.addEventListener('change', () => {
+        providerStatus.textContent = '';
+        renderProviders();
+    });
+    provider.addEventListener('change', saveProvider);
+    size.addEventListener('change', syncCustomSize);
     prompt.addEventListener('input', updateCount);
     sourceImageInput.addEventListener('change', () => {
         const files = Array.from(sourceImageInput.files);
@@ -513,5 +688,6 @@
     });
 
     updateCount();
+    syncCustomSize();
     loadAccount();
 })();

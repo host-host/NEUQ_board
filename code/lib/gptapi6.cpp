@@ -61,7 +61,7 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
             cppJSON info=a["error"];
             gpt6_set_info(ans,info?info:a);
         }
-        if(type=="codex.rate_limits")ans->stable=1003;
+        // if(type=="codex.rate_limits")ans->stable=1003;
     }else {
         if(!issse){
             cppJSON r(tmp.c_str());

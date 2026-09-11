@@ -323,6 +323,7 @@ async function submitGrant() {
         document.getElementById('grantResultUser').textContent = data.user ? `${data.user} · ${data.userid}` : data.userid;
         document.getElementById('grantResultAdded').textContent = formatQuota(data.added);
         document.getElementById('grantResultLimit').textContent = formatQuota(data.token_limit);
+        document.getElementById('grantResultUsed').textContent = formatQuota(data.token_used);
     } catch (error) {
         grantStatus.className = 'grant-status error';
         grantStatus.textContent = error.message || '调整额度失败';
