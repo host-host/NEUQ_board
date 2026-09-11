@@ -42,8 +42,10 @@ struct reslog{
     long long input,output,cache,makecache;
     time_t first_deprecated,total_deprecated;
     long long start,first,last,end;
-    int isimage;
-    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(ll)-sizeof(int)];//保留为未来增加功能
+    int isimage;//其实含义已经变成了计费方式，0按总token 1按次
+    int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
+    char info[128];
+    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(ll)-2*sizeof(int)-128];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;
@@ -156,6 +158,8 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.multiply=multiply;
     item.time=time(0);
     item.isimage=isimage?1:0;
+    item.stable=b.stable;
+    memcpy(item.info,b.info.data(),min(b.info.size(),sizeof(item.info)-1));
     UNLOCK(logs->lock);
 }
 void gpt5_resolve(http_para* a) {
@@ -458,7 +462,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         a->cl=0;
     }
     if(b.stable==0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    if(b.stable!=2)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
+    if(b.stable<2||b.stable>=1000)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
     double mul=config["provider"][provider]["multiply"].valuedouble();
     if(price.IsNumber())mul*=price.valuedouble()/0.3*1000000.0;//按次
     else if(price.IsArray())mul*=price[0].valuedouble()*GPT5_TOKEN_C/0.3;//按token
