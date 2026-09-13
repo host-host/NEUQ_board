@@ -19,6 +19,9 @@ struct gpt6_ret{
     std::string response_id,header,body,bodydelta,info;
     int issse;//0 1no 2yes
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
+    bool send;
+    std::string ca;
 };
-gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format);
+void gpt6_flush(gpt6_ret* ans);
+gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format,bool send_before_first=true);
 #endif

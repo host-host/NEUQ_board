@@ -33,7 +33,8 @@ struct reslog{
     int isimage;//其实含义已经变成了计费方式，0按总token 1按次
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
     char info[128];
-    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(long long)-2*sizeof(int)-128];//保留为未来增加功能
+    char isauto;
+    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(long long)-2*sizeof(int)-128-1];//保留为未来增加功能
 };
 struct reslogs{
     int lock,n;

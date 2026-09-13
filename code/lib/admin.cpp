@@ -47,6 +47,7 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("user",cursor.username);
     item.insert("model",log.model);
     item.insert("provider",log.provider);
+    item.insert("isauto",log.isauto==1);
     item.insert("isimage",log.isimage==1);
     item.insert("used_tokens",(double)log.used_tokens);
     item.insert("input",(double)log.input);
@@ -65,6 +66,7 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("total",(double)(total>0?total:0));
     item.insert("multiply",log.multiply);
     item.insert("time",(double)log.time);
+    item.insert("time_first_ns",(double)log.start);
     item.insert("stable",(double)log.stable);
     item.insert("info",string(log.info,strnlen(log.info,sizeof(log.info))));
     return item;

@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <curl/curl.h>
+#include <vector>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
 #define GPT5_TOKEN_C 0.75
@@ -47,13 +48,42 @@ void gptapi5_init() {
     else exit(-98);
 }
 #define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
-string gotprovider(user_*p,cppJSON& config,string& model){
+struct pro_ret{
+    vector<string>providers;
+    bool isauto;
+    double mul;
+};
+bool checkpro(pro_ret&a,user_*p,cppJSON& config,string& model,string saved){
+    if(saved=="auto"){
+        cppJSON aut=config["model"][model]["auto"];
+        for(cppJSON i:aut["provider"]){
+            cppJSON tmp=config["provider"][i];
+            if(tmp&&(p->admin||tmp["public"]==true))a.providers.push_back(i);
+        }
+        if(a.providers.size()){
+            a.isauto=1;
+            a.mul=aut["multiply"].valuedouble();
+            return 1;
+        }
+        return 0;
+    }
+    cppJSON tmp=config["provider"][saved];
+    if(tmp&&(p->admin||tmp["public"]==true)){
+        a.providers.push_back(saved);
+        a.isauto=0;
+        a.mul=tmp["multiply"].valuedouble();
+        return 1;
+    }
+    return 0;
+}
+pro_ret gotprovider(user_*p,cppJSON& config,string& model){
+    pro_ret ans;
     string key=(string)p->userid+"_"+model;
     char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
-    cppJSON pros=config["model"][model]["provider"],c_p=config["provider"];
-    if(pros.has(saved)&&c_p[saved]&&(p->admin||c_p[saved]["public"]==true))return saved;
-    for(cppJSON pro:pros)if(c_p[pro]&&(p->admin||c_p[pro]["public"]==true))return pro;
-    return "";
+    cppJSON pros=config["model"][model]["provider"];
+    if(pros.has(saved)&&checkpro(ans,p,config,model,saved))return ans;
+    for(cppJSON pro:pros)if(checkpro(ans,p,config,model,pro))return ans;
+    return ans;
 }
 void gpt5_apikey(http_para* a) {
     user_* p=getuser(a->get);
@@ -77,8 +107,9 @@ void gpt5_apikey(http_para* a) {
     ans.insert("admin",p->admin!=0);
     cppJSON selected("{}");
     for(cppJSON item:config["model"]) {
-        string model=item.a->string,sel=gotprovider(p,config,model);
-        if(!sel.empty())selected.insert(model.c_str(),sel);
+        string model=item.a->string;
+        pro_ret sel=gotprovider(p,config,model);
+        if(sel.providers.size()>0)selected.insert(model.c_str(),sel.isauto?(string)"auto":sel.providers[0]);
     }
     ans.insert("selected_provider",std::move(selected));
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
@@ -113,11 +144,12 @@ void gpt5_log_list(http_para* a) {
         item.insert("total",(double)(total>0?total:0));
         item.insert("multiply",logs->a[i].multiply);
         item.insert("time",(double)logs->a[i].time);
+        item.insert("isauto",(double)logs->a[i].isauto);
         ans.push_back(std::move(item));
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply,bool isimage=false) {
+static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply,bool isimage=false,bool isauto=false) {
     reslogs* logs;
     retry:
     logs=(reslogs*)ndb2_got(log_db,p->userid,0);
@@ -142,6 +174,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.time=time(0);
     item.isimage=isimage?1:0;
     item.stable=b.stable;
+    item.isauto=isauto;
     memcpy(item.info,b.info.data(),min(b.info.size(),sizeof(item.info)-1));
     UNLOCK(logs->lock);
 }
@@ -332,6 +365,7 @@ void* gpt5_probe_loop(void*) {
             string model=item.a->string;
             for(cppJSON value:item["provider"]) {
                 string provider=value;
+                if(provider=="auto")continue;
                 cppJSON conf=config["provider"][provider.c_str()];
                 if(!conf)continue;
                 if(gpt5_should_probe(model+"_"+provider))gpt5_probe(model,provider,conf);
@@ -373,7 +407,7 @@ void gpt5_askstable(http_para* a) {
     }
     return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,string&provider){
+void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,string&provider,bool isauto){
     if(!ans||!ans->format||!ans->format[0])return;
     time_t now=time(0);
     struct tm local_time;
@@ -434,24 +468,42 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
     string model=gpt6_request_model(a,req,format);
     if(!config["model"].has(model))return ERROR(H400,"Model not found.");
-    string provider=gotprovider(p,config,model);
-    if(provider.empty())return ERROR(H500,"provider not found.");
+    pro_ret proret=gotprovider(p,config,model);
+    if(proret.providers.empty())return ERROR(H500,"provider not found.");
     cppJSON price=config["model"][model]["price"];
     if(!p->token_limit&&p->admin)p->token_limit=10000000ULL;
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
-    gpt6_ret b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format);
-    if(memcmp(a->get,"POST /api",9)!=0){//网页端阻塞到标题创建完成
-        close(a->cl);
-        a->cl=0;
+    gpt6_ret b;
+    long long startns=0;
+    for(int k=0;k<(int)proret.providers.size();k++){
+        string& provider=proret.providers[k];
+        bool isauto=proret.isauto;
+        b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,k+1==(int)proret.providers.size());
+        if(memcmp(a->get,"POST /api",9)!=0&&b.send){//网页端阻塞到标题创建完成
+            close(a->cl);
+            a->cl=0;
+        }
+        if(b.stable==0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider,isauto);//写入日志文件
+        if(b.stable<2||b.stable>=1000)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
+        double mul=proret.mul;
+        if(price.IsNumber())mul*=price.valuedouble()/0.3*1000000.0;//按次
+        else if(price.IsArray())mul*=price[0].valuedouble()*GPT5_TOKEN_C/0.3;//按token
+        else mul=0;//price error
+        if(!b.send){
+            if(!startns)startns=b.start_ns;
+            if(b.end_ns-startns>3*60*1000000000ll){//3分钟后就不再重试渠道了
+                b.send=1;
+                gpt6_flush(&b);
+            }
+        }
+        if(b.send==0)mul=0;//出错啦，不用计费
+        ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
+        gpt5_log(p,model,provider,b,mul,price.IsNumber(),isauto);//写入个人日志
+        if(b.send){
+            if(isauto)if(b.stable<2||b.stable>=1000)gpt5_add(model+"_auto",b.stable==1,&b);//稳定性统计auto
+            break;
+        }
     }
-    if(b.stable==0)makelog(&b,model.c_str(),a->get+a->n,p->name,provider);//写入日志文件
-    if(b.stable<2||b.stable>=1000)gpt5_add(model+"_"+provider,b.stable==1,&b);//稳定性统计
-    double mul=config["provider"][provider]["multiply"].valuedouble();
-    if(price.IsNumber())mul*=price.valuedouble()/0.3*1000000.0;//按次
-    else if(price.IsArray())mul*=price[0].valuedouble()*GPT5_TOKEN_C/0.3;//按token
-    else mul=0;//price error
-    ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
-    gpt5_log(p,model,provider,b,mul,price.IsNumber());//写入个人日志
     if(!array_name)return;//image 不进历史记录功能
     cppJSON input=req[array_name].clone(),oldinput=my_format(input,format);
     for(auto i:b.append)input.push_back(i);

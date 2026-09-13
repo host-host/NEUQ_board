@@ -201,12 +201,20 @@ async function fetchModels() {//获取 AI 模型列表
             if (existing) existing.isPublic = existing.isPublic || isPublic;
             else model.variants.push({provider, format, isPublic});
         };
+        const resolveProviderConfig = (modelConfig, provider) => {
+            if (provider !== 'auto') return configs.provider?.[provider];
+            const providerIds = modelConfig?.auto?.provider;
+            if (!Array.isArray(providerIds)) return null;
+            const providers = providerIds.map(id => configs.provider?.[id]).filter(Boolean);
+            if (!providers.length) return null;
+            return {...modelConfig.auto, public: providers.some(item => item.public === true)};
+        };
         for (const [name, modelConfig] of Object.entries(configs.model || {})) {
             if (modelConfig?.suggest_format === 'image') continue;
             const providers = modelConfig?.provider;
             if (!Array.isArray(providers)) continue;
             providers.forEach(provider => {
-                const providerConfig = configs.provider?.[provider];
+                const providerConfig = resolveProviderConfig(modelConfig, provider);
                 if (providerConfig) addModelVariant(name, provider, providerConfig, modelConfig.suggest_format);
             });
         }

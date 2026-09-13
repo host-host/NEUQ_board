@@ -142,12 +142,25 @@ function createProviderPerformance() {
     return element;
 }
 
-function availableProviders(config) {
-    if (!Array.isArray(config?.provider)) return [];
-    return config.provider.filter(id => {
-        const provider = modelConfig.provider?.[id];
+function providerConfig(config, id) {
+    return id === 'auto' ? config?.auto : modelConfig.provider?.[id];
+}
+
+function providerAvailable(config, id) {
+    if (id !== 'auto') {
+        const provider = providerConfig(config, id);
+        return provider && (accountData.admin === true || provider.public === true);
+    }
+    const providers = config?.auto?.provider;
+    return Array.isArray(providers) && providers.some(providerId => {
+        const provider = modelConfig.provider?.[providerId];
         return provider && (accountData.admin === true || provider.public === true);
     });
+}
+
+function availableProviders(config) {
+    if (!Array.isArray(config?.provider)) return [];
+    return config.provider.filter(id => providerAvailable(config, id));
 }
 
 function createProviderChoice(model, config, providers) {
@@ -162,7 +175,7 @@ function createProviderChoice(model, config, providers) {
     providers.forEach(id => {
         const option = document.createElement('option');
         option.value = id;
-        option.textContent = `${id} · ${formatProviderPrice(config.price, modelConfig.provider[id].multiply)}`;
+        option.textContent = `${id} · ${formatProviderPrice(config.price, providerConfig(config, id)?.multiply)}`;
         select.appendChild(option);
     });
     select.value = providers.includes(accountData.selected_provider?.[model])

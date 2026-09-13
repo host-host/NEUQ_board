@@ -197,9 +197,10 @@ function renderRows(items) {
         appendUserCell(row, log);
         appendStatusCell(row, log.stable);
         appendTextCell(row, log.model || '-', 'model-cell');
-        appendTextCell(row, log.provider || '-');
+        appendTextCell(row, Number(log.isauto) === 1 ? `auto(${log.provider || '-'})` : log.provider || '-');
         appendUsageCell(row, log);
-        appendTextCell(row, formatDuration(image ? log.total : log.first));
+        appendTextCell(row, image ? '-' : formatDuration(log.first));
+        appendTextCell(row, formatDuration(log.total));
         appendTextCell(row, formatTps(log));
         appendTextCell(row, formatTokens(Math.ceil(used * multiply)));
         appendInfoCell(row, log.info);

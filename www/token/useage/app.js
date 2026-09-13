@@ -100,7 +100,8 @@ function renderRows(items) {
         const multiply = Math.max(0, Number(log.multiply) || 0);
         const charged = Math.max(0, Math.ceil(used * multiply));
         const row = document.createElement('tr');
-        [formatTime(log.time), log.model || '-', log.provider || '-'].forEach(value => appendTextCell(row, value));
+        const provider = Number(log.isauto) === 1 ? `auto(${log.provider || '-'})` : log.provider || '-';
+        [formatTime(log.time), log.model || '-', provider].forEach(value => appendTextCell(row, value));
 
         const usageCell = document.createElement('td');
         const usageTarget = document.createElement('span');

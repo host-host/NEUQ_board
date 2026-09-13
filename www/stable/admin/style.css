@@ -35,7 +35,7 @@ select:focus, #refreshButton:focus-visible, .grant-open-button:focus-visible { b
 .filter-actions .primary-button { border-color:var(--accent); background:var(--accent); color:#fff; }
 .filter-actions .primary-button:hover { background:#c2410c; color:#fff; }
 .table-wrap { overflow:auto; border:1px solid var(--line); }
-table { width:100%; min-width:1240px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+table { width:100%; min-width:1320px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
 th { position:sticky; top:0; z-index:1; padding:10px 12px; background:#f5f5f4; color:var(--muted); font-size:12px; font-weight:600; text-align:left; white-space:nowrap; }
 td { height:52px; padding:10px 12px; border-top:1px solid var(--line); vertical-align:middle; white-space:nowrap; }
 tbody tr:hover { background:#fcfcfb; }

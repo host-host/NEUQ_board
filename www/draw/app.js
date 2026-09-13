@@ -80,12 +80,26 @@
         renderProviders();
     }
 
+    function providerConfig(name, id) {
+        const config = modelConfig?.model?.[name];
+        return id === 'auto' ? config?.auto : modelConfig?.provider?.[id];
+    }
+
+    function providerAvailable(name, id) {
+        if (id !== 'auto') {
+            const config = providerConfig(name, id);
+            return config && (accountData?.admin === true || config.public === true);
+        }
+        const providers = modelConfig?.model?.[name]?.auto?.provider;
+        return Array.isArray(providers) && providers.some(providerId => {
+            const config = modelConfig?.provider?.[providerId];
+            return config && (accountData?.admin === true || config.public === true);
+        });
+    }
+
     function availableProviders(name) {
         const ids = modelConfig?.model?.[name]?.provider;
-        return Array.isArray(ids) ? ids.filter(id => {
-            const config = modelConfig.provider?.[id];
-            return config && (accountData?.admin === true || config.public === true);
-        }) : [];
+        return Array.isArray(ids) ? ids.filter(id => providerAvailable(name, id)) : [];
     }
 
     async function loadModels() {
@@ -139,7 +153,7 @@
         for (const id of ids) {
             const option = document.createElement('option');
             option.value = id;
-            option.textContent = `${id} · ${formatProviderPrice(modelConfig.model[model.value].price, modelConfig.provider[id].multiply)}`;
+            option.textContent = `${id} · ${formatProviderPrice(modelConfig.model[model.value].price, providerConfig(model.value, id)?.multiply)}`;
             provider.appendChild(option);
         }
         if (!ids.length) {
@@ -153,9 +167,11 @@
         }
         providerInfo.hidden = !ids.length;
         if (ids.length) {
-            const config = modelConfig.provider[provider.value];
+            const config = providerConfig(model.value, provider.value);
             providerPrice.textContent = formatProviderPrice(modelConfig.model[model.value].price, config.multiply);
-            providerVisibility.textContent = config.public === true ? '公开' : '仅管理员';
+            providerVisibility.textContent = provider.value === 'auto'
+                ? '自动选择可用 Provider'
+                : config.public === true ? '公开' : '仅管理员';
         }
         syncFormState();
         loadProviderStability();
