@@ -22,7 +22,7 @@
 #include <vector>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
-#define GPT5_TOKEN_C 0.75
+#define GPT5_TOKEN_C 0.35
 #define ll long long
 ndb2 content_db;//con_id -> content
 ndb2 index_db;//sha256(response_id) -> con_id
@@ -491,7 +491,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         else mul=0;//price error
         if(!b.send){
             if(!startns)startns=b.start_ns;
-            if(b.end_ns-startns>3*60*1000000000ll){//3分钟后就不再重试渠道了
+            if(b.end_ns-startns>2*60*1000000000ll){//2分钟后就不再重试渠道了
                 b.send=1;
                 gpt6_flush(&b);
             }

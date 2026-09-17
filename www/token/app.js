@@ -100,7 +100,7 @@ function formatProviderPrice(price, providerMultiply) {
         return '价格未配置';
     }
     const charge = perToken
-        ? basePrice * 0.75 * providerMultiply / 0.3
+        ? basePrice * 0.35 * providerMultiply / 0.3
         : basePrice / 0.3 * 1000000 * providerMultiply;
     if (!Number.isFinite(charge)) return '价格未配置';
     return perToken ? `${formatMultiply(charge)}x` : `${formatTokens(Math.ceil(charge))}/次`;

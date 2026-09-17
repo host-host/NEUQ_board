@@ -12,7 +12,7 @@
     <script src="/cdn/cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="/cdn/cdn.jsdelivr.net/npm/marked-katex-extension/lib/index.umd.js"></script>
     <script src="/cdn/cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.8/purify.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=0729v1">
+    <link rel="stylesheet" href="style.css?v=0917v1">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
@@ -103,6 +103,7 @@
                 </div>
             </div>
             <div class="bottom-area">
+                <div id="modelCompatibilityWarning" class="model-compatibility-warning" role="status" hidden></div>
                 <div id="pendingFilesContainer" class="pending-files-container" style="display:none;"></div>
                 
                 <div class="input-wrap-box" id="inputWrapBox">
@@ -152,11 +153,11 @@
     </div>
     <script src="utils.js"></script><!-- 工具函数 -->
     <script src="ui.js?v=0728"></script><!-- 渲染ui -->
-    <script src="api.js?v=0915v1"></script><!-- 通用数据接口与会话管理 -->
+    <script src="api.js?v=0917v2"></script><!-- 通用数据接口与会话管理 -->
     <script src="api_completions.js?v=0728"></script><!-- Chat Completions 协议解析 -->
     <script src="api_responses.js?v=0728"></script><!-- Responses 协议解析 -->
     <script src="api_claude.js?v=0828"></script><!-- Claude Messages 原生协议 -->
     <script src="api_gemini.js?v=0728"></script><!-- Gemini generateContent 原生协议 -->
-    <script src="app.js?v=0730v3"></script><!-- 其他函数 -->
+    <script src="app.js?v=0917v1"></script><!-- 其他函数 -->
 </body>
 </html>

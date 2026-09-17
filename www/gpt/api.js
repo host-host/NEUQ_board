@@ -85,6 +85,19 @@ function normalizeModelFormat(format) {
     return ['responses', 'claude', 'gemini'].includes(format) ? format : 'completions';
 }
 
+function updateModelCompatibilityWarning() {
+    const warning = document.getElementById('modelCompatibilityWarning');
+    const suggestedFormat = document.getElementById('selectButton')?.dataset.format;
+    if (!warning) return;
+    warning.hidden = !(currentChatFormat && suggestedFormat &&
+        currentChatFormat !== suggestedFormat &&
+        currentChatFormat !== 'completions' && suggestedFormat !== 'completions');
+    if (!warning.hidden) {
+        const recommendedModel = {responses: 'OpenAI', claude: 'Claude', gemini: 'Gemini'}[currentChatFormat];
+        warning.textContent = `当前模型对当前对话可能不可用，建议切换 ${recommendedModel} 的模型。`;
+    }
+}
+
 function availableModelVariants(name, requireAccess = true) {
     const model = modelCatalog.get(name);
     if (!model) return [];
@@ -104,6 +117,7 @@ function setSelectedModel(name, preferredFormat = null) {
     selectButton.textContent = name;
     selectButton.dataset.provider = variant.provider;
     selectButton.dataset.format = variant.format;
+    updateModelCompatibilityWarning();
     requestSettings.max_tokens = '';
     showMaxTokensPresets();
     const label = document.querySelector('.max-tokens-label');
@@ -487,6 +501,7 @@ async function selectHistoryChat(id, updateUrl = true, owned = true) {//选择�
     try {
         const data = await fetchGpt5History(id, false);
         currentChatFormat = normalizeModelFormat(data.format);
+        updateModelCompatibilityWarning();
         if (currentChatFormat === 'responses') renderResponsesHistory(data);
         else if (currentChatFormat === 'claude') renderClaudeHistory(data);
         else if (currentChatFormat === 'gemini') renderGeminiHistory(data);

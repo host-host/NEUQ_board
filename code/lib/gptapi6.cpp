@@ -356,10 +356,11 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(!ans.bodydelta.empty())gpt6_parse(&ans,ans.bodydelta,true);
     if(ans.httpcode/100==5||ans.httpcode==429)ans.stable=ans.httpcode+1000;
     if(ans.curlcode!=0)ans.stable=1000;
+    if(ans.last_ns==0)ans.stable=3000;//没有响应体
     if(ans.info.empty()&&ans.curlcode!=0)ans.info=curl_error[0]?curl_error:curl_easy_strerror((CURLcode)ans.curlcode);
     if(ans.info.empty()&&ans.httpcode>=400)ans.info=ans.body;
     if(ans.used_tokens)ans.stable=ans.stable<=1?1/*正常*/:0/*有花费并且有问题，需要写日志人工看看*/;
-    if(ans.send==0&&ans.stable<1000){
+    if(ans.send==0&&ans.stable<1000&&ans.stable){
         ans.send=1;
         gpt6_flush(&ans);
     }

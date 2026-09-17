@@ -820,6 +820,18 @@ body, html {
     padding: 10px 20px 20px 20px;
 }
 
+.model-compatibility-warning {
+    max-width: 1100px;
+    margin: 0 auto 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--primary-border);
+    border-radius: 8px;
+    background-color: var(--primary-light);
+    color: #9a3412;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .input-wrap-box {
     max-width: 1100px;
     margin: 0 auto;

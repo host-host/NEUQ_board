@@ -41,6 +41,7 @@ function startNewChat() {//新建对话
     const selectButton = document.getElementById('selectButton');
     if (selectButton && modelCatalog.has(selectButton.textContent))
         setSelectedModel(selectButton.textContent, selectButton.dataset.format);
+    updateModelCompatibilityWarning();
     updateHeaderButtons();
 }
 function responseContentPartsFromWrapper(wrapper) {
@@ -325,6 +326,7 @@ async function sendMessage() {//发送消息的核心入口
             return;
         }
         currentChatFormat = requestFormat;
+        updateModelCompatibilityWarning();
         updateHeaderButtons();
 
         const { wrapper, contentDiv, thinkTextarea } = reply;
