@@ -136,7 +136,7 @@
         if (!perToken && price !== null && typeof price === 'object') return '其他计费';
         const basePrice = perToken ? price[0] : price;
         if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(multiply) || multiply < 0) return '价格未配置';
-        const charge = perToken ? basePrice * 0.35 * multiply / 0.3 : basePrice / 0.3 * 1000000 * multiply;
+        const charge = perToken ? basePrice * 0.75 * multiply / 0.3 : basePrice / 0.3 * 1000000 * multiply;
         if (!Number.isFinite(charge)) return '价格未配置';
         return perToken ? `${Number(charge.toFixed(6))}x` : `${new Intl.NumberFormat('zh-CN').format(Math.ceil(charge))}/次`;
     }

@@ -1,94 +1,79 @@
-marked.setOptions({
+// 在 Markdown 分词时识别公式，让代码块、行内代码和转义符由 marked 处理。
+function readChatMath(source) {
+    const opening = /^(\$\$|\\\[|\\\(|\$)/.exec(source)?.[0];
+    if (!opening) return;
+    const closing = opening === '\\[' ? '\\]' : opening === '\\(' ? '\\)' : opening;
+    const display = opening === '$$' || opening === '\\[';
+    if (opening === '$' && /\s/.test(source[1] || ' ')) return;
+
+    for (let index = opening.length; index < source.length; index++) {
+        if (opening === '$' && source[index] === '\n') return;
+        if (source.startsWith(closing, index)) {
+            // 不把金额中的美元符号或相邻的块级分隔符当作行内公式结尾。
+            if (opening === '$' && (/\s/.test(source[index - 1]) || /[\d$]/.test(source[index + 1] || ''))) return;
+            const text = source.slice(opening.length, index);
+            if (!text.trim()) return;
+            return {raw: source.slice(0, index + closing.length), text, display};
+        }
+        // 跳过成对的转义字符，包含公式里的 \$、\\ 和转义的括号。
+        if (source[index] === '\\') index++;
+    }
+}
+
+function renderChatMath(token) {
+    return katex.renderToString(token.text.trim(), {
+        displayMode: token.display,
+        throwOnError: false,
+        trust: false,
+        output: 'html'
+    });
+}
+
+const chatMarkdown = new marked.Marked({
+    gfm: true,
     breaks: true,
-    smartypants: false, 
-    highlight: function(code, lang) {
-        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-        return hljs.highlight(code, { language }).value;
+    extensions: [
+        {
+            name: 'chatMathBlock',
+            level: 'block',
+            start(source) { return source.search(/^ {0,3}(?:\$\$|\\\[)/m); },
+            tokenizer(source) {
+                const prefix = /^ {0,3}(?=\$\$|\\\[)/.exec(source);
+                if (!prefix) return;
+                const math = readChatMath(source.slice(prefix[0].length));
+                if (!math) return;
+                const ending = /^[ \t]*(?:\n|$)/.exec(source.slice(prefix[0].length + math.raw.length));
+                if (!ending) return;
+                return {...math, type: 'chatMathBlock', raw: prefix[0] + math.raw + ending[0]};
+            },
+            renderer(token) { return renderChatMath(token) + '\n'; }
+        },
+        {
+            name: 'chatMathInline',
+            level: 'inline',
+            start(source) { return source.search(/\$|\\[\[(]/); },
+            tokenizer(source) {
+                const math = readChatMath(source);
+                if (math) return {...math, type: 'chatMathInline'};
+            },
+            renderer: renderChatMath
+        }
+    ],
+    tokenizer: {
+        emStrong(source, maskedSource, previousCharacter) {
+            const token = marked.Tokenizer.prototype.emStrong.call(this, source, maskedSource, previousCharacter);
+            if (token) return token;
+            // 中文紧邻引号时仍允许加粗，如：用**“找规律”**的方法。
+            const match = /^\*\*(?!\*)(\S[^\n]*?)\*\*(?!\*)/.exec(source);
+            if (!match || !/[\u3400-\u9fff]/.test(match[1]) || /\s$|`/.test(match[1])) return false;
+            return {type: 'strong', raw: match[0], text: match[1], tokens: this.lexer.inlineTokens(match[1])};
+        }
     }
 });
+
 function safeParseMarkdown(markdownText) {
     if (!markdownText) return '';
-
-    let processedText = markdownText;
-
-
-    const mathBlocks = [];
-    const codeBlocks = [];
-    let mathCounter = 0;
-    let codeCounter = 0;
-    let protectedText = processedText;
-
-    // 保护多行代码块
-    protectedText = protectedText.replace(/(```[\s\S]*?```)/g, (match) => {
-        const id = `<!--CODE_BLOCK_PLACEHOLDER_${codeCounter++}-->`;
-        codeBlocks.push({ id, content: match });
-        return id;
-    });
-    // 保护单行行内代码
-    protectedText = protectedText.replace(/(`[^`\n]+?`)/g, (match) => {
-        const id = `<!--CODE_BLOCK_PLACEHOLDER_${codeCounter++}-->`;
-        codeBlocks.push({ id, content: match });
-        return id;
-    });
-
-    // 提取并隔离所有 LaTeX 公式
-    function protectMath(mathContent, isBlock) {
-        const id = `<!--MATH_PLACEHOLDER_${mathCounter++}-->`;
-        mathBlocks.push({ id, content: mathContent, isBlock });
-        return id;
-    }
-
-    // 1. 匹配块级公式 \[ ... \]
-    protectedText = protectedText.replace(/\\\[([\s\S]*?)\\\]/g, (match, g1) => protectMath(g1, true));
-    
-    // 2. 匹配块级公式 $$ ... $$
-    protectedText = protectedText.replace(/\$\$([\s\S]*?)\$\$/g, (match, g1) => protectMath(g1, true));
-    
-    // 3. 匹配行内公式 \( ... \)
-    protectedText = protectedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, g1) => protectMath(g1, false));
-    
-    // 4. 匹配行内公式 $ ... $ 
-    protectedText = protectedText.replace(/\$(?!\s)([^\$\n]{1,500}?)(?<!\s)\$/g, (match, g1) => {return protectMath(g1, false);});
-
-    // 手动处理 CJK 兼容的加粗 ---
-    protectedText = protectedText.replace(/\*\*([^\*]+?(?:\*[^\*]+?)*)\*\*/g, '<strong>$1</strong>');
-    // 收窄双下划线加粗范围，只匹配纯字母/数字/中文，彻底防止污染 URL 链接
-    protectedText = protectedText.replace(/__([a-zA-Z0-9\u4e00-\u9fa5]+?)__/g, '<strong>$1</strong>');
-
-    // 还原
-    codeBlocks.forEach(({ id, content }) => {
-        protectedText = protectedText.split(id).join(content);
-    });
-    let html = marked.parse(protectedText);
-    mathBlocks.forEach(({ id, content, isBlock }) => {
-        try {
-            const renderedHtml = katex.renderToString(content.trim(), {
-                displayMode: isBlock,
-                throwOnError: false,
-                trust: false,
-                output: 'html'
-            });
-            
-            // 安全回填：【关键修复】利用正则兼容带任意空格/换行符的 <p> 包裹层
-            if (isBlock) {
-                const blockRegex = new RegExp(`<p>\\s*${id}\\s*</p>`, 'g');
-                if (blockRegex.test(html)) {
-                    // 使用匿名函数返回值回填，完美避免特殊字符（如 $&）引发的 JS replace 漏洞
-                    html = html.replace(blockRegex, () => renderedHtml);
-                    return;
-                }
-            }
-            
-            // 安全回填行内公式
-            html = html.split(id).join(renderedHtml);
-            
-        } catch (err) {
-            console.error("KaTeX rendering error:", err);
-            const errorSpan = `<span class="katex-error" style="color:var(--danger-color);">${err.message}</span>`;
-            html = html.split(id).join(errorSpan);
-        }
-    });
-    return DOMPurify.sanitize(html, {
+    return DOMPurify.sanitize(chatMarkdown.parse(markdownText), {
         FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'base'],
         ALLOW_DATA_ATTR: false,
         ALLOW_UNKNOWN_PROTOCOLS: false

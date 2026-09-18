@@ -22,7 +22,7 @@
 #include <vector>
 using namespace std;
 #define CONFIG "/web/res/pri/gpt4.json"
-#define GPT5_TOKEN_C 0.35
+#define GPT5_TOKEN_C 0.75
 #define ll long long
 ndb2 content_db;//con_id -> content
 ndb2 index_db;//sha256(response_id) -> con_id

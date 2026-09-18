@@ -506,16 +506,18 @@ body, html {
 
 .chat-content-markdown {
     align-self: flex-start;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
     background-color: var(--bg-chat-assistant);
     border: 1px solid var(--border-color);
-    border-radius: 16px 16px 16px 4px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    font-size: 14.5px;
-    line-height: 1.6;
-    color: var(--text-dark);
-    overflow-x: auto;
+    border-radius: 8px;
+    padding: 24px 28px;
+    font-family: "Times New Roman", "Songti SC", SimSun, "Noto Serif CJK SC", serif;
+    font-size: 16px;
+    line-height: 1.75;
+    color: #333;
+    overflow-wrap: anywhere;
 }
 
 .chat-content-markdown.is-collapsed,
@@ -1002,28 +1004,137 @@ body, html {
     text-decoration: underline;
 }
 
-/* Markdown 子元素格式微调 */
-.chat-content-markdown h1, 
-.chat-content-markdown h2, 
-.chat-content-markdown h3 {
-    color: var(--primary-color);
-    margin-top: 12px;
-    margin-bottom: 8px;
+/* 文档式阅读排版。低优先级继承覆盖站点通用字体，保留 KaTeX 自身的字体规则。 */
+:where(.chat-content-markdown *) {
+    font-family: inherit;
+}
+
+.chat-content-markdown :is(h1, h2, h3, h4, h5, h6) {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #333;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 1em 0 0.65em;
+}
+
+.chat-content-markdown h1 { font-size: 2em; }
+.chat-content-markdown h2 { font-size: 1.75em; }
+.chat-content-markdown h3 { font-size: 1.5em; }
+.chat-content-markdown h4 { font-size: 1.25em; }
+.chat-content-markdown h5 { font-size: 1em; }
+.chat-content-markdown h6 { font-size: 0.9em; color: #777; }
+
+.chat-content-markdown :is(h1, h2) {
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.chat-content-markdown > :first-child { margin-top: 0; }
+.chat-content-markdown > :last-child { margin-bottom: 0; }
+
+.chat-content-markdown p {
+    margin: 0.85em 0;
+}
+
+.chat-content-markdown :is(ul, ol) {
+    margin: 0.75em 0;
+    padding-left: 2em;
+}
+
+.chat-content-markdown li + li {
+    margin-top: 0.35em;
+}
+
+.chat-content-markdown li > :is(ul, ol, p) {
+    margin-top: 0.4em;
+    margin-bottom: 0.4em;
+}
+
+.chat-content-markdown strong {
+    font-weight: 700;
+}
+
+.chat-content-markdown hr {
+    height: 0;
+    margin: 1.25em 0;
+    border: 0;
+    border-top: 1px solid #ddd;
+}
+
+.chat-content-markdown blockquote {
+    margin: 1em 0;
+    padding: 0 1em;
+    border-left: 4px solid #ddd;
+    color: #666;
+}
+
+.chat-content-markdown a {
+    color: #4183c4;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.chat-content-markdown img {
+    max-width: 100%;
+    height: auto;
+}
+
+.chat-content-markdown table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 1em 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.chat-content-markdown :is(th, td) {
+    padding: 6px 13px;
+    border: 1px solid #ddd;
+}
+
+.chat-content-markdown th {
+    font-weight: 700;
+    background: #f6f8fa;
+}
+
+.chat-content-markdown tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.chat-content-markdown .katex {
+    font-size: 1.1em;
+    overflow-wrap: normal;
+}
+
+.chat-content-markdown .katex-display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 1em 0;
+    padding: 0.25em 0;
+}
+
+.chat-content-markdown .katex-error {
+    white-space: pre-wrap;
 }
 
 .chat-content-markdown pre {
-    background-color: #f8fafc;
-    border-radius: 8px;
-    padding: 12px;
+    margin: 1em 0;
+    background-color: #f6f8fa;
+    border-radius: 4px;
+    padding: 14px 16px;
     overflow-x: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #e7e7e7;
+    line-height: 1.5;
+    overflow-wrap: normal;
 }
 
 .chat-content-markdown code {
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #f1f5f9;
-    padding: 2px 4px;
-    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    background-color: #f3f4f4;
+    padding: 0.15em 0.35em;
+    border-radius: 3px;
     font-size: 0.9em;
 }
 
@@ -1093,6 +1204,11 @@ body, html {
 
     .chat-content-markdown {
         max-width: 100%;
+        padding: 18px 16px;
+    }
+
+    .chat-content-markdown :is(ul, ol) {
+        padding-left: 1.5em;
     }
 }
 /* --- 新增：历史记录折叠区样式 --- */
