@@ -235,6 +235,7 @@ async function callClaudeStreamingApi(response, wrapper, contentDiv, thinkTextar
                         thinkTextarea.previousElementSibling.style.display = 'flex';
                         thinkTextarea.style.display = 'block';
                         thinkTextarea.value += event.delta.thinking || '';
+                        resizeThinkTextarea(thinkTextarea);
                     } else if (event.delta?.type === 'signature_delta') {
                         block.signature = (block.signature || '') + (event.delta.signature || '');
                     } else if (event.delta?.type === 'input_json_delta') {

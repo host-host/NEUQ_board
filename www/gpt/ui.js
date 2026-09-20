@@ -193,6 +193,18 @@ function renderUserMessage(text) {
     return wrapper;
 }
 
+function resizeThinkTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function toggleThinking(header) {
+    const textarea = header.nextElementSibling;
+    const expanded = textarea.style.display === 'none';
+    textarea.style.display = expanded ? 'block' : 'none';
+    if (expanded) resizeThinkTextarea(textarea);
+}
+
 // 渲染 AI 消息气泡
 function renderAssistantMessage(text, reasoning = '') {
     const chatBox = document.getElementById('chatBox');
@@ -216,9 +228,7 @@ function renderAssistantMessage(text, reasoning = '') {
         const thinkTextarea = wrapper.querySelector('.chat-think');
         thinkTextarea.value = reasoning;
         thinkTextarea.style.display = 'none';
-        thinkHeader.onclick = () => {
-            thinkTextarea.style.display = thinkTextarea.style.display === 'none' ? 'block' : 'none';
-        };
+        thinkHeader.onclick = () => toggleThinking(thinkHeader);
     }
     chatBox.appendChild(wrapper);
     setupEditDelete(wrapper, 'assistant');
@@ -317,9 +327,7 @@ function renderToolCall(item, outputText = '', reasoning = '', traceText = '') {
         thinkTextarea.readOnly = true;
         thinkTextarea.value = reasoning;
         thinkTextarea.style.display = 'none';
-        thinkHeader.onclick = () => {
-            thinkTextarea.style.display = thinkTextarea.style.display === 'none' ? 'block' : 'none';
-        };
+        thinkHeader.onclick = () => toggleThinking(thinkHeader);
         wrapper.append(thinkHeader, thinkTextarea);
     }
     wrapper.appendChild(details);
@@ -336,7 +344,7 @@ function renderAssistantPlaceholder() {
     wrapper.dataset.raw = '';
 
     wrapper.innerHTML = `
-        <div class="think" style="display:none;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none';">▶ 正在思考...</div>
+        <div class="think" style="display:none;" onclick="toggleThinking(this)">▶ 正在思考...</div>
         <textarea class="chat-think" style="display:none;"></textarea>
         <div class="chat-content-markdown" style="display:none;"></div>
         <div class="contentcalc">
@@ -454,6 +462,7 @@ function setupEditDelete(wrapper, role) {
                     contentDiv.innerHTML = safeParseMarkdown(editTa.value);
                     editTa.style.display = 'none';
                     contentDiv.style.display = 'block';
+                    renderMathAndCode(contentDiv);
                     editBtn.innerHTML = '✏️ 修改';
                     isEditing = false;
                     const collapseBtn = wrapper.querySelector('.assistant-collapse-btn');

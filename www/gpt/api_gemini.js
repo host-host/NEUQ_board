@@ -169,6 +169,7 @@ async function callGeminiStreamingApi(response, wrapper, contentDiv, thinkTextar
                         thinkTextarea.previousElementSibling.style.display = 'flex';
                         thinkTextarea.style.display = 'block';
                         thinkTextarea.value += part.text;
+                        resizeThinkTextarea(thinkTextarea);
                     } else rawContent += part.text;
                 });
                 if (rawContent) {

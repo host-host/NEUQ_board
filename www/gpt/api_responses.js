@@ -220,7 +220,6 @@ async function callResponsesStreamingApi(response, wrapper, contentDiv, thinkTex
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
-        let thinkCounter = 0;
         let hasRenderedContent = false;
         while (true) {
             const {done, value} = await reader.read();
@@ -272,7 +271,7 @@ async function callResponsesStreamingApi(response, wrapper, contentDiv, thinkTex
                     if (thinkHeader) thinkHeader.style.display = 'flex';
                     thinkTextarea.style.display = 'block';
                     thinkTextarea.value += event.delta;
-                    if (++thinkCounter % 3 === 0) thinkTextarea.style.height = `${thinkTextarea.scrollHeight}px`;
+                    resizeThinkTextarea(thinkTextarea);
                 } else if (type === 'response.completed') {
                     responseId = eventResponse.id || responseId;
                     const tokens = eventResponse.usage?.output_tokens;

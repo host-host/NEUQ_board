@@ -49,7 +49,6 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let hasRenderedNormalContent = false;
-        let thinkCounter = 0;
         let buffer = '';
 
         while (true) {
@@ -97,7 +96,6 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
 
                             if (!hasRenderedNormalContent) {
                                 hasRenderedNormalContent = true;
-                                thinkTextarea.style.height = thinkTextarea.scrollHeight + 'px';
                                 thinkTextarea.style.display = 'none';
                                 const thinkHeader = thinkTextarea.previousElementSibling;
                                 if (thinkHeader) thinkHeader.textContent = `▶ 思考过程 (耗时 ${time} 秒)`;
@@ -109,7 +107,7 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
                             if (thinkHeader) thinkHeader.style.display = 'flex';
                             thinkTextarea.style.display = 'block';
                             thinkTextarea.value += reasoningContent;
-                            if (++thinkCounter % 3 == 0) thinkTextarea.style.height = thinkTextarea.scrollHeight + 'px';
+                            resizeThinkTextarea(thinkTextarea);
                         }
                     }
                 } catch (error) {
