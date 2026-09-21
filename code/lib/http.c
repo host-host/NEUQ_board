@@ -68,22 +68,31 @@ void* http_w(http_para* a){
     struct timeval timehttps={10,0};
     setsockopt(a->cl,SOL_SOCKET,SO_RCVTIMEO,(char*)&timehttps,sizeof(struct timeval));
     setsockopt(a->cl,SOL_SOCKET,SO_SNDTIMEO,(char*)&timehttps,sizeof(struct timeval));
-    a->get=(char*)malloc(50*1024*1000);
-    while(1){
-        int m=read(a->cl,a->get+n,50000000-n);
+    a->get=(char*)malloc(128*1024+1024);
+    while(a->get){
+        int m=read(a->cl,a->get+n,128*1024-n);
         if(m<=0)break;
         a->get[n+m]=0;
         char* t2=strstr(a->get+max(0,n-8),"\r\n\r\n");
         n+=m;
         if(t2){
-            int N=t2-a->get+4,M=0;
+            ll N=t2-a->get+4,M=0;
             char *t3=strstr(a->get,"\r\nContent-Length:");
             if(t3)M=readll(t3+15);
-            if(N+M<50000000)while(n<N+M){
+            if(N+M<256*1024*1024){
+                if(N+M>128*1024){
+                    char*tmp=malloc(N+M+1024);
+                    if(!tmp)break;
+                    memcpy(tmp,a->get,n);
+                    free(a->get);
+                    a->get=tmp;
+                }
+                while(n<N+M){
                     int m=read(a->cl,a->get+n,N+M-n);
                     if(m<=0)break;
                     a->get[n+=m]=0;
                 }
+            }
             if(n==N+M){
                 a->n=N;
                 a->m=M;
@@ -91,8 +100,8 @@ void* http_w(http_para* a){
                         (**(http_work*)((ll)a->f->p+i*16+8))(a);
                         break;
                     }
-                break;
             }
+            break;
         }
     }
     if(a->get)free(a->get);

@@ -67,16 +67,21 @@ body, html {
     transition: transform 0.3s ease;
 }
 
-.new-chat-btn {
+.new-chat-btn,
+.sidebar-console-link {
     width: 100%;
     padding: 12px;
     background: var(--primary-gradient);
     border: none;
     border-radius: 60px;
+    color: var(--text-dark);
     font-size: 14px;
     font-weight: bold;
+    line-height: 20px;
+    text-decoration: none;
     cursor: pointer;
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -84,8 +89,19 @@ body, html {
     margin-bottom: 20px;
 }
 
-.new-chat-btn:hover {
+.new-chat-btn:hover,
+.sidebar-console-link:hover {
     background-color: #f1f5f9;
+}
+
+.sidebar-console-link {
+    margin-bottom: 8px;
+}
+
+.new-chat-btn:focus-visible,
+.sidebar-console-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .history-list-container {
@@ -988,20 +1004,6 @@ body, html {
     color: var(--primary-color);
     background-color: var(--primary-light);
     transform: translateY(-1px);
-}
-
-.token-account-link {
-    display: block;
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-    color: var(--primary-color);
-    font-size: 14px;
-    text-decoration: none;
-}
-
-.token-account-link:hover {
-    text-decoration: underline;
 }
 
 /* 文档式阅读排版。低优先级继承覆盖站点通用字体，保留 KaTeX 自身的字体规则。 */

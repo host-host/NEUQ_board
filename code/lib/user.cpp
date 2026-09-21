@@ -1,5 +1,6 @@
 #include<math.h>
 #include<string>
+#include<time.h>
 #include"user.h"
 #include"ndb2.h"
 #include"mylib.h"
