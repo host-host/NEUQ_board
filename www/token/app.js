@@ -50,9 +50,10 @@
     function isImage(log) { return log?.isimage === true || Number(log?.isimage) === 1; }
     function charge(log) { return Math.ceil(Math.floor(numeric(log.used_tokens)) * numeric(log.multiply)); }
     function providerName(log) { return Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—'; }
-    function duration(value) {
+    function duration(value, allowZero = false) {
+        if (value == null) return '—';
         const seconds = Number(value);
-        return Number.isFinite(seconds) && seconds > 0 && seconds <= 1e6 ? Number(seconds.toFixed(2)).toString() : '—';
+        return Number.isFinite(seconds) && seconds >= 0 && (allowZero || seconds > 0) && seconds <= 1e6 ? Number(seconds.toFixed(2)).toString() : '—';
     }
     function tps(log) {
         return numeric(log.total) > 0 && numeric(log.total) <= 1e6 && numeric(log.output) > 0
@@ -752,7 +753,7 @@
                 button.addEventListener('blur', scheduleHideTokenDetail);
                 usage.append(button);
             }
-            row.append(time, model, usage, node('td', '', duration(image ? log.total : log.first)), node('td', '', tps(log)),
+            row.append(time, model, usage, node('td', '', duration(image ? log.total : log.first, !image)), node('td', '', tps(log)),
                 node('td', '', logPrice(log)), node('td', 'charged', money(creditsToYuan(charge(log)))));
             body.append(row);
         });
@@ -794,7 +795,7 @@
         const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '费用（人民币）']];
         state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
             numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache),
-            duration(isImage(log) ? log.total : log.first), tps(log), logPrice(log), money(creditsToYuan(charge(log)))]));
+            duration(isImage(log) ? log.total : log.first, !isImage(log)), tps(log), logPrice(log), money(creditsToYuan(charge(log)))]));
         const csv = rows.map(row => row.map(value => {
             let text = String(value);
             // Prevent spreadsheet formulas in server-supplied model/provider names.

@@ -147,7 +147,7 @@ async function processFile(file) {//处理上传的文件/图片核心逻辑
         const isImage = imageExtensions.includes(fileExtension);
 
         if (isImage) {
-            extractedContent = await compressImage(file, 900, 900, 0.8);
+            extractedContent = await compressImage(file, 1500, 1500, 0.8);
         } else {
             const arrayBufferForParsing = await file.arrayBuffer();
             if (fileExtension === '.pdf') {

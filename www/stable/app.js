@@ -1,5 +1,6 @@
 const BUCKET_COUNT = 3 * 24 * 4;
 const BUCKET_MS = 15 * 60 * 1000;
+const CNY_PER_USD = 7;
 
 const state = {
     items: [],
@@ -48,6 +49,69 @@ function formatAverage(total, count, unit) {
 function normalizeStatValue(value) {
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+function calculateOfficialCost(usage, official) {
+    if (!official || !['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude'].includes(official.format)) return null;
+    const lowestPrice = field => {
+        const values = [official[field]];
+        if (official.format === 'lengthdouble') values.push(official.newprice?.[field]);
+        if (official.format === 'claude' && field === 'makecache') values.push(official['makecache(1h)']);
+        const prices = values.filter(value => Number.isFinite(value) && value >= 0);
+        return prices.length ? Math.min(...prices) : null;
+    };
+    let quantities;
+    if (official.format === 'per' || official.format === 'token') {
+        if (lowestPrice('price') === null) return null;
+        quantities = {price: official.format === 'per' ? usage.s : usage.tokens};
+    } else {
+        if (lowestPrice('input') === null || lowestPrice('output') === null) return null;
+        // Claude 的输入不含缓存；其他协议的输入需扣除缓存，避免重复计费。
+        const input = official.format === 'claude' ? usage.input : Math.max(0, usage.input - usage.cache - usage.makecache);
+        quantities = {input, output: usage.output, cache: usage.cache, makecache: usage.makecache};
+    }
+    let amount = 0;
+    for (const [field, quantity] of Object.entries(quantities)) {
+        if (!quantity) continue;
+        const price = lowestPrice(field);
+        if (price === null) return null;
+        amount += quantity * price;
+    }
+    if (official.format !== 'per') amount /= 1000000;
+    return Number.isFinite(amount) ? {amount, currency: official.dollar === true ? 'USD' : 'CNY'} : null;
+}
+
+function formatMultiply(value) {
+    return Number.isFinite(value)
+        ? new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 6, useGrouping: false}).format(value)
+        : '--';
+}
+
+function formatOfficialCost(cost, includeCurrency = true) {
+    if (!cost) return '--';
+    const symbol = includeCurrency ? (cost.currency === 'USD' ? '$' : '¥') : '';
+    if (cost.amount > 0 && cost.amount < 0.000001) return `<${symbol}0.000001`;
+    return symbol + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 6}).format(cost.amount);
+}
+
+function calculateCostPerMillion(cost, multiply, tokens) {
+    if (!cost || !Number.isFinite(multiply) || multiply < 0 || !Number.isFinite(tokens) || tokens <= 0) return null;
+    const exchangeRate = cost.currency === 'USD' ? CNY_PER_USD : 1;
+    const amount = cost.amount * exchangeRate * multiply / tokens * 1000000;
+    return Number.isFinite(amount) ? {amount, currency: 'CNY'} : null;
+}
+
+function calculateModelTotalCost(model, items) {
+    let amount = 0;
+    let tokens = 0;
+    for (const item of items) {
+        if (item.model !== model || item.provider === 'auto') continue;
+        const cost = calculateOfficialCost(item, item.officialPrice);
+        if (!cost || !Number.isFinite(item.multiply) || item.multiply < 0) return null;
+        amount += cost.amount * (cost.currency === 'USD' ? CNY_PER_USD : 1) * item.multiply;
+        tokens += item.tokens;
+    }
+    return calculateCostPerMillion({amount, currency: 'CNY'}, 1, tokens);
 }
 
 function bucketLevel(bucket) {
@@ -118,7 +182,11 @@ function buildCatalog(config) {
         if (!Array.isArray(providers)) return;
         providers.forEach(provider => {
             if (typeof provider !== 'string') return;
-            catalog.push({model, provider, key: `${model}_${provider}`});
+            catalog.push({
+                model, provider, key: `${model}_${provider}`,
+                officialPrice: modelConfig.o_price,
+                multiply: provider === 'auto' ? modelConfig.auto?.multiply : config?.provider?.[provider]?.multiply
+            });
         });
     });
     return catalog;
@@ -287,6 +355,24 @@ function createProviderRow(item) {
     fragment.querySelector('.hour-rate').textContent = formatRate(item.hour.stable, item.hour.total);
     fragment.querySelector('.sample-count').textContent = formatNumber(item.total.total);
     fragment.querySelector('.failure-count').textContent = formatNumber(item.total.total - item.total.stable);
+    const officialCost = fragment.querySelector('.official-cost');
+    const cost = calculateOfficialCost(item, item.officialPrice);
+    officialCost.textContent = formatOfficialCost(cost);
+    officialCost.title = cost
+        ? `按当前官方单价和累计用量估算，无法区分的档位取较低价格；${cost.amount} ${cost.currency}`
+        : '官方价格未配置或不完整';
+    fragment.querySelector('.usage-multiply').textContent = formatMultiply(item.multiply);
+    const isAuto = item.provider === 'auto';
+    const costPerMillion = isAuto
+        ? calculateModelTotalCost(item.model, state.items)
+        : calculateCostPerMillion(cost, item.multiply, item.tokens);
+    fragment.querySelector('.usage-cost-label').textContent = isAuto ? '总成本¥/M tokens' : '成本¥/M tokens';
+    const costPerMillionElement = fragment.querySelector('.usage-cost-per-million');
+    costPerMillionElement.textContent = formatOfficialCost(costPerMillion, false);
+    costPerMillionElement.title = costPerMillion
+        ? `${costPerMillion.amount} ¥/M tokens；美元兑人民币汇率 ${CNY_PER_USD}`
+        : isAuto ? '同名模型的非 auto 渠道官方费用或 multiply 未配置，或累计 Token 总量为 0'
+            : '官方费用或 multiply 未配置，或 Token 总量为 0';
     const usageFields = [
         ['.usage-s', item.s],
         ['.usage-input', item.input],

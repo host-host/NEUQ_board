@@ -46,9 +46,10 @@ function formatTime(value) {
     }).format(date);
 }
 
-function formatDuration(value) {
+function formatDuration(value, allowZero = false) {
+    if (value == null) return '-';
     const seconds = Number(value);
-    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1e6) return '-';
+    if (!Number.isFinite(seconds) || seconds < 0 || (!allowZero && seconds === 0) || seconds > 1e6) return '-';
     return Number(seconds.toFixed(2));
 }
 
@@ -199,7 +200,7 @@ function renderRows(items) {
         appendTextCell(row, log.model || '-', 'model-cell');
         appendTextCell(row, Number(log.isauto) === 1 ? `auto(${log.provider || '-'})` : log.provider || '-');
         appendUsageCell(row, log);
-        appendTextCell(row, image ? '-' : formatDuration(log.first));
+        appendTextCell(row, image ? '-' : formatDuration(log.first, true));
         appendTextCell(row, formatDuration(log.total));
         appendTextCell(row, formatTps(log));
         appendTextCell(row, formatTokens(Math.ceil(used * multiply)));

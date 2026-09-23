@@ -54,15 +54,17 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("output",(double)log.output);
     item.insert("cache",(double)log.cache);
     item.insert("makecache",(double)log.makecache);
-    long long first,total;
+    double first=-1;
+    long long total;
     if(log.start>0){
-        first=(log.first-log.start)/1000000000LL;
+        if(log.first>=log.start)first=(log.first-log.start)/1000000000.0;
         total=(log.end-log.start)/1000000000LL;
     }else{
-        first=log.first_deprecated;
+        if(log.first_deprecated>0)first=log.first_deprecated;
         total=log.total_deprecated;
     }
-    item.insert("first",(double)(first>0?first:0));
+    if(first>=0)item.insert("first",first);
+    else item.insert("first",(const char*)0);
     item.insert("total",(double)(total>0?total:0));
     item.insert("multiply",log.multiply);
     item.insert("time",(double)log.time);

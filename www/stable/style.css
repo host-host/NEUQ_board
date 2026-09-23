@@ -44,7 +44,7 @@ button { color: inherit; }
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 0 max(20px, calc((100vw - 1440px) / 2));
+    padding: 0 20px;
     background: var(--surface);
     border-bottom: 1px solid var(--line);
     position: sticky;
@@ -113,7 +113,7 @@ button { color: inherit; }
 .summary-band { background: var(--surface); border-bottom: 1px solid var(--line); }
 
 .summary-inner {
-    width: min(1440px, calc(100% - 40px));
+    width: calc(100% - 40px);
     min-height: 126px;
     margin: 0 auto;
     display: flex;
@@ -152,7 +152,7 @@ button { color: inherit; }
 .summary-metrics dt, .provider-metrics dt { color: var(--muted); font-size: 12px; }
 .summary-metrics dd { margin: 6px 0 0; font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; }
 
-.workspace { width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 48px; }
+.workspace { width: calc(100% - 40px); margin: 0 auto; padding: 24px 0 48px; }
 
 .toolbar {
     display: grid;
@@ -263,12 +263,12 @@ button { color: inherit; }
 .provider-detail {
     min-width: 956px;
     display: grid;
-    grid-template-columns: minmax(340px, max-content) minmax(600px, 1fr);
+    grid-template-columns: max-content minmax(600px, 1fr);
     gap: 16px;
     align-items: center;
 }
 .provider-usage {
-    min-width: 0;
+    min-width: 340px;
     margin: 0;
     padding: 2px 16px 2px 0;
     display: grid;
@@ -332,6 +332,11 @@ button { color: inherit; }
 
 @keyframes rotate { to { transform: rotate(360deg); } }
 
+@media (max-width: 1560px) {
+    .provider-row { grid-template-columns: 1fr; }
+    .provider-overview { border-right: 0; border-bottom: 1px solid var(--line); }
+}
+
 @media (max-width: 980px) {
     .summary-inner { align-items: stretch; flex-direction: column; gap: 18px; padding: 25px 0; }
     .summary-metrics { width: 100%; }
@@ -339,8 +344,6 @@ button { color: inherit; }
     .toolbar { grid-template-columns: 1fr auto; }
     .search-control { max-width: none; }
     .segment-control { grid-column: 1 / -1; grid-row: 2; width: max-content; max-width: 100%; overflow-x: auto; }
-    .provider-row { grid-template-columns: 1fr; }
-    .provider-overview { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 
 @media (max-width: 640px) {

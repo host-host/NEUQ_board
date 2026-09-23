@@ -103,6 +103,7 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
         if(!tmp.empty())ans->append[0]["content"]=ans->append[0]["content"].valuestring()+tmp;
         cppJSON tool_calls=delta["tool_calls"];
         if(tool_calls.IsArray()){//此处未验证过
+            gpt6_mark_first(ans);
             if(!ans->append[0]["tool_calls"].IsArray())ans->append[0].insert("tool_calls",cppJSON("[]"));
             cppJSON calls=ans->append[0]["tool_calls"];
             for(cppJSON item:tool_calls){

@@ -132,15 +132,18 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
-        long long first,total;
+        double first=-1;
+        long long total;
         if(logs->a[i].start>0){
-            first=(logs->a[i].first-logs->a[i].start)/1000000000LL;
+            if(logs->a[i].first>=logs->a[i].start)
+                first=(logs->a[i].first-logs->a[i].start)/1000000000.0;
             total=(logs->a[i].end-logs->a[i].start)/1000000000LL;
         }else{
-            first=logs->a[i].first_deprecated;
+            if(logs->a[i].first_deprecated>0)first=logs->a[i].first_deprecated;
             total=logs->a[i].total_deprecated;
         }
-        item.insert("first",(double)(first>0?first:0));
+        if(first>=0)item.insert("first",first);
+        else item.insert("first",(const char*)0);
         item.insert("total",(double)(total>0?total:0));
         item.insert("multiply",logs->a[i].multiply);
         item.insert("time",(double)logs->a[i].time);
