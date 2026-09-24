@@ -188,6 +188,8 @@ main:has(#credentialsPage:not([hidden]), #modelsPage:not([hidden]), #historyPage
 .search-field { display: flex; align-items: center; gap: 9px; padding: 7px 12px; color: #57534e; border: 1px solid var(--line); border-radius: 7px; background: var(--background); }
 .search-field input { min-width: 0; width: 160px; background: transparent; border: 0; font-size: 14px; color: var(--ink); padding: 3px 0; }
 input::placeholder { color: var(--muted); }
+.provider-recommendation { display: flex; align-items: baseline; gap: 8px; margin: -8px 28px 20px; padding: 10px 13px; border: 1px solid #fed7aa; border-radius: 7px; background: var(--accent-soft); color: #57534e; font-size: 13px; line-height: 1.7; }
+.provider-recommendation strong { color: var(--accent-hover); font-weight: 600; white-space: nowrap; }
 .provider-tabs { display: flex; align-items: center; gap: 23px; padding: 0 28px; border-bottom: 1px solid var(--line); }
 .provider-tabs button { padding: 0 0 13px; background: transparent; font-size: 14px; color: #57534e; border-bottom: 2px solid transparent; }
 .provider-tabs button.active { color: var(--accent-hover); border-bottom-color: var(--accent); }
@@ -202,6 +204,9 @@ input::placeholder { color: var(--muted); }
 .model-price-button { display: inline-grid; place-items: center; flex-shrink: 0; width: 22px; height: 26px; padding: 0; background: transparent; color: #57534e; font-size: 12px; }
 .model-price-button:hover, .model-price-button[aria-expanded="true"] { color: var(--accent-hover); }
 .model-price-info { display: inline-grid; place-items: center; width: 13px; height: 13px; border: 1px solid currentColor; border-radius: 50%; font: 10px/1 Georgia, serif; }
+.model-log-button { display: inline-grid; place-items: center; flex-shrink: 0; width: 22px; height: 26px; margin-left: auto; padding: 0; background: transparent; color: #b45309; cursor: help; }
+.model-log-button:hover, .model-log-button:focus-visible { color: #92400e; }
+.model-log-icon { width: 16px; height: 16px; fill: var(--accent-soft); stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .provider-select { min-width: 0; width: 100%; padding: 8px 7px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 14px; }
 .stability-bars { height: 20px; display: grid; grid-template-columns: repeat(12, 1fr); align-items: end; gap: 1px; }
 .stability-bar { height: 100%; min-height: 2px; border-radius: 2px 2px 0 0; background: #4d9f72; }
@@ -262,6 +267,7 @@ dialog::backdrop { background: #1c191755; backdrop-filter: blur(3px); }
 .small-dialog > p.error-text { color: var(--danger); margin-top: 10px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
 .token-tooltip { position: fixed; top: 0; left: 0; z-index: 60; width: 240px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; padding: 14px 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 8px 28px #1c191718; }
+.model-log-tooltip { position: fixed; top: 0; left: 0; z-index: 60; width: max-content; max-width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); box-shadow: 0 8px 28px #1c191718; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .token-detail-list { margin: 0; }
 .token-detail-list > div { display: flex; justify-content: space-between; gap: 20px; padding: 5px 0; font-size: 14px; }
 .token-detail-list > div:last-child { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; }
@@ -364,6 +370,7 @@ dialog::backdrop { background: #1c191755; backdrop-filter: blur(3px); }
     .provider-heading { padding: 20px; flex-wrap: wrap; gap: 17px; }
     .search-field { width: 100%; }
     .search-field input { width: 100%; }
+    .provider-recommendation { align-items: flex-start; flex-wrap: wrap; margin: -5px 20px 16px; padding: 9px 11px; gap: 2px 8px; }
     .provider-tabs { padding: 0 20px; gap: 18px; flex-wrap: wrap; }
     .provider-tabs > span { width: 100%; margin: -12px 0 0; padding-bottom: 9px; }
     .provider-footer { padding: 13px 20px; flex-wrap: wrap; gap: 10px; }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>渠道测试 - NEUQ Board</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/stable/style.css?v=0921v5">
+    <link rel="stylesheet" href="/stable/test/style.css?v=0923v3">
+    <script src="/auth.js?v=0910v2" defer></script>
+    <script src="/stable/test/runner.js?v=0923v1" defer></script>
+    <script src="/stable/test/app.js?v=0923v3" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="返回 NEUQ Board 首页"><img src="/newintown.png" alt="NEUQ Board"></a>
+        <div class="topbar-title"><strong>渠道测试</strong><span>串行执行</span></div>
+        <nav class="topbar-actions" aria-label="相关页面">
+            <a class="admin-link" href="/stable/">稳定性</a>
+            <a class="admin-link" href="/token/#models">模型广场</a>
+        </nav>
+    </header>
+
+    <main class="test-workspace">
+        <div class="page-heading">
+            <div><h1>同一个问题，逐个测试渠道</h1><p>选择模型和渠道，用预期 Answer 检查各渠道的实际回复。</p></div>
+            <button id="refreshButton" class="button" type="button">刷新模型</button>
+        </div>
+        <div id="notice" class="test-notice" role="status">正在加载模型与账户…</div>
+        <a id="loginLink" class="button login-link" href="/login/" hidden>登录后测试</a>
+
+        <form id="testForm">
+            <section class="test-panel" aria-labelledby="settingsHeading">
+                <h2 id="settingsHeading">测试设置</h2>
+                <div class="model-fields">
+                    <div class="field model-field">
+                        <label for="modelSelect">模型</label>
+                        <select id="modelSelect" required disabled><option value="">正在加载…</option></select>
+                    </div>
+                    <div class="model-meta"><span id="modelFormat">—</span><span id="currentProvider">当前渠道：—</span></div>
+                </div>
+                <div class="prompt-fields">
+                    <div class="field">
+                        <label for="questionInput">问题</label>
+                        <textarea id="questionInput" rows="5" placeholder="输入每个渠道都要回答的同一个问题" required disabled></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="answerInput">预期 Answer</label>
+                        <textarea id="answerInput" rows="5" placeholder="输入需要在回复中精确出现的文字" aria-describedby="matchHelp" required disabled spellcheck="false"></textarea>
+                        <span id="matchHelp" class="field-help">按原文子串匹配，区分大小写，保留空格和换行；不匹配思考内容。</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="test-panel channels-panel" aria-labelledby="channelsHeading">
+                <div class="panel-heading">
+                    <div><h2 id="channelsHeading">渠道与测试结果</h2><p id="selectionSummary">正在加载渠道…</p></div>
+                    <div class="test-actions">
+                        <button id="stopButton" class="button" type="button" hidden>完成当前后停止</button>
+                        <button id="startButton" class="button button-primary" type="submit" disabled>开始测试</button>
+                    </div>
+                </div>
+                <p class="routing-note">每次先切换账户渠道，再发送独立提问，等待回复结束后继续。测试结束或停止后自动切回 auto 渠道；测试期间请勿在其他页面切换此模型渠道。</p>
+                <div id="runProgress" class="run-progress" hidden>
+                    <div><span id="progressText" role="status"></span><span id="resultSummary"></span></div>
+                    <progress id="progressBar" value="0" max="1" aria-label="测试进度"></progress>
+                </div>
+                <div class="table-scroll" tabindex="0" aria-label="渠道测试结果，可横向滚动">
+                    <table>
+                        <thead><tr>
+                            <th class="checkbox-cell"><input id="selectAll" type="checkbox" aria-label="全选可用渠道" disabled></th>
+                            <th>渠道</th><th>状态</th><th>精确匹配</th><th>回复 Answer</th>
+                            <th class="numeric" title="从发送请求到收到首个输出，含思考内容">延迟 (s)</th>
+                            <th class="numeric" title="输出 Tokens / 请求总耗时（秒）">TPS</th>
+                            <th class="numeric">输出 Tokens</th>
+                            <th class="numeric" title="渠道配置中的 multiply">multiple</th>
+                        </tr></thead>
+                        <tbody id="channelRows"></tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="test-empty" hidden>该模型没有非 auto 渠道。</div>
+                <p class="metrics-help">延迟为首个输出（含思考）的等待时间；TPS = 输出 Tokens ÷ 请求总耗时。输出 Tokens 来自接口用量，缺失时显示「—」；非流式回复无法测量首个输出延迟。multiple 为渠道配置的 multiply。</p>
+                <p id="storageStatus" class="metrics-help" role="status">结果按模型与渠道保存在此浏览器，每个组合保留最近一次测试；刷新页面后可继续查看。</p>
+            </section>
+        </form>
+    </main>
+</body>
+</html>

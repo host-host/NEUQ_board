@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0920v7">
+    <link rel="stylesheet" href="style.css?v=0927v1">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=0921v1" defer></script>
+    <script src="app.js?v=0924v3" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -21,6 +21,7 @@
         <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="3"/><path d="M15 4V3H3v12h1"/></symbol>
         <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
         <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9 21h6"/></symbol>
+        <symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M10.3 3.9 2.1 18a2 2 0 0 0 1.7 3h16.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
         <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
         <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v12H6a3 3 0 0 1-3-3V6"/><path d="M21 12h-6v5h6m-3-2.5h.01"/></symbol>
         <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15v-4m5 4V6m5 9V9"/></symbol>
@@ -123,6 +124,7 @@
             <section id="modelsPage" class="page-section" aria-label="模型广场" hidden>
                 <section class="panel provider-panel" aria-labelledby="providerTitle">
                     <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>为每个模型选择服务商，选择后自动保存。</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
+                    <div class="provider-recommendation" role="note"><strong>推荐选择 auto 渠道</strong><span>我们主要保证 auto 渠道的稳定性</span></div>
                     <div class="provider-tabs" role="group" aria-label="模型类型"><button class="active" type="button" data-model-type="text" aria-pressed="true">文本模型 <span id="textModelCount">0</span></button><button type="button" data-model-type="image" aria-pressed="false">图像模型 <span id="imageModelCount">0</span></button><span id="providerBilling">单价：¥/M tokens</span></div>
                     <div id="providerState" class="state-message" role="status">正在加载模型…</div>
                     <div class="provider-table" id="providerTable" hidden>
@@ -151,6 +153,7 @@
     <dialog id="noticeDialog" aria-labelledby="noticeDialogTitle"><div class="dialog-heading"><div><p class="eyebrow">ANNOUNCEMENTS</p><h2 id="noticeDialogTitle">全部公告</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭公告"><svg class="icon"><use href="#i-close"/></svg></button></div><ul id="allNoticeList" class="notice-list"></ul></dialog>
     <dialog id="rotateDialog" class="small-dialog" aria-labelledby="rotateTitle" aria-describedby="rotateDescription"><div class="dialog-heading"><h2 id="rotateTitle">重置 API Key</h2><button class="icon-button" type="button" data-close-dialog aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div><p id="rotateDescription">重置后，旧密钥将立即失效。使用旧密钥的应用需要更新为新密钥。</p><p id="rotateError" class="error-text" role="alert" hidden></p><div class="dialog-actions"><button class="button button-white" type="button" data-close-dialog autofocus>取消</button><button id="confirmRotate" class="button button-danger" type="button">确认重置</button></div></dialog>
     <div id="tokenTooltip" class="token-tooltip" role="tooltip" hidden><dl id="tokenDetailList" class="token-detail-list"></dl></div>
+    <div id="modelLogTooltip" class="model-log-tooltip" role="tooltip" hidden></div>
     <div id="pricePopover" class="price-popover" role="dialog" aria-modal="false" aria-labelledby="pricePopoverTitle" hidden>
         <div class="price-popover-heading"><h2 id="pricePopoverTitle"></h2><button id="closePricePopover" class="icon-button" type="button" aria-label="关闭价格详情"><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div>
         <section class="site-price-section" aria-labelledby="sitePriceTitle">

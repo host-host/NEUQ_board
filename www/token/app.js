@@ -24,6 +24,8 @@
     let searchTimer;
     let tokenTooltipTimer;
     let tokenTooltipTarget;
+    let modelLogTooltipTimer;
+    let modelLogTooltipTarget;
     let pricePopoverTimer;
     let pricePopoverTarget;
     let pricePopoverPinned = false;
@@ -325,10 +327,10 @@
         if (!perToken && price !== null && typeof price === 'object') return '其他计费';
         const base = perToken ? price[0] : price;
         if (!Number.isFinite(base) || base < 0 || !Number.isFinite(multiplier) || multiplier < 0) return '价格未配置';
-        const value = perToken ? base * .75 * multiplier / .3 : base / .3 * 1000000 * multiplier;
+        const value = perToken ? base * 1 * multiplier / .3 : base / .3 * 1000000 * multiplier;
         if (!Number.isFinite(value)) return '价格未配置';
         const amount = perToken ? money(value * CNY_PER_MILLION_CREDITS) : money(creditsToYuan(Math.ceil(value)));
-        const unit = perToken ? '/M tokens' : '/次';
+        const unit = perToken ? ' /M tokens' : ' /次';
         return unitAfter ? `${amount.replace('¥', '')} ¥${unit}` : `${amount}${unit}`;
     }
     function renderOfficialPrice(official) {
@@ -428,6 +430,7 @@
         clearTimeout(pricePopoverTimer);
         if (pricePopoverTarget !== target) hidePricePopover();
         hideTokenDetail();
+        hideModelLog();
         pricePopoverTarget = target;
         target.setAttribute('aria-expanded', 'true');
         $('pricePopoverTitle').textContent = target.dataset.model;
@@ -475,8 +478,55 @@
         });
         return button;
     }
+    function hideModelLog() {
+        clearTimeout(modelLogTooltipTimer);
+        $('modelLogTooltip').hidden = true;
+        modelLogTooltipTarget?.removeAttribute('aria-describedby');
+        modelLogTooltipTarget = null;
+    }
+    function scheduleHideModelLog() {
+        clearTimeout(modelLogTooltipTimer);
+        modelLogTooltipTimer = setTimeout(() => {
+            if (!modelLogTooltipTarget?.matches(':hover, :focus-visible') && !$('modelLogTooltip').matches(':hover')) hideModelLog();
+        }, 180);
+    }
+    function showModelLog(target, log) {
+        hideModelLog();
+        hidePricePopover();
+        modelLogTooltipTarget = target;
+        target.setAttribute('aria-describedby', 'modelLogTooltip');
+        const tooltip = $('modelLogTooltip');
+        tooltip.textContent = log;
+        tooltip.hidden = false;
+        const anchor = target.getBoundingClientRect();
+        const bounds = tooltip.getBoundingClientRect();
+        const margin = 12;
+        const gap = 8;
+        const top = anchor.top - bounds.height - gap;
+        tooltip.style.left = `${Math.max(margin, Math.min(anchor.right - bounds.width, innerWidth - bounds.width - margin))}px`;
+        tooltip.style.top = `${Math.max(margin, Math.min(top >= margin ? top : anchor.bottom + gap, innerHeight - bounds.height - margin))}px`;
+    }
+    function createModelLogButton(name, log) {
+        const button = node('button', 'model-log-button');
+        button.type = 'button';
+        button.setAttribute('aria-label', `查看 ${name} 的模型说明`);
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.classList.add('model-log-icon');
+        icon.setAttribute('aria-hidden', 'true');
+        const shape = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        shape.setAttribute('href', '#i-alert-triangle');
+        icon.append(shape);
+        button.append(icon);
+        button.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') showModelLog(button, log); });
+        button.addEventListener('pointerleave', scheduleHideModelLog);
+        button.addEventListener('focus', () => { if (button.matches(':focus-visible')) showModelLog(button, log); });
+        button.addEventListener('blur', scheduleHideModelLog);
+        button.addEventListener('click', () => showModelLog(button, log));
+        return button;
+    }
     function renderProviders() {
         hidePricePopover();
+        hideModelLog();
         state.stabilityRequest++;
         const rows = $('providerRows');
         rows.replaceChildren();
@@ -503,6 +553,7 @@
             const info = node('div', 'model-info');
             info.append(node('span', 'model-name', name));
             if (officialPriceFormats.has(config.o_price?.format)) info.append(createPriceButton(name));
+            if (typeof config.log === 'string' && config.log.trim()) info.append(createModelLogButton(name, config.log));
             const select = node('select', 'provider-select');
             select.dataset.model = name;
             select.setAttribute('aria-label', `${name} Provider`);
@@ -828,6 +879,7 @@
     function route() {
         hideTokenDetail();
         hidePricePopover();
+        hideModelLog();
         setAccountMenu(false);
         const requested = location.hash.slice(1);
         const page = Object.hasOwn(pages, requested) ? requested : 'overview';
@@ -892,6 +944,7 @@
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape') hideTokenDetail();
         if (event.key === 'Escape') closePricePopover();
+        if (event.key === 'Escape') hideModelLog();
         if (event.key === 'Escape' && !$('accountDropdown').hidden) {
             setAccountMenu(false);
             $('userMenuToggle').focus();
@@ -944,6 +997,8 @@
     $('exportLogs').addEventListener('click', exportLogs);
     $('tokenTooltip').addEventListener('mouseenter', () => clearTimeout(tokenTooltipTimer));
     $('tokenTooltip').addEventListener('mouseleave', scheduleHideTokenDetail);
+    $('modelLogTooltip').addEventListener('pointerenter', () => clearTimeout(modelLogTooltipTimer));
+    $('modelLogTooltip').addEventListener('pointerleave', scheduleHideModelLog);
     $('closePricePopover').addEventListener('click', closePricePopover);
     $('pricePopover').addEventListener('pointerenter', () => clearTimeout(pricePopoverTimer));
     $('pricePopover').addEventListener('pointerleave', scheduleHidePricePopover);
@@ -961,7 +1016,10 @@
     document.addEventListener('pointerdown', event => {
         if (!event.target.closest('.token-button, #tokenTooltip')) hideTokenDetail();
         if (!event.target.closest('.model-price-button, #pricePopover')) hidePricePopover();
+        if (!event.target.closest('.model-log-button, #modelLogTooltip')) hideModelLog();
     });
+    window.addEventListener('scroll', event => { if (!$('modelLogTooltip').contains(event.target)) hideModelLog(); }, true);
+    window.addEventListener('resize', hideModelLog);
     window.addEventListener('scroll', event => { if (!$('pricePopover').contains(event.target)) hidePricePopover(); }, true);
     window.addEventListener('resize', hidePricePopover);
     window.addEventListener('scroll', hideTokenDetail, true);
