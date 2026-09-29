@@ -143,11 +143,12 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
 void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
     auto f=[](gpt6_ret* ans,cppJSON usage){
         if(!usage.IsObject())return;
-        ans->input=max(ans->input,usage["input_tokens"].valuedouble());
+        ll input=max(ans->input-ans->cache-ans->makecache,usage["input_tokens"].valuedouble());
         ans->output=max(ans->output,usage["output_tokens"].valuedouble());
         ans->cache=max(ans->cache,usage["cache_read_input_tokens"].valuedouble());
         ans->makecache=max(ans->makecache,usage["cache_creation_input_tokens"].valuedouble());
-        ans->used_tokens=ans->input+ans->output+ans->cache;
+        ans->input=input+ans->cache+ans->makecache;
+        ans->used_tokens=ans->input+ans->output;
     };
     if(issse&&tmp.find("data: ")==0){
         cppJSON res(tmp.data()+6),append,tmp;
@@ -315,7 +316,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
         return ans;
     }
     char curl_error[CURL_ERROR_SIZE]={0};
-    string Authorization=conf["Authorization"],url=conf["url"],mm;
+    string Authorization=conf["Authorization"],url=conf["url"],mm,proxy=conf["proxy"];
     struct curl_slist* headers=curl_slist_append(0,"Content-Type: application/json");
     if(strcmp(format,"responses")==0||strcmp(format,"completions")==0||strcmp(format,"image")==0)Authorization="Authorization: Bearer "+Authorization;
     if(strcmp(format,"claude")==0)Authorization="x-api-key: "+Authorization;
@@ -347,6 +348,10 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT,60L);
     curl_easy_setopt(curl,CURLOPT_TIMEOUT,3600L);
     curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1L);
+    if(!proxy.empty()){
+        curl_easy_setopt(curl,CURLOPT_PROXY,proxy.c_str());
+        curl_easy_setopt(curl,CURLOPT_NOPROXY,"");
+    }
     ans.curlcode=curl_easy_perform(curl);
     ans.end_ns=gpt6_now_ns();
     if(!ans.issse)gpt6body(0,0,0,&ans);

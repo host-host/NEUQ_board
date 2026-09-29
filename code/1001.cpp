@@ -10,7 +10,7 @@
 #include<cstring>
 #include <pthread.h>
 void other(http_para* a){
-    LOG("%s\n",a->get);
+    http_send(a,H404 Hc0 Htxt,"Not Found",0);
 }
 void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
     a->get[a->n]=0;
@@ -43,8 +43,8 @@ int main() {
     http_add(&a,"POST /api/gpt5_model_list ",gpt5_model_list);
     http_add(&a,"POST /api/gpt5_askstable ",gpt5_askstable);
 
-    http_add(&a,"GET /v1/models ",gpt5_models);
-    http_add(&a,"GET /v1/models?",gpt5_models);
+    // http_add(&a,"GET /v1/models ",gpt5_models);
+    // http_add(&a,"GET /v1/models?",gpt5_models);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
     http_add(&a,"POST /v1/responses?",gpt5_responses);
@@ -78,6 +78,6 @@ int main() {
     http_add(&a,"POST /api/gpt5_history_delete ",gpt5_history_delete);
     http_add(&a,"POST /api/gpt5_share ",gpt5_share);
     http_add(&a,"GET /api/stop ",apistop);
-    // http_add(&a,"",other);
+    http_add(&a,"",other);
     return http_start(&a,INADDR_LOOPBACK,1001);//INADDR_ANY
 }

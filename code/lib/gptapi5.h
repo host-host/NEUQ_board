@@ -28,13 +28,16 @@ struct reslog{
     double multiply;
     long long time;
     long long input,output,cache,makecache;
-    time_t first_deprecated,total_deprecated;
+    long long deprecated1,deprecated2;
     long long start,first,last,end;
     int isimage;//其实含义已经变成了计费方式，0按总token 1按次
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
     char info[128];
     char isauto;
-    char other[256-4*sizeof(long long)-2*sizeof(time_t)-4*sizeof(long long)-2*sizeof(int)-128-1];//保留为未来增加功能
+    char other1,other2;//保留
+    char isswitch;//1表示本次请求为auto请求并且失败了被下一个渠道自动切换
+    long long useage;//事实扣费数额
+    char other[256-4*sizeof(long long)-2*sizeof(long long)-4*sizeof(long long)-2*sizeof(int)-128-4-sizeof(long long)-4];//保留为未来增加功能，末尾减4计入useage前的对齐填充
 };
 struct reslogs{
     int lock,n;

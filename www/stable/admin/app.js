@@ -64,6 +64,13 @@ function isImageLog(log) {
     return log?.isimage === true || Number(log?.isimage) === 1;
 }
 
+function chargedUsage(log) {
+    if (Object.hasOwn(log, 'useage')) return log.useage;
+    const used = Math.max(0, Math.floor(Number(log.used_tokens) || 0));
+    const multiply = Math.max(0, Number(log.multiply) || 0);
+    return Math.ceil(used * multiply);
+}
+
 function hideTokenBreakdown() {
     tokenTooltip.hidden = true;
 }
@@ -191,19 +198,18 @@ function renderRows(items) {
     body.replaceChildren();
     for (const log of items) {
         const image = isImageLog(log);
-        const used = Math.max(0, Math.floor(Number(log.used_tokens) || 0));
-        const multiply = Math.max(0, Number(log.multiply) || 0);
         const row = document.createElement('tr');
         appendTextCell(row, formatTime(log.time));
         appendUserCell(row, log);
         appendStatusCell(row, log.stable);
         appendTextCell(row, log.model || '-', 'model-cell');
-        appendTextCell(row, Number(log.isauto) === 1 ? `auto(${log.provider || '-'})` : log.provider || '-');
+        const provider = Number(log.isauto) === 1 ? `auto(${log.provider || '-'})` : log.provider || '-';
+        appendTextCell(row, Number(log.isswitch) === 1 ? `${provider}（已切换）` : provider);
         appendUsageCell(row, log);
         appendTextCell(row, image ? '-' : formatDuration(log.first, true));
         appendTextCell(row, formatDuration(log.total));
         appendTextCell(row, formatTps(log));
-        appendTextCell(row, formatTokens(Math.ceil(used * multiply)));
+        appendTextCell(row, formatTokens(chargedUsage(log)));
         appendInfoCell(row, log.info);
         body.appendChild(row);
     }

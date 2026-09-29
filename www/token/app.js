@@ -50,8 +50,14 @@
             : `${money(numeric(log.multiply) * CNY_PER_MILLION_CREDITS)}/M tokens`;
     }
     function isImage(log) { return log?.isimage === true || Number(log?.isimage) === 1; }
-    function charge(log) { return Math.ceil(Math.floor(numeric(log.used_tokens)) * numeric(log.multiply)); }
-    function providerName(log) { return Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—'; }
+    function charge(log) {
+        return Object.hasOwn(log, 'useage') ? numeric(log.useage)
+            : Math.ceil(Math.floor(numeric(log.used_tokens)) * numeric(log.multiply));
+    }
+    function providerName(log) {
+        const name = Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—';
+        return Number(log.isswitch) === 1 ? `${name}（已切换）` : name;
+    }
     function duration(value, allowZero = false) {
         if (value == null) return '—';
         const seconds = Number(value);
@@ -270,7 +276,7 @@
         $('quotaProgress').classList.toggle('exhausted', ready && remaining === 0);
         if (ready) $('quotaProgress').setAttribute('aria-valuenow', String(Math.min(100, percent)));
         else $('quotaProgress').removeAttribute('aria-valuenow');
-        $('quotaNote').textContent = ready && remaining === 0 ? '当前余额为 ¥0.00，请留意账户余额。' : '金额单位为人民币；文本模型按 Token 计费，图像模型按次计费。';
+        $('quotaNote').textContent = ready && remaining === 0 ? '当前余额为 ¥0.00，请留意账户余额。' : '金额单位为人民币';
     }
     async function loadModels() {
         const id = ++state.modelRequest;

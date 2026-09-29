@@ -66,8 +66,8 @@ function calculateOfficialCost(usage, official) {
         quantities = {price: official.format === 'per' ? usage.s : usage.tokens};
     } else {
         if (lowestPrice('input') === null || lowestPrice('output') === null) return null;
-        // Claude 的输入不含缓存；其他协议的输入需扣除缓存，避免重复计费。
-        const input = official.format === 'claude' ? usage.input : Math.max(0, usage.input - usage.cache - usage.makecache);
+        // 后端统一返回包含缓存读写的总输入，普通输入按扣除缓存后的数量计价。
+        const input = Math.max(0, usage.input - usage.cache - usage.makecache);
         quantities = {input, output: usage.output, cache: usage.cache, makecache: usage.makecache};
     }
     let amount = 0;

@@ -21,6 +21,7 @@
 #include <curl/curl.h>
 #include <vector>
 using namespace std;
+static_assert(sizeof(reslog)==376,"reslog size error");
 #define CONFIG "/web/res/pri/gpt4.json"
 #define GPT5_TOKEN_C 1
 #define ll long long
@@ -133,26 +134,25 @@ void gpt5_log_list(http_para* a) {
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
         double first=-1;
-        long long total;
+        long long total=0;
         if(logs->a[i].start>0){
             if(logs->a[i].first>=logs->a[i].start)
                 first=(logs->a[i].first-logs->a[i].start)/1000000000.0;
             total=(logs->a[i].end-logs->a[i].start)/1000000000LL;
-        }else{
-            if(logs->a[i].first_deprecated>0)first=logs->a[i].first_deprecated;
-            total=logs->a[i].total_deprecated;
         }
         if(first>=0)item.insert("first",first);
         else item.insert("first",(const char*)0);
         item.insert("total",(double)(total>0?total:0));
         item.insert("multiply",logs->a[i].multiply);
+        item.insert("isswitch",logs->a[i].isswitch==1);
+        item.insert("useage",(double)logs->a[i].useage);
         item.insert("time",(double)logs->a[i].time);
         item.insert("isauto",(double)logs->a[i].isauto);
         ans.push_back(std::move(item));
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply,bool isimage=false,bool isauto=false) {
+static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,double multiply,long long useage,bool isimage=false,bool isauto=false,bool isswitch=false) {
     reslogs* logs;
     retry:
     logs=(reslogs*)ndb2_got(log_db,p->userid,0);
@@ -178,6 +178,8 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item.isimage=isimage?1:0;
     item.stable=b.stable;
     item.isauto=isauto;
+    item.isswitch=isswitch?1:0;
+    item.useage=useage;
     memcpy(item.info,b.info.data(),min(b.info.size(),sizeof(item.info)-1));
     UNLOCK(logs->lock);
 }
@@ -328,6 +330,25 @@ void gpt5_add(string a,bool stable,gpt6_ret* b){
     }
     UNLOCK(c->lock);
 }
+static bool gpt5_should_skip(const string& key) {
+    stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),0);
+    if(!cc||(unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))return false;
+    LOCK(&cc->lock);
+    int t=time(0)/(15*60);
+    bool skip=true;
+    for(int window=0;window<2&&skip;window++) {
+        long long stable=0,total=0;
+        for(int i=t-window*8-7;i<=t-window*8;i++) {
+            if(i>cc->uptime||i<=cc->uptime-ST_D)continue;
+            int index=(i+ST_D)%ST_D;
+            stable+=cc->c[index][0];
+            total+=cc->c[index][1];
+        }
+        if(total==0||stable*20>=total)skip=false;
+    }
+    UNLOCK(cc->lock);
+    return skip;
+}
 static bool gpt5_should_probe(const string& key) {
     stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),sizeof(stablelog));
     if(!cc)return false;
@@ -350,7 +371,7 @@ static bool gpt5_should_probe(const string& key) {
     return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
 }
 static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
-    cppJSON request("{\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}");
+    cppJSON request("{\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}");
     request.insert("model",model);
     gpt6_ret a=gpt6_work3(0,request.stringify_Unformatted().c_str(),model.c_str(),conf,"completions");
     string key=model+"_"+provider;
@@ -480,8 +501,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     long long startns=0;
     for(int k=0;k<(int)proret.providers.size();k++){
         string& provider=proret.providers[k];
-        bool isauto=proret.isauto;
-        b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,k+1==(int)proret.providers.size());
+        bool isauto=proret.isauto,last=k+1==(int)proret.providers.size();
+        if(isauto&&!last&&gpt5_should_skip(model+"_"+provider))continue;
+        b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last);
         if(memcmp(a->get,"POST /api",9)!=0&&b.send){//网页端阻塞到标题创建完成
             close(a->cl);
             a->cl=0;
@@ -500,8 +522,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
             }
         }
         if(b.send==0)mul=0;//出错啦，不用计费
-        ADD(&p->token_used,(long long)ceil(b.used_tokens*mul));//加入用量
-        gpt5_log(p,model,provider,b,mul,price.IsNumber(),isauto);//写入个人日志
+        long long useage=(long long)ceil(b.used_tokens*mul);
+        ADD(&p->token_used,useage);//加入用量
+        gpt5_log(p,model,provider,b,mul,useage,price.IsNumber(),isauto,isauto&&!last&&!b.send);//写入个人日志
         if(b.send){
             if(isauto)if(b.stable<2||b.stable>=1000)gpt5_add(model+"_auto",b.stable==1,&b);//稳定性统计auto
             break;
