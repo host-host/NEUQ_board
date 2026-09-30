@@ -360,9 +360,10 @@
             fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'],
                 ['makecache', '缓存写入（5 分钟）'], ['makecache(1h)', '缓存写入（1 小时）']];
         }
+        if (['lengthdouble', 'claude', 'normal'].includes(official.format)) fields.push(['websearch', '联网搜索']);
         const table = node('table', 'official-price-table');
         table.classList.toggle('tiered-price-table', columns.length > 1);
-        table.setAttribute('aria-label', `官方定价，${official.dollar === true ? '美元' : '人民币'}${official.format === 'per' ? '每次' : '每百万 tokens'}`);
+        table.setAttribute('aria-label', `官方定价，${official.dollar === true ? '美元' : '人民币'}`);
         if (columns.length > 1) {
             const head = node('thead');
             const row = node('tr');
@@ -379,18 +380,24 @@
         }
         const body = node('tbody');
         fields.forEach(([field, label]) => {
-            if (field.startsWith('makecache') && !columns.some(column => Object.hasOwn(column.price || {}, field))) return;
+            if ((field.startsWith('makecache') || field === 'websearch') && !columns.some(column => Object.hasOwn(column.price || {}, field))) return;
+            const fieldUnit = field === 'websearch' ? `${currency}/次` : unit;
             const row = node('tr');
             const heading = node('th', '', label);
             heading.scope = 'row';
             row.append(heading);
-            columns.forEach(column => {
+            const amounts = columns.map(column => {
                 const value = column.price?.[field];
-                const amount = typeof value === 'number' ? value * column.factor : NaN;
+                return typeof value === 'number' ? value * column.factor : NaN;
+            });
+            const sharedPrice = amounts.length > 1 && Number.isFinite(amounts[0]) && amounts[0] >= 0 &&
+                amounts.every(amount => amount === amounts[0]);
+            (sharedPrice ? amounts.slice(0, 1) : amounts).forEach(amount => {
                 const cell = node('td');
+                if (sharedPrice) cell.colSpan = columns.length;
                 if (Number.isFinite(amount) && amount >= 0) {
                     const price = node('span', 'price-inline');
-                    price.append(node('span', '', officialPriceFormat.format(amount)), node('span', 'price-value-unit', unit));
+                    price.append(node('span', '', officialPriceFormat.format(amount)), node('span', 'price-value-unit', fieldUnit));
                     cell.append(price);
                 } else cell.textContent = '—';
                 row.append(cell);
@@ -832,7 +839,10 @@
         tokenTooltipTarget = target;
         target.setAttribute('aria-describedby', 'tokenTooltip');
         $('tokenDetailList').replaceChildren();
-        [['输入', log.input], ['输出', log.output], ['缓存读取', log.cache], ['缓存创建', log.makecache], ['实际 Token', log.used_tokens]].forEach(([label, value]) => {
+        const details = [['输入', log.input], ['输出', log.output], ['缓存读取', log.cache], ['缓存创建', log.makecache],
+            ['实际 Token', log.used_tokens]];
+        if (numeric(log.websearch) > 0) details.push(['联网搜索（次）', log.websearch]);
+        details.forEach(([label, value]) => {
             const item = node('div');
             item.append(node('dt', '', label), node('dd', '', tokens(value)));
             $('tokenDetailList').append(item);
@@ -849,9 +859,9 @@
     }
     function exportLogs() {
         if (!state.logs.length) return;
-        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '费用（人民币）']];
+        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '费用（人民币）']];
         state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
-            numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache),
+            numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.websearch),
             duration(isImage(log) ? log.total : log.first, !isImage(log)), tps(log), logPrice(log), money(creditsToYuan(charge(log)))]));
         const csv = rows.map(row => row.map(value => {
             let text = String(value);

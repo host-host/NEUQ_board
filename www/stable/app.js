@@ -78,6 +78,11 @@ function calculateOfficialCost(usage, official) {
         amount += quantity * price;
     }
     if (official.format !== 'per') amount /= 1000000;
+    if (['lengthdouble', 'claude', 'normal'].includes(official.format) && usage.allwebsearch > 0) {
+        const searchPrice = lowestPrice('websearch');
+        if (searchPrice === null) return null;
+        amount += usage.allwebsearch * searchPrice;
+    }
     return Number.isFinite(amount) ? {amount, currency: official.dollar === true ? 'USD' : 'CNY'} : null;
 }
 
@@ -153,6 +158,7 @@ function normalizeStats(raw) {
         output: normalizeStatValue(data.output),
         cache: normalizeStatValue(data.cache),
         makecache: normalizeStatValue(data.makecache),
+        allwebsearch: normalizeStatValue(data.allwebsearch),
         tokens: normalizeStatValue(data.tokens),
         latency: normalizeStatValue(data.latency),
         latency_n: normalizeStatValue(data.latency_n),
@@ -379,6 +385,7 @@ function createProviderRow(item) {
         ['.usage-output', item.output],
         ['.usage-cache', item.cache],
         ['.usage-makecache', item.makecache],
+        ['.usage-websearch', item.allwebsearch],
         ['.usage-tokens', item.tokens]
     ];
     usageFields.forEach(([selector, value]) => {

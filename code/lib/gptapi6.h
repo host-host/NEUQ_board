@@ -13,6 +13,7 @@ struct gpt6_ret{
     cppJSON append;
     long long used_tokens;
     long long input,output,cache,makecache;//总输入（包含缓存读写），总输出，缓存读，缓存写
+    long long websearch;
     long long start_ns,first_ns,last_ns,end_ns;
     int curlcode;
     long long httpcode;

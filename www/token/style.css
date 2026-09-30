@@ -295,6 +295,8 @@ dialog::backdrop { background: #1c191755; backdrop-filter: blur(3px); }
 .official-price-table th:first-child { text-align: left; width: 42%; padding-left: 0; }
 .tiered-price-table th:first-child { width: 28%; }
 .official-price-table th:last-child, .official-price-table td:last-child { padding-right: 0; }
+.official-price-table td[colspan] { text-align: center; padding-right: 4px; }
+.official-price-table td[colspan] .price-inline { justify-content: center; }
 .official-price-table tbody tr:last-child th, .official-price-table tbody tr:last-child td { border-bottom: 0; }
 .official-price-table tbody tr:hover { background: transparent; }
 .toast { position: fixed; bottom: 30px; left: calc(50% + 126px); transform: translateX(-50%); max-width: calc(100% - 32px); z-index: 70; padding: 11px 22px; border-radius: 9px; background: #292524; box-shadow: 0 6px 22px #1c191718; color: #fff; font-size: 12px; }

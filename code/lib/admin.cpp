@@ -54,6 +54,7 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("output",(double)log.output);
     item.insert("cache",(double)log.cache);
     item.insert("makecache",(double)log.makecache);
+    item.insert("websearch",(double)log.websearch);
     double first=-1;
     long long total=0;
     if(log.start>0){

@@ -28,7 +28,9 @@ struct reslog{
     double multiply;
     long long time;
     long long input,output,cache,makecache;
-    long long deprecated1,deprecated2;
+    int websearch;
+    int deprecated1;
+    long long deprecated2;
     long long start,first,last,end;
     int isimage;//其实含义已经变成了计费方式，0按总token 1按次
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
@@ -42,6 +44,16 @@ struct reslog{
 struct reslogs{
     int lock,n;
     reslog a[];
+};
+#define ST_D (3*24*4)
+struct stablelog{
+    int c[ST_D][2];
+    int uptime,lock;
+    long long s,input,output,cache,makecache,tokens;
+    long long latency,latency_n,alltime,alltime_tokens;
+    int allwebsearch;
+    double o_cost,cost;//按原价成本,真实成本(¥)
+    long long sell;//总扣费用户多少额度
 };
 extern ndb2 log_db;
 void gptapi5_init();
