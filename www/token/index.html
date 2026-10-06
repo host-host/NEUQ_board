@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0930v1">
+    <link rel="stylesheet" href="style.css?v=1006v4">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=0930v3" defer></script>
+    <script src="app.js?v=1007v2" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -124,7 +124,6 @@
             <section id="modelsPage" class="page-section" aria-label="模型广场" hidden>
                 <section class="panel provider-panel" aria-labelledby="providerTitle">
                     <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>为每个模型选择服务商，选择后自动保存。</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
-                    <div class="provider-recommendation" role="note"><strong>推荐选择 auto 渠道</strong><span>我们主要保证 auto 渠道的稳定性</span></div>
                     <div class="provider-tabs" role="group" aria-label="模型类型"><button class="active" type="button" data-model-type="text" aria-pressed="true">文本模型 <span id="textModelCount">0</span></button><button type="button" data-model-type="image" aria-pressed="false">图像模型 <span id="imageModelCount">0</span></button><span id="providerBilling">单价：¥/M tokens</span></div>
                     <div id="providerState" class="state-message" role="status">正在加载模型…</div>
                     <div class="provider-table" id="providerTable" hidden>
@@ -140,7 +139,7 @@
                 <section class="panel history-panel" aria-labelledby="historyTitle">
                     <div class="panel-heading"><div><h2 id="historyTitle">调用日志</h2><p id="recordSummary">按时间倒序展示 API 调用记录</p></div><button id="exportLogs" class="button button-white" type="button" disabled><svg class="icon small"><use href="#i-download"/></svg>导出本页</button></div>
                     <div class="table-scroll" id="logTable" tabindex="0" role="region" aria-label="API 调用日志表格，可横向滚动" hidden>
-                        <table><thead><tr><th scope="col">时间</th><th scope="col">模型 / Provider</th><th scope="col">实际 Token / 次数</th><th scope="col">首字 / 耗时 (s)</th><th scope="col">TPS</th><th scope="col">单价（¥）</th><th scope="col">费用（¥）</th></tr></thead><tbody id="logRows"></tbody></table>
+                        <table><thead><tr><th scope="col">时间</th><th scope="col">模型 / Provider</th><th scope="col">实际 Token / 次数</th><th scope="col">首字 / 耗时 (s)</th><th scope="col">TPS</th><th scope="col">单价（¥）</th><th scope="col">实际扣费（¥）</th></tr></thead><tbody id="logRows"></tbody></table>
                     </div>
                     <div id="historyState" class="state-message" role="status">正在加载日志…</div>
                     <div class="pagination"><label class="page-size">每页 <select id="pageSize" aria-label="每页记录数"><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></label><nav class="page-buttons" aria-label="日志分页"><button id="firstPage" type="button" aria-label="第一页" title="第一页" disabled>«</button><button id="previousPage" type="button" aria-label="上一页" title="上一页" disabled>‹</button><span id="pageIndicator">第 1 页</span><button id="nextPage" type="button" aria-label="下一页" title="下一页" disabled>›</button></nav></div>
@@ -159,6 +158,7 @@
         <section class="site-price-section" aria-labelledby="sitePriceTitle">
             <div class="price-section-heading"><h3 id="sitePriceTitle">本站价格</h3><span id="sitePriceProvider" class="price-provider"></span></div>
             <div class="site-price-value" id="sitePriceValue"></div>
+            <div id="sitePriceContent" hidden></div>
             <p class="price-note" id="sitePriceBasis"></p>
         </section>
         <section class="official-price-section" aria-labelledby="officialPriceTitle">

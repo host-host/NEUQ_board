@@ -12,6 +12,46 @@
 #include <vector>
 using namespace std;
 
+void admin_stable_stats(http_para* a){
+    user_* p=getuser(a->get);
+    if(!p)return http_send(a,H401 Hjson Hc0,"{\"error\":{\"message\":\"Please log in first.\"}}",0);
+    if(!(p->admin&2))return http_send(a,H403 Hjson Hc0,"{\"error\":{\"message\":\"Permission denied.\"}}",0);
+    cppJSON req(a->get+a->n),ans("{}");
+    if(!req.IsArray()||req.size()>200)
+        return http_send(a,H400 Hjson Hc0,"{\"error\":{\"message\":\"Bad request.\"}}",0);
+    for(cppJSON key:req){
+        string name=key.valuestring();
+        if(!key.IsString()||name.empty()||name.size()>47||name.find('\0')!=string::npos)
+            return http_send(a,H400 Hjson Hc0,"{\"error\":{\"message\":\"Invalid statistics key.\"}}",0);
+    }
+    for(cppJSON key:req){
+        string name=key.valuestring();
+        stablelog snapshot{};
+        stablelog* stored=(stablelog*)ndb2_got(stable_db,name.c_str(),0);
+        if(stored){
+            if(ndb2_gotmaxlen(stored)<(long long)sizeof(stablelog))
+                stored=(stablelog*)ndb2_got(stable_db,name.c_str(),sizeof(stablelog));
+            if(!stored)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"Cannot read statistics.\"}}",0);
+            LOCK(&stored->lock);
+            snapshot=*stored;
+            UNLOCK(stored->lock);
+        }
+        cppJSON stats("{}");
+        stats.insert("s",(double)snapshot.s);
+        stats.insert("input",(double)snapshot.input);
+        stats.insert("output",(double)snapshot.output);
+        stats.insert("cache",(double)snapshot.cache);
+        stats.insert("makecache",(double)snapshot.makecache);
+        stats.insert("tokens",(double)snapshot.tokens);
+        stats.insert("allwebsearch",(double)snapshot.allwebsearch);
+        stats.insert("o_cost",snapshot.o_cost);
+        stats.insert("cost",snapshot.cost);
+        stats.insert("sell",(double)snapshot.sell);
+        ans.insert(name.c_str(),std::move(stats));
+    }
+    http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
+}
+
 struct admin_log_cursor{
     reslogs* logs;
     int index;

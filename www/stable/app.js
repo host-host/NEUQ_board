@@ -1,6 +1,6 @@
 const BUCKET_COUNT = 3 * 24 * 4;
 const BUCKET_MS = 15 * 60 * 1000;
-const CNY_PER_USD = 7;
+const CNY_PER_MILLION_CREDITS = 0.3;
 
 const state = {
     items: [],
@@ -51,72 +51,10 @@ function normalizeStatValue(value) {
     return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
-function calculateOfficialCost(usage, official) {
-    if (!official || !['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude'].includes(official.format)) return null;
-    const lowestPrice = field => {
-        const values = [official[field]];
-        if (official.format === 'lengthdouble') values.push(official.newprice?.[field]);
-        if (official.format === 'claude' && field === 'makecache') values.push(official['makecache(1h)']);
-        const prices = values.filter(value => Number.isFinite(value) && value >= 0);
-        return prices.length ? Math.min(...prices) : null;
-    };
-    let quantities;
-    if (official.format === 'per' || official.format === 'token') {
-        if (lowestPrice('price') === null) return null;
-        quantities = {price: official.format === 'per' ? usage.s : usage.tokens};
-    } else {
-        if (lowestPrice('input') === null || lowestPrice('output') === null) return null;
-        // 后端统一返回包含缓存读写的总输入，普通输入按扣除缓存后的数量计价。
-        const input = Math.max(0, usage.input - usage.cache - usage.makecache);
-        quantities = {input, output: usage.output, cache: usage.cache, makecache: usage.makecache};
-    }
-    let amount = 0;
-    for (const [field, quantity] of Object.entries(quantities)) {
-        if (!quantity) continue;
-        const price = lowestPrice(field);
-        if (price === null) return null;
-        amount += quantity * price;
-    }
-    if (official.format !== 'per') amount /= 1000000;
-    if (['lengthdouble', 'claude', 'normal'].includes(official.format) && usage.allwebsearch > 0) {
-        const searchPrice = lowestPrice('websearch');
-        if (searchPrice === null) return null;
-        amount += usage.allwebsearch * searchPrice;
-    }
-    return Number.isFinite(amount) ? {amount, currency: official.dollar === true ? 'USD' : 'CNY'} : null;
-}
-
-function formatMultiply(value) {
-    return Number.isFinite(value)
-        ? new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 6, useGrouping: false}).format(value)
-        : '--';
-}
-
-function formatOfficialCost(cost, includeCurrency = true) {
-    if (!cost) return '--';
-    const symbol = includeCurrency ? (cost.currency === 'USD' ? '$' : '¥') : '';
-    if (cost.amount > 0 && cost.amount < 0.000001) return `<${symbol}0.000001`;
-    return symbol + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 6}).format(cost.amount);
-}
-
-function calculateCostPerMillion(cost, multiply, tokens) {
-    if (!cost || !Number.isFinite(multiply) || multiply < 0 || !Number.isFinite(tokens) || tokens <= 0) return null;
-    const exchangeRate = cost.currency === 'USD' ? CNY_PER_USD : 1;
-    const amount = cost.amount * exchangeRate * multiply / tokens * 1000000;
-    return Number.isFinite(amount) ? {amount, currency: 'CNY'} : null;
-}
-
-function calculateModelTotalCost(model, items) {
-    let amount = 0;
-    let tokens = 0;
-    for (const item of items) {
-        if (item.model !== model || item.provider === 'auto') continue;
-        const cost = calculateOfficialCost(item, item.officialPrice);
-        if (!cost || !Number.isFinite(item.multiply) || item.multiply < 0) return null;
-        amount += cost.amount * (cost.currency === 'USD' ? CNY_PER_USD : 1) * item.multiply;
-        tokens += item.tokens;
-    }
-    return calculateCostPerMillion({amount, currency: 'CNY'}, 1, tokens);
+function formatCost(amount) {
+    if (!Number.isFinite(amount)) return '--';
+    if (amount > 0 && amount < 0.000001) return '<¥0.000001';
+    return '¥' + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 6}).format(amount);
 }
 
 function bucketLevel(bucket) {
@@ -153,13 +91,6 @@ function normalizeStats(raw) {
     const data = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     return {
         buckets: Array.isArray(raw) ? raw : data.buckets,
-        s: normalizeStatValue(data.s),
-        input: normalizeStatValue(data.input),
-        output: normalizeStatValue(data.output),
-        cache: normalizeStatValue(data.cache),
-        makecache: normalizeStatValue(data.makecache),
-        allwebsearch: normalizeStatValue(data.allwebsearch),
-        tokens: normalizeStatValue(data.tokens),
         latency: normalizeStatValue(data.latency),
         latency_n: normalizeStatValue(data.latency_n),
         alltime: normalizeStatValue(data.alltime),
@@ -185,26 +116,23 @@ function buildCatalog(config) {
     const models = config?.model || {};
     Object.entries(models).forEach(([model, modelConfig]) => {
         const providers = modelConfig?.provider;
-        if (!Array.isArray(providers)) return;
-        providers.forEach(provider => {
+        const all = modelConfig?.all;
+        const channels = new Set([...(Array.isArray(all) ? all : []), ...(Array.isArray(providers) ? providers : [])]);
+        channels.forEach(provider => {
             if (typeof provider !== 'string') return;
-            catalog.push({
-                model, provider, key: `${model}_${provider}`,
-                officialPrice: modelConfig.o_price,
-                multiply: provider === 'auto' ? modelConfig.auto?.multiply : config?.provider?.[provider]?.multiply
-            });
+            catalog.push({model, provider, key: `${model}_${provider}`});
         });
     });
     return catalog;
 }
 
 async function fetchJson(url, options) {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {credentials: 'same-origin', cache: 'no-store', ...options});
     const text = await response.text();
     let data;
     try { data = JSON.parse(text); }
     catch (error) { throw new Error(text || `请求失败（HTTP ${response.status}）`); }
-    if (!response.ok) throw new Error(data?.error?.message || `请求失败（HTTP ${response.status}）`);
+    if (!response.ok) throw Object.assign(new Error(data?.error?.message || `请求失败（HTTP ${response.status}）`), {status: response.status});
     if (data?.error) throw new Error(data.error?.message || data.error || '接口返回错误');
     return data;
 }
@@ -213,10 +141,30 @@ async function updateAdminLink() {
     try {
         const user = await fetchJson('/api/user');
         elements.adminLink.hidden = user?.admin !== true;
-    } catch (_) {}
+        return user?.admin === true;
+    } catch (_) {
+        elements.adminLink.hidden = true;
+        return false;
+    }
+}
+
+async function loadPrivateStats(catalog) {
+    const stats = {};
+    for (let offset = 0; offset < catalog.length; offset += 200) {
+        Object.assign(stats, await fetchJson('/api/gpt5_admin_stable_stats', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(catalog.slice(offset, offset + 200).map(item => item.key))
+        }));
+    }
+    return stats;
 }
 
 async function loadData() {
+    if (elements.refresh.disabled) return;
+    state.items = [];
+    hideTooltip();
+    render();
+    elements.empty.hidden = true;
     elements.refresh.disabled = true;
     elements.refresh.classList.add('refreshing');
     elements.notice.hidden = false;
@@ -224,13 +172,22 @@ async function loadData() {
     elements.notice.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>正在获取 Provider 状态</span>';
 
     try {
-        const config = await fetchJson('/api/gpt5_model_list', {method: 'POST'});
+        const [config, admin] = await Promise.all([fetchJson('/api/gpt5_model_list', {method: 'POST'}), updateAdminLink()]);
         const catalog = buildCatalog(config);
         const stats = catalog.length ? await fetchJson('/api/gpt5_askstable', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(catalog.map(item => item.key))
         }) : {};
+        let privateStats = null;
+        let privateError = '';
+        if (admin) {
+            try { privateStats = await loadPrivateStats(catalog); }
+            catch (error) {
+                if (error.status === 401 || error.status === 403) elements.adminLink.hidden = true;
+                else privateError = `管理员用量和费用加载失败：${error.message}`;
+            }
+        }
         const currentBucket = finalBucketNumber();
 
         state.items = catalog.map(entry => {
@@ -239,10 +196,14 @@ async function loadData() {
             const total = sumBuckets(buckets);
             const hour = sumBuckets(buckets.slice(-4));
             const status = classifyItem(buckets);
-            return {...entry, ...usage, buckets, total, hour, status};
+            return {...entry, ...usage, privateStats: privateStats?.[entry.key] || null, buckets, total, hour, status};
         });
 
-        elements.notice.hidden = true;
+        elements.notice.hidden = !privateError;
+        if (privateError) {
+            elements.notice.className = 'notice warning';
+            elements.notice.textContent = privateError;
+        }
         elements.updatedAt.textContent = `${new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})} 更新`;
         render();
     } catch (error) {
@@ -361,38 +322,27 @@ function createProviderRow(item) {
     fragment.querySelector('.hour-rate').textContent = formatRate(item.hour.stable, item.hour.total);
     fragment.querySelector('.sample-count').textContent = formatNumber(item.total.total);
     fragment.querySelector('.failure-count').textContent = formatNumber(item.total.total - item.total.stable);
-    const officialCost = fragment.querySelector('.official-cost');
-    const cost = calculateOfficialCost(item, item.officialPrice);
-    officialCost.textContent = formatOfficialCost(cost);
-    officialCost.title = cost
-        ? `按当前官方单价和累计用量估算，无法区分的档位取较低价格；${cost.amount} ${cost.currency}`
-        : '官方价格未配置或不完整';
-    fragment.querySelector('.usage-multiply').textContent = formatMultiply(item.multiply);
-    const isAuto = item.provider === 'auto';
-    const costPerMillion = isAuto
-        ? calculateModelTotalCost(item.model, state.items)
-        : calculateCostPerMillion(cost, item.multiply, item.tokens);
-    fragment.querySelector('.usage-cost-label').textContent = isAuto ? '总成本¥/M tokens' : '成本¥/M tokens';
-    const costPerMillionElement = fragment.querySelector('.usage-cost-per-million');
-    costPerMillionElement.textContent = formatOfficialCost(costPerMillion, false);
-    costPerMillionElement.title = costPerMillion
-        ? `${costPerMillion.amount} ¥/M tokens；美元兑人民币汇率 ${CNY_PER_USD}`
-        : isAuto ? '同名模型的非 auto 渠道官方费用或 multiply 未配置，或累计 Token 总量为 0'
-            : '官方费用或 multiply 未配置，或 Token 总量为 0';
-    const usageFields = [
-        ['.usage-s', item.s],
-        ['.usage-input', item.input],
-        ['.usage-output', item.output],
-        ['.usage-cache', item.cache],
-        ['.usage-makecache', item.makecache],
-        ['.usage-websearch', item.allwebsearch],
-        ['.usage-tokens', item.tokens]
-    ];
-    usageFields.forEach(([selector, value]) => {
-        const element = fragment.querySelector(selector);
-        element.textContent = formatNumber(value);
-        element.title = String(value);
-    });
+    const stats = item.privateStats;
+    fragment.querySelectorAll('[data-private-stat]').forEach(element => { element.hidden = !stats; });
+    fragment.querySelector('.provider-usage').classList.toggle('public-usage', !stats);
+    fragment.querySelector('.provider-detail').classList.toggle('public-detail', !stats);
+    if (stats) {
+        const usageFields = [
+            ['.usage-s', stats.s], ['.usage-input', stats.input], ['.usage-output', stats.output],
+            ['.usage-cache', stats.cache], ['.usage-makecache', stats.makecache],
+            ['.usage-websearch', stats.allwebsearch], ['.usage-tokens', stats.tokens]
+        ];
+        usageFields.forEach(([selector, value]) => {
+            const element = fragment.querySelector(selector);
+            element.textContent = Number.isFinite(value) ? formatNumber(value) : '--';
+            element.title = Number.isFinite(value) ? String(value) : '';
+        });
+        fragment.querySelector('.official-cost').textContent = formatCost(stats.o_cost);
+        fragment.querySelector('.official-cost').title = '后端累计原价成本，人民币';
+        fragment.querySelector('.usage-cost').textContent = formatCost(stats.cost);
+        fragment.querySelector('.usage-sell').textContent = formatCost(
+            Number.isFinite(stats.sell) ? stats.sell / 1000000 * CNY_PER_MILLION_CREDITS : NaN);
+    }
     const latency = fragment.querySelector('.usage-latency');
     latency.textContent = formatAverage(item.latency, item.latency_n, 's');
     latency.title = `${item.latency} s / ${item.latency_n}`;
@@ -472,5 +422,4 @@ elements.sort.addEventListener('change', event => {
     render();
 });
 
-updateAdminLink();
 loadData();

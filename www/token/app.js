@@ -16,6 +16,7 @@
     };
     const numberFormat = new Intl.NumberFormat('zh-CN');
     const CNY_PER_MILLION_CREDITS = 0.3;
+    const CNY_PER_USD = 7;
     const moneyFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 7});
     const balanceFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const STABILITY_BUCKETS = 3 * 24 * 4;
@@ -29,8 +30,10 @@
     let pricePopoverTimer;
     let pricePopoverTarget;
     let pricePopoverPinned = false;
-    const officialPriceFormats = new Set(['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude']);
+    const priceFormats = new Set(['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude']);
     const officialPriceFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 10});
+    const summaryPriceFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 3});
+    const calculationPriceFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 6});
 
     function numeric(value) {
         const number = Number(value);
@@ -45,14 +48,20 @@
         const format = summary && amount >= 0.01 ? balanceFormat : moneyFormat;
         return `¥${format.format(amount)}`;
     }
+    function logUnitPrice(log) {
+        if (!Number.isFinite(log.multiply)) return NaN;
+        // 历史记录和新记录均保存扣费额度；换算为元/次或元/百万 token。
+        return log.multiply * CNY_PER_MILLION_CREDITS / (isImage(log) ? 1000000 : 1);
+    }
     function logPrice(log) {
-        return isImage(log) ? `${money(creditsToYuan(Math.ceil(numeric(log.multiply))))}/次`
-            : `${money(numeric(log.multiply) * CNY_PER_MILLION_CREDITS)}/M tokens`;
+        const itemized = Number(log.isimage) === 2;
+        if (itemized ? !Number.isFinite(log.inputm) || !Number.isFinite(log.outputm) || !Number.isFinite(log.cachem) : !Number.isFinite(log.multiply)) return '—';
+        return providerPrice({format: itemized ? 'normal' : isImage(log) ? 'per' : 'token',
+            input: itemized ? log.inputm : logUnitPrice(log), output: log.outputm, cache: log.cachem}, true);
     }
     function isImage(log) { return log?.isimage === true || Number(log?.isimage) === 1; }
-    function charge(log) {
-        return Object.hasOwn(log, 'useage') ? numeric(log.useage)
-            : Math.ceil(Math.floor(numeric(log.used_tokens)) * numeric(log.multiply));
+    function logCharge(log) {
+        return Number.isFinite(log.useage) ? money(creditsToYuan(log.useage)) : '—';
     }
     function providerName(log) {
         const name = Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—';
@@ -328,46 +337,80 @@
         return config.provider.filter(id => id === 'auto'
             ? Array.isArray(config.auto?.provider) && config.auto.provider.some(accessible) : accessible(id));
     }
-    function providerPrice(price, multiplier, unitAfter = false) {
-        const perToken = Array.isArray(price);
-        if (!perToken && price !== null && typeof price === 'object') return '其他计费';
-        const base = perToken ? price[0] : price;
-        if (!Number.isFinite(base) || base < 0 || !Number.isFinite(multiplier) || multiplier < 0) return '价格未配置';
-        const value = perToken ? base * 1 * multiplier / .3 : base / .3 * 1000000 * multiplier;
-        if (!Number.isFinite(value)) return '价格未配置';
-        const amount = perToken ? money(value * CNY_PER_MILLION_CREDITS) : money(creditsToYuan(Math.ceil(value)));
-        const unit = perToken ? ' /M tokens' : ' /次';
-        return unitAfter ? `${amount.replace('¥', '')} ¥${unit}` : `${amount}${unit}`;
+    function isPriceObject(value) {
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
     }
-    function renderOfficialPrice(official) {
-        const content = $('officialPriceContent');
+    function mergePrice(base, overrides) {
+        const price = isPriceObject(base) ? {...base} : {};
+        if (!isPriceObject(overrides)) return price;
+        for (const [key, value] of Object.entries(overrides)) {
+            price[key] = isPriceObject(price[key]) && isPriceObject(value) ? mergePrice(price[key], value) : value;
+        }
+        return price;
+    }
+    function modelProviderPrice(config, id) {
+        return mergePrice(config.price, providerConfig(config, id)?.price);
+    }
+    function priceMultiplier(price, yuan = false) {
+        const multiplier = Number.isFinite(price.multiply) && price.multiply !== 0 ? price.multiply : 1;
+        return multiplier * (yuan && price.dollar === true ? CNY_PER_USD : 1);
+    }
+    function priceColumns(price) {
+        if (price.format === 'deepseek') {
+            return [{label: '非高峰', price, factor: 1}, {label: '高峰', price, factor: 2}];
+        }
+        if (price.format === 'lengthdouble') {
+            const threshold = tokens(price.length);
+            return [{label: `≤ ${threshold} tokens`, price, factor: 1},
+                {label: `> ${threshold} tokens`, price: price.newprice, factor: 1}];
+        }
+        return [{price, factor: 1}];
+    }
+    function providerPrice(price, compact = false) {
+        if (!priceFormats.has(price?.format)) return '价格未配置';
+        const multiplier = priceMultiplier(price, true);
+        const format = amount => compact ? `¥${summaryPriceFormat.format(amount)}` : money(amount);
+        if (price.format === 'per' || price.format === 'token') {
+            const amount = numeric(price.input) * multiplier;
+            return price.format === 'per'
+                ? `${format(creditsToYuan(Math.ceil(amount / CNY_PER_MILLION_CREDITS * 1000000)))}/次`
+                : `${format(amount)}/M tokens`;
+        }
+        const columns = priceColumns(price);
+        const summary = field => {
+            const amounts = columns.map(column => numeric(column.price?.[field]) * column.factor * multiplier);
+            return format(Math.min(...amounts));
+        };
+        return `${summary('input')}/${summary('output')}/${summary('cache')} per 1M`;
+    }
+    function renderPriceTable(price, content, site = false) {
         content.replaceChildren();
-        const currency = official.dollar === true ? '$' : '¥';
-        const unit = official.format === 'per' ? `${currency}/次` : `${currency}/M tokens`;
-        let columns = [{price: official, factor: 1}];
+        if (!priceFormats.has(price?.format)) {
+            content.append(node('p', 'price-note', '价格未配置'));
+            return;
+        }
+        const currency = !site && price.dollar === true ? '$' : '¥';
+        const unit = price.format === 'per' ? `${currency}/次` : `${currency}/M tokens`;
+        const multiplier = priceMultiplier(price, site);
+        const columns = priceColumns(price);
         let fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'], ['makecache', '缓存写入']];
         let note = '';
-        if (official.format === 'per' || official.format === 'token') {
-            fields = [['price', official.format === 'per' ? '每次调用' : '总 Token']];
-        } else if (official.format === 'deepseek') {
-            columns = [{label: '非高峰', price: official, factor: 1}, {label: '高峰', price: official, factor: 2}];
-            note = '北京时间周一至周五（不含中国法定节假日）9:00–12:00、14:00–18:00 为高峰时段，价格翻倍。';
-        } else if (official.format === 'lengthdouble') {
-            const threshold = Number.isFinite(official.length) && official.length >= 0 ? tokens(official.length) : '—';
-            columns = [{label: `≤ ${threshold} tokens`, price: official, factor: 1}, {label: `> ${threshold} tokens`, price: official.newprice, factor: 1}];
-            note = '按总输入 Token 数分档，超过阈值时使用右侧价格。';
-        } else if (official.format === 'claude') {
+        if (price.format === 'per' || price.format === 'token') {
+            fields = [['input', price.format === 'per' ? '每次调用' : '总 Token']];
+        } else if (price.format === 'deepseek') {
+            note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍；节假日和调休均按星期计算。';
+        } else if (price.format === 'claude' && !site) {
             fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'],
                 ['makecache', '缓存写入（5 分钟）'], ['makecache(1h)', '缓存写入（1 小时）']];
         }
-        if (['lengthdouble', 'claude', 'normal'].includes(official.format)) fields.push(['websearch', '联网搜索']);
+        if (price.format !== 'per' && price.format !== 'token') fields.push(['websearch', '联网搜索']);
         const table = node('table', 'official-price-table');
         table.classList.toggle('tiered-price-table', columns.length > 1);
-        table.setAttribute('aria-label', `官方定价，${official.dollar === true ? '美元' : '人民币'}`);
+        table.setAttribute('aria-label', `${site ? '本站价格' : '官方定价'}，${currency === '$' ? '美元' : '人民币'}`);
         if (columns.length > 1) {
             const head = node('thead');
             const row = node('tr');
-            const label = node('th', '', official.format === 'lengthdouble' ? '总输入' : '计费项');
+            const label = node('th', '', price.format === 'lengthdouble' ? '总输入' : '计费项');
             label.scope = 'col';
             row.append(label);
             columns.forEach(column => {
@@ -388,7 +431,8 @@
             row.append(heading);
             const amounts = columns.map(column => {
                 const value = column.price?.[field];
-                return typeof value === 'number' ? value * column.factor : NaN;
+                return site ? numeric(value) * column.factor * multiplier
+                    : typeof value === 'number' ? value * column.factor * multiplier : NaN;
             });
             const sharedPrice = amounts.length > 1 && Number.isFinite(amounts[0]) && amounts[0] >= 0 &&
                 amounts.every(amount => amount === amounts[0]);
@@ -413,9 +457,17 @@
         const config = state.models?.model?.[pricePopoverTarget.dataset.model];
         const select = pricePopoverTarget.closest('.provider-row')?.querySelector('.provider-select');
         if (!config || !select) return hidePricePopover();
+        const price = modelProviderPrice(config, select.value);
+        const itemized = priceFormats.has(price.format) && price.format !== 'per' && price.format !== 'token';
         $('sitePriceProvider').textContent = `Provider · ${select.value}`;
-        $('sitePriceValue').textContent = providerPrice(config.price, providerConfig(config, select.value)?.multiply, true);
-        $('sitePriceBasis').textContent = Array.isArray(config.price) ? '按总 Token 计费' : typeof config.price === 'number' ? '按次计费' : '按模型规则计费';
+        $('sitePriceValue').textContent = providerPrice(price);
+        $('sitePriceValue').hidden = itemized;
+        $('sitePriceContent').hidden = !itemized;
+        $('sitePriceContent').replaceChildren();
+        if (itemized) renderPriceTable(price, $('sitePriceContent'), true);
+        $('sitePriceBasis').textContent = price.format === 'per' ? '按次计费，金额单位为人民币。'
+            : price.format === 'token' ? '按输入与输出的总 Token 数计费。' : '';
+        $('sitePriceBasis').hidden = !$('sitePriceBasis').textContent;
     }
     function hidePricePopover() {
         clearTimeout(pricePopoverTimer);
@@ -439,7 +491,7 @@
     }
     function showPricePopover(target) {
         const config = state.models?.model?.[target.dataset.model];
-        if (!officialPriceFormats.has(config?.o_price?.format)) return;
+        if (!priceFormats.has(config?.price?.format)) return;
         clearTimeout(pricePopoverTimer);
         if (pricePopoverTarget !== target) hidePricePopover();
         hideTokenDetail();
@@ -448,7 +500,7 @@
         target.setAttribute('aria-expanded', 'true');
         $('pricePopoverTitle').textContent = target.dataset.model;
         updateSitePrice();
-        renderOfficialPrice(config.o_price);
+        renderPriceTable(config.price, $('officialPriceContent'));
         const popover = $('pricePopover');
         popover.hidden = false;
         const anchor = target.getBoundingClientRect();
@@ -565,13 +617,13 @@
             const row = node('div', 'provider-row');
             const info = node('div', 'model-info');
             info.append(node('span', 'model-name', name));
-            if (officialPriceFormats.has(config.o_price?.format)) info.append(createPriceButton(name));
+            if (priceFormats.has(config.price?.format)) info.append(createPriceButton(name));
             if (typeof config.log === 'string' && config.log.trim()) info.append(createModelLogButton(name, config.log));
             const select = node('select', 'provider-select');
             select.dataset.model = name;
             select.setAttribute('aria-label', `${name} Provider`);
             providers.forEach(id => {
-                const option = node('option', '', `${id} · ${providerPrice(config.price, providerConfig(config, id)?.multiply)}`);
+                const option = node('option', '', `${id} · ${providerPrice(modelProviderPrice(config, id), true)}`);
                 option.value = id;
                 select.append(option);
             });
@@ -800,25 +852,23 @@
             const row = node('tr');
             const time = node('td');
             const [day, hour] = timeParts(log.time);
-            time.append(node('div', 'log-date', day), node('div', 'log-time', hour));
+            time.append(node('span', 'log-date', day), ' ', node('span', 'log-time', hour));
             const model = node('td');
-            const name = node('div', 'log-model', log.model || '—');
+            const name = node('span', 'log-model', log.model || '—');
             name.title = log.model || '';
-            model.append(name, node('div', 'log-provider', providerName(log)));
+            model.append(name, node('span', 'log-provider', ` / ${providerName(log)}`));
             const usage = node('td');
-            if (image) usage.append(node('span', 'image-count', numeric(log.used_tokens) ? `${tokens(log.used_tokens)} 次` : '失败'));
-            else {
-                const button = node('button', 'token-button', tokens(log.used_tokens));
-                button.type = 'button';
-                button.setAttribute('aria-label', `查看 ${log.model || '请求'} 的 Token 明细，实际 Token ${tokens(log.used_tokens)}`);
-                button.addEventListener('mouseenter', () => showTokenDetail(button, log));
-                button.addEventListener('mouseleave', scheduleHideTokenDetail);
-                button.addEventListener('focus', () => showTokenDetail(button, log));
-                button.addEventListener('blur', scheduleHideTokenDetail);
-                usage.append(button);
-            }
+            const button = node('button', image ? 'token-button image-count' : 'token-button',
+                image ? numeric(log.used_tokens) ? `${tokens(log.used_tokens)} 次` : '失败' : tokens(log.used_tokens));
+            button.type = 'button';
+            button.setAttribute('aria-label', `查看 ${log.model || '请求'} 的${image ? '次数' : 'Token'}与费用明细`);
+            button.addEventListener('mouseenter', () => showTokenDetail(button, log));
+            button.addEventListener('mouseleave', scheduleHideTokenDetail);
+            button.addEventListener('focus', () => showTokenDetail(button, log));
+            button.addEventListener('blur', scheduleHideTokenDetail);
+            usage.append(button);
             row.append(time, model, usage, node('td', '', duration(image ? log.total : log.first, !image)), node('td', '', tps(log)),
-                node('td', '', logPrice(log)), node('td', 'charged', money(creditsToYuan(charge(log)))));
+                node('td', '', logPrice(log)), node('td', 'charged', logCharge(log)));
             body.append(row);
         });
     }
@@ -834,19 +884,63 @@
             if (!tokenTooltipTarget?.matches(':hover, :focus') && !$('tokenTooltip').matches(':hover')) hideTokenDetail();
         }, 120);
     }
+    function logCostDetails(log) {
+        const formulas = {};
+        let total = 0;
+        let complete = true;
+        const add = (field, expression, count, rate, divisor) => {
+            if (!Number.isFinite(rate)) {
+                formulas[field] = '单价未记录';
+                complete = false;
+                return;
+            }
+            const amount = count * rate / divisor;
+            total += amount;
+            formulas[field] = `${expression} x ¥${calculationPriceFormat.format(rate)}/${divisor === 1000000 ? 'M tokens' : '次'} = ${money(amount)}`;
+        };
+        if (Number(log.isimage) === 2) {
+            const input = numeric(log.input), cache = numeric(log.cache), makecache = numeric(log.makecache);
+            const expression = `(${tokens(input)} - ${tokens(cache)} - ${tokens(makecache)})`;
+            add('input', input < cache + makecache ? `max(${expression}, 0)` : expression,
+                Math.max(0, input - cache - makecache), log.inputm, 1000000);
+            add('output', tokens(log.output), numeric(log.output), log.outputm, 1000000);
+            add('cache', tokens(cache), cache, log.cachem, 1000000);
+            add('makecache', tokens(makecache), makecache, log.makecachem, 1000000);
+            if (numeric(log.websearch) > 0) add('websearch', tokens(log.websearch), numeric(log.websearch), log.websearchm, 1);
+        } else {
+            add('used_tokens', tokens(log.used_tokens), numeric(log.used_tokens), logUnitPrice(log), isImage(log) ? 1 : 1000000);
+        }
+        return {formulas, total: complete ? total : null};
+    }
     function showTokenDetail(target, log) {
         hideTokenDetail();
         tokenTooltipTarget = target;
         target.setAttribute('aria-describedby', 'tokenTooltip');
         $('tokenDetailList').replaceChildren();
-        const details = [['输入', log.input], ['输出', log.output], ['缓存读取', log.cache], ['缓存创建', log.makecache],
-            ['实际 Token', log.used_tokens]];
-        if (numeric(log.websearch) > 0) details.push(['联网搜索（次）', log.websearch]);
-        details.forEach(([label, value]) => {
+        const itemized = Number(log.isimage) === 2;
+        $('tokenDetailList').classList.toggle('itemized', itemized);
+        const details = isImage(log) ? [['次数', 'used_tokens']] : [['输入', 'input'], ['输出', 'output'],
+            ['缓存读取', 'cache'], ['缓存创建', 'makecache'], ['实际 Token', 'used_tokens']];
+        if (numeric(log.websearch) > 0) {
+            details.splice(itemized ? details.length - 1 : details.length, 0, ['联网搜索（次）', 'websearch']);
+        }
+        const calculation = logCostDetails(log);
+        const totalAmount = calculation.total === null ? '单价未记录' : money(calculation.total);
+        details.filter(([, field]) => field !== 'makecache' || numeric(log.makecache) > 0).forEach(([label, field]) => {
             const item = node('div');
-            item.append(node('dt', '', label), node('dd', '', tokens(value)));
+            const formula = node('dd', 'token-cost-formula', calculation.formulas[field] || '');
+            if (itemized && field === 'used_tokens') {
+                formula.classList.add('token-cost-summary');
+                formula.append(node('span', '', '计算费用'), node('strong', '', totalAmount));
+            }
+            item.append(node('dt', '', label), node('dd', '', tokens(log[field])), formula);
             $('tokenDetailList').append(item);
         });
+        if (!itemized) {
+            const total = node('div', 'token-cost-total');
+            total.append(node('dt', '', '计算费用'), node('dd', '', totalAmount));
+            $('tokenDetailList').append(total);
+        }
         const tooltip = $('tokenTooltip');
         tooltip.hidden = false;
         const anchor = target.getBoundingClientRect();
@@ -859,10 +953,10 @@
     }
     function exportLogs() {
         if (!state.logs.length) return;
-        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '费用（人民币）']];
+        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）']];
         state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
             numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.websearch),
-            duration(isImage(log) ? log.total : log.first, !isImage(log)), tps(log), logPrice(log), money(creditsToYuan(charge(log)))]));
+            duration(isImage(log) ? log.total : log.first, !isImage(log)), tps(log), logPrice(log), logCharge(log)]));
         const csv = rows.map(row => row.map(value => {
             let text = String(value);
             // Prevent spreadsheet formulas in server-supplied model/provider names.

@@ -7,6 +7,7 @@ extern "C"{
 #include "http.h"
 void admin_log_list(http_para* a);
 void admin_add_token(http_para* a);
+void admin_stable_stats(http_para* a);
 
 #ifdef __cplusplus
 }

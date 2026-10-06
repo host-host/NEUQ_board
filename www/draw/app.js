@@ -57,6 +57,10 @@
     let stabilityRequestId = 0;
     const STABILITY_BUCKETS = 3 * 24 * 4;
     const STABILITY_BUCKET_MS = 15 * 60 * 1000;
+    const CNY_PER_USD = 7;
+    const CNY_PER_MILLION_CREDITS = 0.3;
+    const priceSummaryFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 3});
+    const priceDetailFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 7});
 
     function setMessage(message, type) {
         formMessage.textContent = message || '';
@@ -131,14 +135,39 @@
         }
     }
 
-    function formatProviderPrice(price, multiply) {
-        const perToken = Array.isArray(price);
-        if (!perToken && price !== null && typeof price === 'object') return '其他计费';
-        const basePrice = perToken ? price[0] : price;
-        if (!Number.isFinite(basePrice) || basePrice < 0 || !Number.isFinite(multiply) || multiply < 0) return '价格未配置';
-        const charge = perToken ? basePrice * 1 * multiply / 0.3 : basePrice / 0.3 * 1000000 * multiply;
-        if (!Number.isFinite(charge)) return '价格未配置';
-        return perToken ? `${Number(charge.toFixed(6))}x` : `${new Intl.NumberFormat('zh-CN').format(Math.ceil(charge))}/次`;
+    function isPriceObject(value) {
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function mergePrice(base, overrides) {
+        const price = isPriceObject(base) ? {...base} : {};
+        if (!isPriceObject(overrides)) return price;
+        for (const [key, value] of Object.entries(overrides)) {
+            price[key] = isPriceObject(price[key]) && isPriceObject(value) ? mergePrice(price[key], value) : value;
+        }
+        return price;
+    }
+
+    function selectedProviderPrice(name, id) {
+        return mergePrice(modelConfig?.model?.[name]?.price, providerConfig(name, id)?.price);
+    }
+
+    function formatProviderPrice(price, compact = false) {
+        const multiply = Number.isFinite(price.multiply) && price.multiply !== 0 ? price.multiply : 1;
+        const factor = multiply * (price.dollar === true ? CNY_PER_USD : 1);
+        const format = amount => `¥${(compact ? priceSummaryFormat : priceDetailFormat).format(amount)}`;
+        if (price.format === 'per' || price.format === 'token') {
+            const amount = price.input * factor;
+            if (!Number.isFinite(price.input) || !Number.isFinite(amount) || amount < 0) return '价格未配置';
+            if (price.format === 'token') return `${format(amount)}/M tokens`;
+            const charge = Math.ceil(amount / CNY_PER_MILLION_CREDITS * 1000000);
+            return `${format(charge / 1000000 * CNY_PER_MILLION_CREDITS)}/次`;
+        }
+        if (!['normal', 'deepseek', 'lengthdouble', 'claude'].includes(price.format)) return '价格未配置';
+        const input = price.input * factor, output = price.output * factor;
+        if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0) return '价格未配置';
+        const tiered = price.format === 'lengthdouble' || price.format === 'deepseek';
+        return `${format(input)}/${format(output)} per 1M${tiered ? '（分档计费）' : ''}`;
     }
 
     function formatAverage(total, count) {
@@ -153,7 +182,7 @@
         for (const id of ids) {
             const option = document.createElement('option');
             option.value = id;
-            option.textContent = `${id} · ${formatProviderPrice(modelConfig.model[model.value].price, providerConfig(model.value, id)?.multiply)}`;
+            option.textContent = `${id} · ${formatProviderPrice(selectedProviderPrice(model.value, id), true)}`;
             provider.appendChild(option);
         }
         if (!ids.length) {
@@ -168,7 +197,11 @@
         providerInfo.hidden = !ids.length;
         if (ids.length) {
             const config = providerConfig(model.value, provider.value);
-            providerPrice.textContent = formatProviderPrice(modelConfig.model[model.value].price, config.multiply);
+            const price = selectedProviderPrice(model.value, provider.value);
+            providerPrice.textContent = formatProviderPrice(price);
+            providerPrice.title = price.format === 'per' ? '每次请求的人民币费用'
+                : price.format === 'token' ? '每百万总 Token 的人民币价格'
+                    : '输入 / 输出价格，单位为元/百万 Token；分项价格见控制台模型广场';
             providerVisibility.textContent = provider.value === 'auto'
                 ? '自动选择可用 Provider'
                 : config.public === true ? '公开' : '仅管理员';

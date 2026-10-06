@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <title>Provider 稳定性 - NEUQ Board</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=0921v5">
+    <link rel="stylesheet" href="style.css?v=1007v1">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
@@ -136,31 +136,31 @@
             <div class="heatmap-scroll" tabindex="0" aria-label="72 小时稳定性时间线">
                 <div class="provider-detail">
                     <dl class="provider-usage" aria-label="累计用量">
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>累计请求</dt>
                             <dd class="usage-s">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt title="包含缓存读取和缓存写入">总输入 Token</dt>
                             <dd class="usage-input">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>输出 Token</dt>
                             <dd class="usage-output">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>缓存读取</dt>
                             <dd class="usage-cache">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>缓存写入</dt>
                             <dd class="usage-makecache">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>联网搜索（次）</dt>
                             <dd class="usage-websearch">--</dd>
                         </div>
-                        <div>
+                        <div data-private-stat hidden>
                             <dt>Token 总量</dt>
                             <dd class="usage-tokens">--</dd>
                         </div>
@@ -172,17 +172,17 @@
                             <dt>平均 TPS</dt>
                             <dd class="usage-tps">--</dd>
                         </div>
-                        <div>
-                            <dt>累计官方费用（估算）</dt>
+                        <div data-private-stat hidden>
+                            <dt>累计原价成本（¥）</dt>
                             <dd class="official-cost">--</dd>
                         </div>
-                        <div>
-                            <dt>multiply</dt>
-                            <dd class="usage-multiply">--</dd>
+                        <div data-private-stat hidden>
+                            <dt>累计实际成本（¥）</dt>
+                            <dd class="usage-cost">--</dd>
                         </div>
-                        <div>
-                            <dt class="usage-cost-label">成本¥/M tokens</dt>
-                            <dd class="usage-cost-per-million">--</dd>
+                        <div data-private-stat hidden>
+                            <dt>累计实际扣费（¥）</dt>
+                            <dd class="usage-sell">--</dd>
                         </div>
                     </dl>
                     <div class="heatmap"></div>
@@ -192,6 +192,6 @@
     </template>
 
     <div id="heatTooltip" class="heat-tooltip" role="tooltip" hidden></div>
-    <script src="app.js?v=0930v2"></script>
+    <script src="app.js?v=1007v3"></script>
 </body>
 </html>
