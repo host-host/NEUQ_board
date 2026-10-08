@@ -268,7 +268,6 @@ async function sendMessage() {//发送消息的核心入口
     };
     else if (requestFormat === 'claude') bodyData = {
         model: modelName,
-        max_tokens: 8192,
         stream: true,
         system: 'You are a helpful assistant.',
         messages: currentClaudeMessages

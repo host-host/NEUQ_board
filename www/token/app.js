@@ -398,7 +398,7 @@
         if (price.format === 'per' || price.format === 'token') {
             fields = [['input', price.format === 'per' ? '每次调用' : '总 Token']];
         } else if (price.format === 'deepseek') {
-            note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍；节假日和调休均按星期计算。';
+            note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍。';
         } else if (price.format === 'claude' && !site) {
             fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'],
                 ['makecache', '缓存写入（5 分钟）'], ['makecache(1h)', '缓存写入（1 小时）']];
