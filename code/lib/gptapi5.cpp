@@ -163,16 +163,10 @@ void gpt5_log_list(http_para* a) {
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
         item.insert("websearch",(double)logs->a[i].websearch);
-        double first=-1;
-        long long total=0;
-        if(logs->a[i].start>0){
-            if(logs->a[i].first>=logs->a[i].start)
-                first=(logs->a[i].first-logs->a[i].start)/1000000000.0;
-            total=(logs->a[i].end-logs->a[i].start)/1000000000LL;
-        }
-        if(first>=0)item.insert("first",first);
+        long long first=logs->a[i].start>0?logs->a[i].first-logs->a[i].start:-1;
+        if(first>=0)item.insert("first",first/1000000000.0);
         else item.insert("first",(const char*)0);
-        item.insert("total",(double)(total>0?total:0));
+        item.insert("total",(logs->a[i].end-logs->a[i].start)/1000000000.0);
         item.insert("multiply",logs->a[i].multiply);
         item.insert("inputm",(double)logs->a[i].inputm);
         item.insert("outputm",(double)logs->a[i].outputm);
@@ -183,6 +177,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("useage",(double)logs->a[i].useage);
         item.insert("time",(double)logs->a[i].time);
         item.insert("isauto",(double)logs->a[i].isauto);
+        item.insert("info",logs->a[i].info);
         ans.push_back(std::move(item));
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);

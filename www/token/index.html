@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1006v4">
+    <link rel="stylesheet" href="style.css?v=1009v2">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1007v2" defer></script>
+    <script src="app.js?v=1009v2" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -135,11 +135,11 @@
             </section>
 
             <section id="historyPage" class="page-section" aria-label="API 调用日志" hidden>
-                <div class="history-info"><span class="quick-icon accent-soft"><svg class="icon"><use href="#i-history"/></svg></span><div><strong>每一次调用，都有迹可循</strong><p>查看实际 Token、响应速度和人民币费用。悬停 Token 数值可查看明细。</p></div></div>
+                <div class="history-info"><span class="quick-icon accent-soft"><svg class="icon"><use href="#i-history"/></svg></span><div><strong>每一次调用，都有迹可循</strong><p>查看实际 Token、响应速度和人民币费用。</p></div></div>
                 <section class="panel history-panel" aria-labelledby="historyTitle">
                     <div class="panel-heading"><div><h2 id="historyTitle">调用日志</h2><p id="recordSummary">按时间倒序展示 API 调用记录</p></div><button id="exportLogs" class="button button-white" type="button" disabled><svg class="icon small"><use href="#i-download"/></svg>导出本页</button></div>
                     <div class="table-scroll" id="logTable" tabindex="0" role="region" aria-label="API 调用日志表格，可横向滚动" hidden>
-                        <table><thead><tr><th scope="col">时间</th><th scope="col">模型 / Provider</th><th scope="col">实际 Token / 次数</th><th scope="col">首字 / 耗时 (s)</th><th scope="col">TPS</th><th scope="col">单价（¥）</th><th scope="col">实际扣费（¥）</th></tr></thead><tbody id="logRows"></tbody></table>
+                        <table><thead><tr><th scope="col">时间</th><th scope="col">模型 / Provider</th><th scope="col">实际 Token</th><th scope="col">首字 (s)</th><th scope="col">总耗时 (s)</th><th scope="col">TPS</th><th scope="col">单价</th><th scope="col">实际扣费</th><th scope="col" class="log-info">附加信息</th></tr></thead><tbody id="logRows"></tbody></table>
                     </div>
                     <div id="historyState" class="state-message" role="status">正在加载日志…</div>
                     <div class="pagination"><label class="page-size">每页 <select id="pageSize" aria-label="每页记录数"><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></label><nav class="page-buttons" aria-label="日志分页"><button id="firstPage" type="button" aria-label="第一页" title="第一页" disabled>«</button><button id="previousPage" type="button" aria-label="上一页" title="上一页" disabled>‹</button><span id="pageIndicator">第 1 页</span><button id="nextPage" type="button" aria-label="下一页" title="下一页" disabled>›</button></nav></div>

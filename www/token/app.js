@@ -67,6 +67,9 @@
         const name = Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—';
         return Number(log.isswitch) === 1 ? `${name}（已切换）` : name;
     }
+    function logInfo(log) {
+        return typeof log.info === 'string' && log.info.trim() ? log.info : '';
+    }
     function duration(value, allowZero = false) {
         if (value == null) return '—';
         const seconds = Number(value);
@@ -867,8 +870,21 @@
             button.addEventListener('focus', () => showTokenDetail(button, log));
             button.addEventListener('blur', scheduleHideTokenDetail);
             usage.append(button);
-            row.append(time, model, usage, node('td', '', duration(image ? log.total : log.first, !image)), node('td', '', tps(log)),
-                node('td', '', logPrice(log)), node('td', 'charged', logCharge(log)));
+            const first = node('td', '', image ? '—' : duration(log.first, true));
+            const total = node('td', '', duration(log.total));
+            const info = node('td', 'log-info');
+            const message = logInfo(log);
+            if (message) {
+                const detail = node('details', 'log-info-detail');
+                const summary = node('summary', '', '查看');
+                summary.setAttribute('aria-label', `查看 ${log.model || '请求'} 的附加信息`);
+                detail.append(summary, node('pre', '', message));
+                info.append(detail);
+            } else {
+                info.textContent = '—';
+            }
+            row.append(time, model, usage, first, total, node('td', '', tps(log)),
+                node('td', '', logPrice(log)), node('td', 'charged', logCharge(log)), info);
             body.append(row);
         });
     }
@@ -953,13 +969,13 @@
     }
     function exportLogs() {
         if (!state.logs.length) return;
-        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token / 次数', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字 / 耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）']];
+        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字(s)', '总耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）', '附加信息']];
         state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
             numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.websearch),
-            duration(isImage(log) ? log.total : log.first, !isImage(log)), tps(log), logPrice(log), logCharge(log)]));
+            isImage(log) ? '—' : duration(log.first, true), duration(log.total), tps(log), logPrice(log), logCharge(log), logInfo(log)]));
         const csv = rows.map(row => row.map(value => {
             let text = String(value);
-            // Prevent spreadsheet formulas in server-supplied model/provider names.
+            // Prevent spreadsheet formulas in server-supplied text, including log info.
             if (/^[=+\-@\t\r\n]/.test(text)) text = `'${text}`;
             return `"${text.replaceAll('"', '""')}"`;
         }).join(',')).join('\r\n');
