@@ -119,6 +119,54 @@ h1 { font-size: 28px; font-weight: 700; line-height: 1.4; }
 .stat-caption { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--muted); }
 .stat-caption span { font-size: 10px; letter-spacing: .8px; }
 .overview-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 23px; margin-bottom: 24px; }
+#overviewPage .usage-panel { margin-bottom: 24px; overflow: hidden; }
+#overviewPage .usage-heading { padding: 23px 25px 20px; flex-wrap: wrap; gap: 12px; }
+#overviewPage .usage-heading h2 { flex-wrap: wrap; }
+#overviewPage .usage-heading p { margin-top: 5px; color: var(--muted); font-size: 13px; }
+#overviewPage .usage-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; padding: 8px 32px 28px; }
+#overviewPage .usage-chart { min-width: 0; margin: 0; text-align: center; }
+#overviewPage .usage-chart figcaption { margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #57534e; }
+#overviewPage .usage-donut-wrap { position: relative; width: min(100%, 252px); margin: 0 auto; aspect-ratio: 1; }
+#overviewPage .usage-donut { display: block; width: 100%; height: 100%; overflow: visible; }
+#overviewPage .usage-donut-track { fill: none; stroke: #f5f5f4; stroke-width: 30; }
+#overviewPage .usage-segment { fill: none; stroke-width: 30; cursor: pointer; transition: opacity .15s, stroke-width .15s; }
+#overviewPage .usage-segment.is-muted { opacity: .22; }
+#overviewPage .usage-segment.is-active, #overviewPage .usage-segment:focus-visible { stroke-width: 35; outline: none; }
+#overviewPage .usage-donut-center { position: absolute; inset: 0; width: 55%; margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; pointer-events: none; }
+#overviewPage .usage-donut-center strong { max-width: 100%; color: var(--ink); font-size: 27px; font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#overviewPage .usage-donut-center > span { max-width: 100%; color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+#overviewPage .usage-chart-hint { min-height: 20px; color: var(--muted); font-size: 12px; }
+#overviewPage .usage-periods { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 7px; background: var(--background); }
+#overviewPage .usage-periods button { padding: 4px 16px; border-radius: 4px; background: transparent; font-size: 12px; color: var(--muted); }
+#overviewPage .usage-periods button[aria-pressed="true"] { background: white; color: var(--accent-hover); box-shadow: 0 1px 3px #1c191712; font-weight: 600; }
+#overviewPage .usage-periods button:hover { color: var(--accent-hover); }
+#overviewPage .usage-table-wrap { padding: 0 25px; }
+#overviewPage .usage-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+#overviewPage .usage-table th { padding: 10px 12px; background: var(--background); color: var(--muted); font-weight: 400; font-size: 12px; }
+#overviewPage .usage-table td { padding: 15px 12px; color: #57534e; font-variant-numeric: tabular-nums; }
+#overviewPage .usage-table th, #overviewPage .usage-table td { text-align: right; white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid var(--line); }
+#overviewPage .usage-table th:first-child, #overviewPage .usage-table td:first-child { width: 42%; text-align: left; padding-left: 12px; }
+#overviewPage .usage-table tbody tr:last-child td { border-bottom: 0; }
+#overviewPage .usage-table tr.is-active { background: var(--accent-soft); }
+#overviewPage .usage-model-name { display: flex; align-items: center; gap: 10px; font-family: var(--font-code); font-size: 12px; color: var(--ink); font-weight: 500; }
+#overviewPage .usage-model-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; }
+#overviewPage .usage-table .usage-value { display: block; color: var(--ink); font-weight: 500; }
+#overviewPage .usage-table .usage-share-label { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+#overviewPage #usageState { margin: 0 25px 20px; }
+@media (max-width: 640px) {
+    #overviewPage .usage-panel { margin-bottom: 18px; }
+    #overviewPage .usage-heading { padding: 20px 19px 16px; }
+    #overviewPage .usage-charts { padding: 8px 19px 24px; gap: 20px; }
+    #overviewPage .usage-table-wrap { padding: 0 12px; }
+    #overviewPage .usage-table th, #overviewPage .usage-table td { padding: 12px 7px; font-size: 12px; }
+    #overviewPage .usage-table th:first-child, #overviewPage .usage-table td:first-child { width: 40%; padding-left: 7px; }
+    #overviewPage .usage-model-name { gap: 7px; font-size: 11px; }
+    #overviewPage #usageState { margin: 0 19px 18px; }
+}
+@media (max-width: 560px) {
+    #overviewPage .usage-charts { grid-template-columns: 1fr; gap: 26px; }
+    #overviewPage .usage-donut-wrap { width: 224px; }
+}
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .panel h2 { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; }
@@ -235,13 +283,14 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--background); }
 #logTable table { table-layout: fixed; min-width: 1200px; }
 #logTable th { padding-top: 10px; padding-bottom: 10px; line-height: 1.4; }
-#logTable th:nth-child(1), #logTable th:nth-child(9) { width: 14%; }
-#logTable th:nth-child(2) { width: 20%; }
-#logTable th:nth-child(3), #logTable th:nth-child(7) { width: 10%; }
+#logTable th:nth-child(1) { width: 14%; }
+#logTable th:nth-child(2) { width: 15%; }
+#logTable th:nth-child(3) { width: 10%; }
 #logTable th:nth-child(4) { width: 7%; }
 #logTable th:nth-child(5) { width: 8%; }
 #logTable th:nth-child(6) { width: 6%; }
-#logTable th:nth-child(8) { width: 11%; }
+#logTable th:nth-child(7) { width: 18%; }
+#logTable th:nth-child(8), #logTable th:nth-child(9) { width: 11%; }
 #logTable td { padding-top: 8px; padding-bottom: 8px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
 #logTable .log-model { max-width: 100%; }
 #logTable .log-date, #logTable .log-time { display: inline-block; white-space: nowrap; }

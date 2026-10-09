@@ -1,4 +1,5 @@
 #include "gptapi5.h"
+#include "gptapi4.h"
 #include "cppJSON.h"
 #include "gptapi6.h"
 #include "mylib.h"
@@ -556,17 +557,19 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     }
 }
 #define key_find(str) do{char*t=strcasestr(a->get,str);if(t)tmp=t+strlen(str);}while(0)
-user_* gpt5_api_user(http_para* a) {
+user_* gpt5_api_user(http_para* a,string* apikey=nullptr) {
     char *tmp=0;
     key_find("Authorization: Bearer sk-");
     if(!tmp)key_find("Authorization: sk-");
     if(!tmp)key_find("x-api-key: sk-");
     user_* p=getuser_by_id(tmp);
     if(p&&tmp&&memcmp(tmp+8,p->gptapikey,19))p=0;
+    if(p&&apikey)*apikey="sk-"+string(tmp,27);
     return p;
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
-    user_* p=gpt5_api_user(a);
+    string apikey;
+    user_* p=gpt5_api_user(a,&apikey);
     if(!p)return ERROR(H400,"Invalid API key.");
     cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
     string model=gpt6_request_model(a,req,format);
@@ -599,6 +602,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量
+        gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);
         if(b.stable<2||b.stable>=1000)gpt5_add(model+"_"+provider,b.stable==1,&b,ori,cost,rl.useage);//稳定性统计
         gpt5_log(p,model,provider,b,isauto,!b.send,&rl,cost);//写入个人日志
         if(b.send){

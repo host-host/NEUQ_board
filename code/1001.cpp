@@ -4,6 +4,7 @@
 #include"lib/check48.h"
 #include"lib/admin.h"
 // #include"lib/word.h"
+#include"lib/gptapi4.h"
 #include"lib/gptapi5.h"
 #include"lib/mylib.h"
 #include<cstdio>
@@ -22,6 +23,7 @@ void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
 int main() {
     chat_init();
     check48_init();
+    gpt4_init();
     gptapi5_init();
     user_init();
     http a;
@@ -67,6 +69,7 @@ int main() {
     http_add(&a,"POST /v1beta/models/",gpt5_gemini_generate_content);
     http_add(&a,"POST /api/v1beta/models/",gpt5_gemini_generate_content);
 
+    http_add(&a,"POST /api/gpt4_askuseage ",gpt4_askuseage);
     http_add(&a,"POST /api/gpt5_apikey ",gpt5_apikey);
     http_add(&a,"POST /api/gpt5_log_list ",gpt5_log_list);
     http_add(&a,"POST /api/gpt5_admin_log_list ",admin_log_list);

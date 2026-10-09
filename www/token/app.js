@@ -15,6 +15,9 @@
         logRequest: 0, logPage: 1, logNext: false, logs: [], logLoaded: false, logLoading: false
     };
     const numberFormat = new Intl.NumberFormat('zh-CN');
+    const overviewUsage = {request: 0, status: 'idle', key: '', rows: [], error: '', period: 'all', day: 0};
+    const usageColors = ['#f97316', '#5b8def', '#36a58b', '#a78bda', '#e7b34f', '#dc8194', '#56b5ce', '#8c94a4'];
+    const usageCompactNumber = new Intl.NumberFormat('zh-CN', {notation: 'compact', maximumFractionDigits: 2});
     const CNY_PER_MILLION_CREDITS = 0.3;
     const CNY_PER_USD = 7;
     const moneyFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 7});
@@ -257,6 +260,7 @@
             }
             renderAccount();
             renderProviders();
+            if (state.page === 'overview' && state.accountStatus === 'ready') await loadOverviewUsage();
         });
     }
     function renderAccount() {
@@ -289,6 +293,167 @@
         if (ready) $('quotaProgress').setAttribute('aria-valuenow', String(Math.min(100, percent)));
         else $('quotaProgress').removeAttribute('aria-valuenow');
         $('quotaNote').textContent = ready && remaining === 0 ? '当前余额为 ¥0.00，请留意账户余额。' : '金额单位为人民币';
+        if (!ready || overviewUsage.key !== state.account.api_key) {
+            overviewUsage.request++;
+            overviewUsage.status = 'idle';
+            overviewUsage.key = '';
+            overviewUsage.rows = [];
+        }
+        renderOverviewUsage();
+    }
+    function usageDay() { return Math.floor((Date.now() / 1000 + 8 * 3600) / 86400); }
+    async function loadOverviewUsage() {
+        if (state.page !== 'overview' || state.accountStatus !== 'ready') return renderOverviewUsage();
+        const key = state.account.api_key;
+        if (overviewUsage.status === 'loading' && overviewUsage.key === key) return;
+        const id = ++overviewUsage.request;
+        const day = usageDay();
+        overviewUsage.key = key;
+        overviewUsage.status = 'loading';
+        overviewUsage.rows = [];
+        renderOverviewUsage();
+        await busy(async () => {
+            try {
+                const data = await api('/api/gpt4_askuseage', {apikey: key});
+                if (id !== overviewUsage.request || state.account?.api_key !== key) return;
+                if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('用量数据格式异常，请稍后重试。');
+                const rows = Object.entries(data).map(([model, uses]) => {
+                    for (const period of ['today', 'all']) {
+                        if (!uses?.[period] || !['tokens', 'useage'].every(field => Number.isFinite(uses[period][field]) && uses[period][field] >= 0)) {
+                            throw new Error('用量数据格式异常，请稍后重试。');
+                        }
+                    }
+                    return {model, today: uses.today, all: uses.all};
+                });
+                overviewUsage.rows = rows;
+                overviewUsage.status = 'ready';
+                overviewUsage.day = day;
+            } catch (error) {
+                if (id !== overviewUsage.request || state.account?.api_key !== key) return;
+                overviewUsage.status = 'error';
+                overviewUsage.error = error.message;
+            }
+            renderOverviewUsage();
+        });
+    }
+    function renderOverviewUsage() {
+        const ready = state.accountStatus === 'ready' && overviewUsage.status === 'ready' && overviewUsage.key === state.account?.api_key;
+        const period = overviewUsage.period;
+        const periodLabel = period === 'all' ? '累计' : '今日';
+        // 先固定模型颜色，再筛选今日用量，切换范围时保持颜色一致。
+        const rows = ready ? [...overviewUsage.rows]
+            .sort((a, b) => b.all.useage - a.all.useage || b.all.tokens - a.all.tokens || a.model.localeCompare(b.model))
+            .map((row, index) => ({...row, index, color: usageColors[index] || `hsl(${(index * 137.508 + 20) % 360} 55% 52%)`}))
+            .filter(row => period === 'all' || row.today.tokens > 0 || row.today.useage > 0) : [];
+        const total = rows.reduce((sum, row) => ({tokens: sum.tokens + row[period].tokens, useage: sum.useage + row[period].useage}), {tokens: 0, useage: 0});
+        function highlight(row) {
+            document.querySelectorAll('#overviewPage [data-usage-model]').forEach(element => {
+                const active = !!row && Number(element.dataset.usageModel) === row.index;
+                element.classList.toggle('is-active', active);
+                element.classList.toggle('is-muted', !!row && !active);
+            });
+            const value = row ? row[period] : total;
+            const tokenValue = $('usageTokenValue'), costValue = $('usageCostValue');
+            tokenValue.textContent = ready ? usageCompactNumber.format(value.tokens) : '—';
+            tokenValue.title = ready ? `${tokens(value.tokens)} Tokens` : '';
+            costValue.textContent = ready ? money(creditsToYuan(value.useage), true) : '—';
+            costValue.title = ready ? money(creditsToYuan(value.useage)) : '';
+            costValue.style.fontSize = costValue.textContent.length > 11 ? '17px' : costValue.textContent.length > 8 ? '21px' : '';
+            $('usageTokenLabel').textContent = row ? row.model : `${periodLabel} Tokens`;
+            $('usageCostLabel').textContent = row ? row.model : `${periodLabel}消费 · 元`;
+        }
+        drawUsageDonut('usageTokenChart', rows, period, 'tokens', total.tokens, highlight);
+        drawUsageDonut('usageCostChart', rows, period, 'useage', total.useage, highlight);
+        highlight(null);
+        $('usageTokenHint').textContent = ready && total.tokens === 0 ? `${periodLabel}暂无 Token 用量` : '按实际 Token 用量统计';
+        $('usageCostHint').textContent = ready && total.useage === 0 ? `${periodLabel}暂无消费` : '按实际消费金额统计';
+        document.querySelectorAll('[data-usage-period]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.usagePeriod === period)));
+        $('usageRows').replaceChildren();
+        $('usageTable').hidden = true;
+        $('usageModelCount').textContent = ready ? tokens(rows.length) : '—';
+        if (state.accountStatus === 'login') return showMessage('usageState', '登录后查看用量统计。', {login: true});
+        if (state.accountStatus === 'error') return showMessage('usageState', '账户信息加载失败，暂时无法获取用量。', {error: true, retry: loadAccount});
+        if (overviewUsage.status === 'error') return showMessage('usageState', overviewUsage.error, {error: true, retry: loadOverviewUsage});
+        if (!ready) return showMessage('usageState', '正在加载用量…', {loading: true});
+        if (!rows.length) return showMessage('usageState', period === 'today' ? '今日暂无模型用量。' : '当前密钥暂无模型用量数据。');
+        const fragment = document.createDocumentFragment();
+        for (const row of rows) {
+            const tr = node('tr');
+            tr.dataset.usageModel = row.index;
+            tr.tabIndex = 0;
+            tr.addEventListener('pointerenter', () => highlight(row));
+            tr.addEventListener('pointerleave', () => highlight(null));
+            tr.addEventListener('focus', () => highlight(row));
+            tr.addEventListener('blur', () => highlight(null));
+            const model = node('td');
+            const name = node('div', 'usage-model-name');
+            const dot = node('span', 'usage-model-dot');
+            dot.style.background = row.color;
+            dot.setAttribute('aria-hidden', 'true');
+            name.append(dot, node('span', '', row.model));
+            model.append(name);
+            tr.append(model);
+            for (const field of ['tokens', 'useage']) {
+                const cell = node('td');
+                const value = row[period][field];
+                cell.append(node('span', 'usage-value', field === 'tokens' ? tokens(value) : money(creditsToYuan(value))),
+                    node('span', 'usage-share-label', usageShare(value, total[field])));
+                tr.append(cell);
+            }
+            fragment.append(tr);
+        }
+        $('usageRows').append(fragment);
+        $('usageTable').hidden = false;
+        $('usageState').hidden = true;
+    }
+    function usageShare(value, total) {
+        const percent = total > 0 ? value / total * 100 : 0;
+        return percent > 0 && percent < 0.1 ? '<0.1%' : `${Number(percent.toFixed(1))}%`;
+    }
+    function drawUsageDonut(id, rows, period, field, total, highlight) {
+        const svg = $(id);
+        const ns = 'http://www.w3.org/2000/svg';
+        svg.replaceChildren();
+        const circle = () => {
+            const element = document.createElementNS(ns, 'circle');
+            element.setAttribute('cx', '120');
+            element.setAttribute('cy', '120');
+            element.setAttribute('r', '88');
+            return element;
+        };
+        const track = circle();
+        track.setAttribute('class', 'usage-donut-track');
+        track.setAttribute('aria-hidden', 'true');
+        svg.append(track);
+        if (total <= 0) return;
+        const parts = rows.filter(row => row[period][field] > 0);
+        let offset = 0;
+        for (const row of parts) {
+            const value = row[period][field];
+            const share = value / total * 100;
+            const gap = parts.length > 1 ? Math.min(0.6, share * 0.08) : 0;
+            const segment = circle();
+            segment.setAttribute('class', 'usage-segment');
+            segment.setAttribute('stroke', row.color);
+            segment.setAttribute('pathLength', '100');
+            segment.setAttribute('stroke-dasharray', `${share - gap} ${100 - share + gap}`);
+            segment.setAttribute('stroke-dashoffset', String(-offset));
+            segment.setAttribute('transform', 'rotate(-90 120 120)');
+            segment.setAttribute('tabindex', '0');
+            segment.setAttribute('role', 'img');
+            segment.dataset.usageModel = row.index;
+            const description = `${row.model}：${field === 'tokens' ? `${tokens(value)} Tokens` : money(creditsToYuan(value))}，占比 ${usageShare(value, total)}`;
+            segment.setAttribute('aria-label', description);
+            const title = document.createElementNS(ns, 'title');
+            title.textContent = description;
+            segment.append(title);
+            segment.addEventListener('pointerenter', () => highlight(row));
+            segment.addEventListener('pointerleave', () => highlight(null));
+            segment.addEventListener('focus', () => highlight(row));
+            segment.addEventListener('blur', () => highlight(null));
+            svg.append(segment);
+            offset += share;
+        }
     }
     async function loadModels() {
         const id = ++state.modelRequest;
@@ -1034,6 +1199,7 @@
         }
         if (page === 'history' && !state.logLoaded && !state.logLoading) loadLogs(1);
         if (page === 'models' && changed) renderProviders();
+        if (page === 'overview' && changed) loadOverviewUsage();
         if (changed) window.scrollTo({top: 0, behavior: 'instant'});
     }
     async function refresh() {
@@ -1045,6 +1211,15 @@
     }
 
     $('refreshButton').addEventListener('click', refresh);
+    document.querySelectorAll('[data-usage-period]').forEach(button => button.addEventListener('click', () => {
+        overviewUsage.period = button.dataset.usagePeriod;
+        renderOverviewUsage();
+    }));
+    function refreshUsageDay() {
+        if (!document.hidden && state.page === 'overview' && overviewUsage.status === 'ready' && overviewUsage.day !== usageDay()) loadOverviewUsage();
+    }
+    document.addEventListener('visibilitychange', refreshUsageDay);
+    setInterval(refreshUsageDay, 60000);
     $('userMenuToggle').addEventListener('click', () => setAccountMenu($('accountDropdown').hidden));
     $('userMenuToggle').addEventListener('keydown', event => {
         if (event.key === 'ArrowDown') {

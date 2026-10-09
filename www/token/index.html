@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1009v2">
+    <link rel="stylesheet" href="style.css?v=1009v6">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1009v2" defer></script>
+    <script src="app.js?v=1009v6" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -88,6 +88,25 @@
                     <article class="stat-card"><div class="stat-label">累计消费<svg class="icon"><use href="#i-chart"/></svg></div><div id="tokenUsed" class="stat-value">—</div><div class="stat-caption"><span>USED</span>已用金额</div></article>
                     <article class="stat-card"><div class="stat-label">总金额<svg class="icon"><use href="#i-stack"/></svg></div><div id="tokenLimit" class="stat-value">—</div><div class="stat-caption"><span>TOTAL</span>账户总金额</div></article>
                 </div>
+                <section class="panel usage-panel" aria-labelledby="usageTitle">
+                    <div class="panel-heading usage-heading"><div><h2 id="usageTitle">模型用量 <span id="usageModelCount" class="count-badge">—</span></h2><p>当前 API Key · 各模型用量分布</p></div><div class="usage-periods" role="group" aria-label="模型用量统计范围"><button type="button" data-usage-period="all" aria-pressed="true">累计</button><button type="button" data-usage-period="today" aria-pressed="false">今日</button></div></div>
+                    <div class="usage-charts">
+                        <figure class="usage-chart" aria-labelledby="usageTokenTitle">
+                            <figcaption id="usageTokenTitle">Token 分布</figcaption>
+                            <div class="usage-donut-wrap"><svg id="usageTokenChart" class="usage-donut" viewBox="0 0 240 240" role="group" aria-label="各模型 Token 占比"></svg><div class="usage-donut-center"><strong id="usageTokenValue">—</strong><span id="usageTokenLabel">累计 Tokens</span></div></div>
+                            <p id="usageTokenHint" class="usage-chart-hint">按实际 Token 用量统计</p>
+                        </figure>
+                        <figure class="usage-chart" aria-labelledby="usageCostTitle">
+                            <figcaption id="usageCostTitle">消费分布</figcaption>
+                            <div class="usage-donut-wrap"><svg id="usageCostChart" class="usage-donut" viewBox="0 0 240 240" role="group" aria-label="各模型消费金额占比"></svg><div class="usage-donut-center"><strong id="usageCostValue">—</strong><span id="usageCostLabel">累计消费 · 元</span></div></div>
+                            <p id="usageCostHint" class="usage-chart-hint">按实际消费金额统计</p>
+                        </figure>
+                    </div>
+                    <div id="usageState" class="state-message compact" role="status">正在加载用量…</div>
+                    <div id="usageTable" class="usage-table-wrap" hidden>
+                        <table class="usage-table"><thead><tr><th scope="col">模型</th><th scope="col">Token 用量 / 占比</th><th scope="col">消费金额 / 占比</th></tr></thead><tbody id="usageRows"></tbody></table>
+                    </div>
+                </section>
                 <div class="overview-grid">
                     <section class="panel quota-panel" aria-labelledby="quotaTitle">
                         <div class="panel-heading"><h2 id="quotaTitle">消费情况</h2><a class="text-link" href="#history">查看明细 <span aria-hidden="true">↗</span></a></div>
