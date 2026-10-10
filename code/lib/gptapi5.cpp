@@ -472,8 +472,10 @@ void* gpt5_probe_loop(void*) {
         for(cppJSON item:config["model"]) {
             if(item["suggest_format"]=="image")continue;
             string model=item.a->string;
-            for(cppJSON value:item["provider"]) {
-                string provider=value;
+            set<string>s;
+            for(cppJSON value:item["provider"])s.insert((string)value);
+            for(cppJSON value:item["auto"]["provider"])s.insert((string)value);
+            for(const string& provider:s) {
                 if(provider=="auto")continue;
                 cppJSON conf=config["provider"][provider.c_str()];
                 if(!conf)continue;

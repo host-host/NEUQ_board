@@ -2,6 +2,7 @@
 #include"cppJSON.h"
 #include"ndb2.h"
 #include"user.h"
+#include"mylib.h"
 #include<cstring>
 #include<ctime>
 #include<string>
@@ -20,8 +21,8 @@ void gpt4_adduseage(const char* apikey,const char* model,long long tokens,long l
     if(!uses)return;
     long long now=time(0);
     if(useage_day(uses->time)!=useage_day(now))uses->today={};
-    uses->all.tokens+=tokens;
-    uses->all.useage+=useage;
+    ADD(&uses->all.tokens,tokens);
+    ADD(&uses->all.useage,useage);
     uses->today.tokens+=tokens;
     uses->today.useage+=useage;
     uses->time=now;
