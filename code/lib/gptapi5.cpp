@@ -576,6 +576,11 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
     string model=gpt6_request_model(a,req,format);
     if(!config["model"].has(model))return ERROR(H400,"Model not found.");
+    cppJSON tmpcheck=config["model"][model]["format"];
+    if(tmpcheck&&!tmpcheck.has(format)){
+        string b=(string)"{\"error\":{\"message\":\"模型 "+model +" 不支持 "+format+ " 格式\"}}";
+        return http_send(a,H400 Hc0 Hjson,b.c_str(),b.size());
+    }
     pro_ret proret=gotprovider(p,config,model);
     if(proret.providers.empty())return ERROR(H400,"Model not found.");
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
@@ -720,6 +725,7 @@ void gpt5_model_list(http_para* a) {
     for(cppJSON provider:config["provider"]) {
         provider.erase("name");
         provider.erase("url");
+        provider.erase("url_claude");
         provider.erase("Authorization");
         provider.erase("cost");
     }

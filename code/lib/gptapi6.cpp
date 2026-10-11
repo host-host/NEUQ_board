@@ -317,6 +317,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     }
     char curl_error[CURL_ERROR_SIZE]={0};
     string Authorization=conf["Authorization"],url=conf["url"],mm,proxy=conf["proxy"];
+    if(conf.has("url_claude")&&strcmp(format,"claude")==0)url=conf["url_claude"];//单独适配deepseek的两种格式url不同
     struct curl_slist* headers=curl_slist_append(0,"Content-Type: application/json");
     if(strcmp(format,"responses")==0||strcmp(format,"completions")==0||strcmp(format,"image")==0)Authorization="Authorization: Bearer "+Authorization;
     if(strcmp(format,"claude")==0)Authorization="x-api-key: "+Authorization;
