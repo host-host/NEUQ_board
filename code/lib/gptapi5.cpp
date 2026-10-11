@@ -470,7 +470,7 @@ void* gpt5_probe_loop(void*) {
         cppJSON config=cppJSON::from_file(CONFIG);
         if(!config)continue;
         for(cppJSON item:config["model"]) {
-            if(item["suggest_format"]=="image")continue;
+            if(!item["format"].has("completions"))continue;
             string model=item.a->string;
             set<string>s;
             for(cppJSON value:item["provider"])s.insert((string)value);
@@ -591,10 +591,6 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         bool isauto=proret.isauto,last=k+1==(int)proret.providers.size();
         if(isauto&&!last&&gpt5_should_skip(model+"_"+provider))continue;
         b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last);
-        if(memcmp(a->get,"POST /api",9)!=0&&b.send){//网页端阻塞到标题创建完成
-            close(a->cl);
-            a->cl=0;
-        }
         if(b.stable==0||config["file"]==true)makelog(&b,model.c_str(),a->get+a->n,p->name,provider,isauto);//写入日志文件
         if(!b.send){
             if(!startns)startns=b.start_ns;
@@ -602,6 +598,10 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
                 b.send=1;
                 gpt6_flush(&b);
             }
+        }
+        if(memcmp(a->get,"POST /api",9)!=0&&b.send){//网页端阻塞到标题创建完成
+            close(a->cl);
+            a->cl=0;
         }
         reslog rl;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价

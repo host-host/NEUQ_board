@@ -757,6 +757,10 @@
         button.addEventListener('click', () => showModelLog(button, log));
         return button;
     }
+    function supportsModelType(config, type) {
+        return Array.isArray(config?.format) && config.format.some(format => type === 'image'
+            ? format === 'image' : ['completions', 'responses', 'claude', 'gemini'].includes(format));
+    }
     function renderProviders() {
         hidePricePopover();
         hideModelLog();
@@ -772,12 +776,12 @@
         if (state.modelStatus === 'error') return showMessage('providerState', state.modelError, {error: true, retry: loadModels});
         if (state.accountStatus !== 'ready' || state.modelStatus !== 'ready') return showMessage('providerState', '正在加载模型…', {loading: true});
         const entries = Object.entries(state.models.model || {}).map(([name, config]) => ({name, config, providers: availableProviders(config)})).filter(item => item.providers.length);
-        const textCount = entries.filter(item => item.config.suggest_format !== 'image').length;
+        const textCount = entries.filter(item => supportsModelType(item.config, 'text')).length;
         $('textModelCount').textContent = String(textCount);
-        $('imageModelCount').textContent = String(entries.length - textCount);
+        $('imageModelCount').textContent = String(entries.filter(item => supportsModelType(item.config, 'image')).length);
         $('modelCount').textContent = String(entries.length);
         const query = $('modelSearch').value.trim().toLocaleLowerCase();
-        const visible = entries.filter(item => (item.config.suggest_format === 'image') === (state.modelType === 'image') && item.name.toLocaleLowerCase().includes(query));
+        const visible = entries.filter(item => supportsModelType(item.config, state.modelType) && item.name.toLocaleLowerCase().includes(query));
         if (!visible.length) return showMessage('providerState', query ? '没有找到匹配的模型，试试其他关键词。' : '暂无可用的模型。');
         $('providerState').hidden = true;
         $('providerTable').hidden = false;

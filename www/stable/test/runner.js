@@ -19,8 +19,8 @@
             });
     }
 
-    function buildRequest(model, suggestedFormat, question) {
-        const format = formatFor(suggestedFormat);
+    function buildRequest(model, requestFormat, question) {
+        const format = formatFor(requestFormat);
         if (format === 'responses') return {format, endpoint: '/api/v1/responses', body: {
             model, stream: true, instructions: SYSTEM,
             input: [{role: 'user', content: [{type: 'input_text', text: question}]}]
@@ -113,8 +113,8 @@
         return {text: '', latency: null, elapsed: null, inputTokens: null, outputTokens: null, totalTokens: null, tps: null};
     }
 
-    async function ask({model, format: suggestedFormat, question, apiKey}, {fetcher = fetch, now = () => performance.now(), onUpdate = () => {}} = {}) {
-        const request = buildRequest(model, suggestedFormat, question);
+    async function ask({model, format, question, apiKey}, {fetcher = fetch, now = () => performance.now(), onUpdate = () => {}} = {}) {
+        const request = buildRequest(model, format, question);
         const result = createResult();
         const started = now();
         let stream = false;

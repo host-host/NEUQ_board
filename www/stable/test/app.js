@@ -8,6 +8,8 @@
     const resultCache = new Map();
     const recordKey = (name, provider) => `stable-channel-test:result:v1:${JSON.stringify([name, provider])}`;
     const formatNames = {completions: 'Chat Completions', responses: 'Responses', claude: 'Claude Messages', gemini: 'Gemini generateContent'};
+    const modelFormat = config => (Array.isArray(config?.format) ? config.format : [])
+        .find(format => Object.hasOwn(formatNames, format));
     const numberFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 2});
     const multiplierFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 6});
     const node = (tag, className, text) => {
@@ -84,7 +86,7 @@
 
     function updateModelMeta() {
         $('modelFormat').textContent = state.catalog?.model?.[model()]
-            ? `请求格式：${formatNames[api.formatFor(state.catalog.model[model()].suggest_format)]}` : '—';
+            ? `请求格式：${formatNames[modelFormat(state.catalog.model[model()])]}` : '—';
         $('currentProvider').textContent = `当前渠道：${state.account?.selected_provider?.[model()] || '—'}`;
     }
 
@@ -194,7 +196,7 @@
             $('loginLink').hidden = !account.reason?.auth;
         }
         const models = Object.entries(state.catalog?.model || {})
-            .filter(([, config]) => config && config.suggest_format !== 'image')
+            .filter(([, config]) => modelFormat(config))
             .map(([name]) => name).sort((a, b) => a.localeCompare(b));
         $('modelSelect').replaceChildren();
         if (!models.length) $('modelSelect').append(new Option('暂无文本模型', ''));
@@ -233,7 +235,7 @@
         const selected = state.rows.filter(row => row.provider.available && row.checkbox.checked);
         if (!selected.length) { notice('请至少选择一个可用渠道。', true); return; }
         const selectedModel = model();
-        const format = api.formatFor(state.catalog.model[selectedModel].suggest_format);
+        const format = modelFormat(state.catalog.model[selectedModel]);
         state.running = true;
         state.stop = false;
         updateControls();

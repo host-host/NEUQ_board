@@ -116,7 +116,7 @@
             modelConfig = config;
             model.replaceChildren();
             for (const [name, entry] of Object.entries(config.model)) {
-                if (entry?.suggest_format !== 'image' || !availableProviders(name).length) continue;
+                if (!Array.isArray(entry?.format) || !entry.format.includes('image') || !availableProviders(name).length) continue;
                 const option = document.createElement('option');
                 option.value = name;
                 option.textContent = name;

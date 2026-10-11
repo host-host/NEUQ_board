@@ -40,7 +40,7 @@ function startNewChat() {//新建对话
     document.getElementById('sidebarOverlay').classList.remove('active');
     const selectButton = document.getElementById('selectButton');
     if (selectButton && modelCatalog.has(selectButton.textContent))
-        setSelectedModel(selectButton.textContent, selectButton.dataset.format);
+        setSelectedModel(selectButton.textContent);
     updateModelCompatibilityWarning();
     updateHeaderButtons();
 }

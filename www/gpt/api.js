@@ -87,13 +87,12 @@ function normalizeModelFormat(format) {
 
 function updateModelCompatibilityWarning() {
     const warning = document.getElementById('modelCompatibilityWarning');
-    const suggestedFormat = document.getElementById('selectButton')?.dataset.format;
+    const modelName = document.getElementById('selectButton')?.textContent;
     if (!warning) return;
-    warning.hidden = !(currentChatFormat && suggestedFormat &&
-        currentChatFormat !== suggestedFormat &&
-        currentChatFormat !== 'completions' && suggestedFormat !== 'completions');
+    warning.hidden = !currentChatFormat || !modelCatalog.has(modelName) ||
+        availableModelVariants(modelName).some(variant => variant.format === currentChatFormat);
     if (!warning.hidden) {
-        const recommendedModel = {responses: 'OpenAI', claude: 'Claude', gemini: 'Gemini'}[currentChatFormat];
+        const recommendedModel = {responses: 'OpenAI', claude: 'Claude', gemini: 'Gemini', completions: '兼容 Chat Completions'}[currentChatFormat];
         warning.textContent = `当前模型对当前对话可能不可用，建议切换 ${recommendedModel} 的模型。`;
     }
 }
@@ -104,7 +103,7 @@ function availableModelVariants(name, requireAccess = true) {
     return model.variants.filter(variant => !requireAccess || variant.isPublic || isAdmin);
 }
 
-function setSelectedModel(name, preferredFormat = null) {
+function setSelectedModel(name, preferredFormat = currentChatFormat) {
     const selectButton = document.getElementById('selectButton');
     const allVariants = availableModelVariants(name, false);
     const variants = availableModelVariants(name);
@@ -200,7 +199,7 @@ async function fetchModels() {//获取 AI 模型列表
         const response = await fetch('/api/gpt5_model_list', { method: 'POST' });
         const configs = await response.json();
         modelCatalog.clear();
-        const addModelVariant = (name, provider, providerConfig, suggestedFormat) => {
+        const addModelVariant = (name, provider, providerConfig, format) => {
             if (typeof name !== 'string' || !name) return;
             if (!modelCatalog.has(name)) {
                 modelCatalog.set(name, {name, hasPublic: false, hasPrivate: false, variants: []});
@@ -209,7 +208,6 @@ async function fetchModels() {//获取 AI 模型列表
             const isPublic = providerConfig.public === true;
             if (isPublic) model.hasPublic = true;
             else model.hasPrivate = true;
-            const format = normalizeModelFormat(suggestedFormat);
             const existing = model.variants.find(variant =>
                 variant.provider === provider && variant.format === format);
             if (existing) existing.isPublic = existing.isPublic || isPublic;
@@ -224,12 +222,14 @@ async function fetchModels() {//获取 AI 模型列表
             return {...modelConfig.auto, public: providers.some(item => item.public === true)};
         };
         for (const [name, modelConfig] of Object.entries(configs.model || {})) {
-            if (modelConfig?.suggest_format === 'image') continue;
+            const formats = Array.isArray(modelConfig?.format) ? modelConfig.format.filter(format =>
+                ['completions', 'responses', 'claude', 'gemini'].includes(format)) : [];
+            if (!formats.length) continue;
             const providers = modelConfig?.provider;
             if (!Array.isArray(providers)) continue;
             providers.forEach(provider => {
                 const providerConfig = resolveProviderConfig(modelConfig, provider);
-                if (providerConfig) addModelVariant(name, provider, providerConfig, modelConfig.suggest_format);
+                if (providerConfig) formats.forEach(format => addModelVariant(name, provider, providerConfig, format));
             });
         }
         Models = [...modelCatalog.values()];
