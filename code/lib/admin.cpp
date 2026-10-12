@@ -112,15 +112,16 @@ void admin_log_list(http_para* a){
     user_* p=getuser(a->get);
     if(!p)return http_send(a,H401 Hjson Hc0,"{\"error\":{\"message\":\"Please log in first.\"}}",0);
     if(!(p->admin&2))return http_send(a,H403 Hjson Hc0,"{\"error\":{\"message\":\"Permission denied.\"}}",0);
-    cppJSON req(a->get+a->n),ans("[]");
-    long long start=req["start"].valuedouble(),end=req["end"].valuedouble();
+    cppJSON req(a->get+a->n),ans(R"({"end":{},"item":[]})");
+    cppJSON start=req["start"],end=ans["end"],items=ans["item"];
     long long from=req["from"].valuedouble(),to=req["to"].valuedouble();
     string user_query=req["user"].valuestring();
-    if(start<1||end<start||end-start>100||from<0||to<0||(from&&to&&from>to)||user_query.size()>64)
+    if(from<0||to<0||(from&&to&&from>to)||user_query.size()>64)
         return http_send(a,H400 Hjson Hc0,"{\"error\":{\"message\":\"Bad request.\"}}",0);
     priority_queue<admin_log_cursor,vector<admin_log_cursor>,admin_log_cursor_less> logs;
     char key[48]={0};
     for(reslogs* value=(reslogs*)ndb2_next(log_db,key);value;value=(reslogs*)ndb2_next(log_db,key)){
+        if(start.IsObject()&&!start.has(key))continue;
         long long size=ndb2_gotmaxlen(value);
         if(size<(long long)sizeof(reslogs))continue;
         long long capacity=(size-sizeof(reslogs))/sizeof(reslog);
@@ -131,20 +132,25 @@ void admin_log_list(http_para* a){
         string username=owner?string(owner->name,strnlen(owner->name,sizeof(owner->name))):string();
         string userid=key;
         if(!admin_user_matches(userid,username,user_query))continue;
-        int index=n-1;
+        int index=start.IsObject()?(int)start[key].valuedouble():n-1;
+        if(index>=n)index=n-1;
         while(index>=0&&to&&value->a[index].time>to)index--;
         if(index<0||(from&&value->a[index].time<from))continue;
+        end.insert(key,(double)index);
         logs.push({value,index,std::move(userid),std::move(username)});
     }
-    for(long long position=1;position<=end&&!logs.empty();position++){
+    for(int count=0;count<100&&!logs.empty();count++){
         admin_log_cursor current=logs.top();
         logs.pop();
-        if(position>=start)ans.push_back(admin_log_json(current));
-        if(current.index>0){
-            current.index--;
-            if(!from||current.logs->a[current.index].time>=from)logs.push(std::move(current));
-        }
+        items.push_back(admin_log_json(current));
+        current.index--;
+        if(current.index>=0&&(!from||current.logs->a[current.index].time>=from)){
+            end.insert(current.userid.c_str(),(double)current.index);
+            logs.push(std::move(current));
+        }else end.erase(current.userid.c_str());
     }
+    if(logs.empty())ans["end"]=-1.0;
+    ans.insert("active",(double)a->f->active);
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 void admin_add_token(http_para* a){

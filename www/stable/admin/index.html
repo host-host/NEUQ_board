@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全用户 API 日志</title>
-    <link rel="stylesheet" href="style.css?v=0916v1">
+    <link rel="stylesheet" href="style.css?v=1012v1">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
@@ -26,13 +26,6 @@
                 <div class="list-controls">
                     <button id="openGrantDialogButton" class="grant-open-button" type="button"><span aria-hidden="true">+</span> 调整额度</button>
                     <button id="refreshButton" type="button">刷新</button>
-                    <label class="page-size-control">每页
-                        <select id="pageSize" aria-label="每页记录数">
-                            <option value="20">20 条</option>
-                            <option value="50">50 条</option>
-                            <option value="100">100 条</option>
-                        </select>
-                    </label>
                 </div>
             </div>
 
@@ -73,16 +66,10 @@
                         <tbody id="logBody"></tbody>
                     </table>
                 </div>
-                <nav class="pagination" aria-label="日志分页">
-                    <div class="page-buttons">
-                        <button id="firstPage" type="button" title="第一页" aria-label="第一页">&#171;</button>
-                        <button id="previousPage" type="button" title="上一页" aria-label="上一页">&#8249;</button>
-                    </div>
-                    <span id="pageIndicator">第 1 页</span>
-                    <div class="page-buttons">
-                        <button id="nextPage" type="button" title="下一页" aria-label="下一页">&#8250;</button>
-                    </div>
-                </nav>
+                <div id="logLoadState" class="log-load-state" role="status">
+                    <span id="logLoadMessage"></span>
+                    <button id="retryLogs" type="button" hidden>重试</button>
+                </div>
             </div>
 
             <div id="loadingState" class="state-message">正在加载日志...</div>
@@ -150,6 +137,6 @@
             </footer>
         </form>
     </dialog>
-    <script src="app.js?v=0930v1"></script>
+    <script src="app.js?v=1012v2"></script>
 </body>
 </html>

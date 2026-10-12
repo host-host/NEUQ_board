@@ -4,7 +4,9 @@ const emptyState = document.getElementById('emptyState');
 const loginState = document.getElementById('loginState');
 const permissionState = document.getElementById('permissionState');
 const errorState = document.getElementById('errorState');
-const pageSizeSelect = document.getElementById('pageSize');
+const logLoadState = document.getElementById('logLoadState');
+const logLoadMessage = document.getElementById('logLoadMessage');
+const retryLogsButton = document.getElementById('retryLogs');
 const tokenTooltip = document.getElementById('tokenBreakdownTooltip');
 const filterForm = document.getElementById('filterForm');
 const userFilterInput = document.getElementById('userFilter');
@@ -19,8 +21,9 @@ const grantResult = document.getElementById('grantResult');
 const submitGrantButton = document.getElementById('submitGrantButton');
 const closeGrantDialogButton = document.getElementById('closeGrantDialogButton');
 const cancelGrantButton = document.getElementById('cancelGrantButton');
-let currentPage = 1;
-let hasNextPage = false;
+let logStart = -1;
+let logLoading = false;
+let logCount = 0;
 let requestId = 0;
 let activeFilters = {};
 
@@ -195,8 +198,6 @@ function appendInfoCell(row, info) {
 
 function renderRows(items) {
     const body = document.getElementById('logBody');
-    hideTokenBreakdown();
-    body.replaceChildren();
     for (const log of items) {
         const image = isImageLog(log);
         const row = document.createElement('tr');
@@ -239,14 +240,14 @@ function applyFilters() {
     if (user) activeFilters.user = user;
     if (from) activeFilters.from = from;
     if (to) activeFilters.to = to;
-    loadPage(1);
+    loadLogs();
 }
 
 function clearFilters() {
     filterForm.reset();
     toFilterInput.setCustomValidity('');
     activeFilters = {};
-    loadPage(1);
+    loadLogs();
 }
 
 function selectedGrantMode() {
@@ -341,29 +342,28 @@ async function submitGrant() {
     }
 }
 
-function updatePagination(start, count) {
-    const hasPrevious = currentPage > 1;
-    document.getElementById('firstPage').disabled = !hasPrevious;
-    document.getElementById('previousPage').disabled = !hasPrevious;
-    document.getElementById('nextPage').disabled = !hasNextPage;
-    document.getElementById('pageIndicator').textContent = `第 ${currentPage} 页`;
-    const filtered = Object.keys(activeFilters).length ? ' · 筛选结果' : '';
-    document.getElementById('recordSummary').textContent = `第 ${formatTokens(start)} 至 ${formatTokens(start + count - 1)} 条 · 按时间倒序${filtered}`;
-}
-
-async function loadPage(page) {
+async function loadLogs(append = false) {
+    if (append && (logLoading || logStart === -1)) return;
     const id = ++requestId;
-    const pageSize = Number(pageSizeSelect.value);
-    const start = (page - 1) * pageSize + 1;
-    const end = start + pageSize;
-    showState(loadingState);
+    logLoading = true;
+    logObserver.disconnect();
+    logLoadState.classList.remove('error');
+    logLoadMessage.textContent = '正在加载更多记录…';
+    retryLogsButton.hidden = true;
+    if (!append) {
+        logStart = -1;
+        logCount = 0;
+        document.getElementById('logBody').replaceChildren();
+        showState(loadingState);
+    }
     try {
         const response = await fetch('/api/gpt5_admin_log_list', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({start, end, ...activeFilters})
+            body:JSON.stringify({start: logStart, ...activeFilters})
         });
         const text = await response.text();
+        if (id !== requestId) return;
         let data;
         try { data = text ? JSON.parse(text) : {}; }
         catch (_) { throw new Error(text || '无法读取服务器响应'); }
@@ -373,29 +373,40 @@ async function loadPage(page) {
             if (response.status === 403 || /permission/i.test(message)) return showState(permissionState);
             throw new Error(message || `请求失败（HTTP ${response.status}）`);
         }
-        if (id !== requestId) return;
-        const items = Array.isArray(data) ? data : [];
-        currentPage = page;
-        if (!items.length) {
+        logStart = data.end;
+        logCount += data.item.length;
+        const filtered = Object.keys(activeFilters).length ? ' · 筛选结果' : '';
+        document.getElementById('recordSummary').textContent = `已加载 ${formatTokens(logCount)} 条 · 按时间倒序${filtered} · 活跃连接 ${formatTokens(data.active)}`;
+        if (!logCount) {
             emptyState.textContent = Object.keys(activeFilters).length ? '没有符合筛选条件的日志记录' : '暂无日志记录';
             return showState(emptyState);
         }
-        hasNextPage = items.length > pageSize;
-        const visibleItems = items.slice(0, pageSize);
-        renderRows(visibleItems);
-        updatePagination(start, visibleItems.length);
-        showState(tableContent);
+        renderRows(data.item);
+        logLoadMessage.textContent = logStart === -1 ? '已加载全部记录' : '继续向下滚动加载更多';
+        if (!append) showState(tableContent);
     } catch (error) {
         if (id !== requestId) return;
-        errorState.textContent = error.message || '加载日志失败';
-        showState(errorState);
+        if (append) {
+            logLoadState.classList.add('error');
+            logLoadMessage.textContent = error.message || '加载日志失败';
+            retryLogsButton.hidden = false;
+        } else {
+            errorState.textContent = error.message || '加载日志失败';
+            showState(errorState);
+        }
+    } finally {
+        if (id === requestId) {
+            logLoading = false;
+            if (!tableContent.hidden && logStart !== -1 && retryLogsButton.hidden) logObserver.observe(logLoadState);
+        }
     }
 }
 
-document.getElementById('firstPage').addEventListener('click', () => loadPage(1));
-document.getElementById('previousPage').addEventListener('click', () => loadPage(currentPage - 1));
-document.getElementById('nextPage').addEventListener('click', () => loadPage(currentPage + 1));
-document.getElementById('refreshButton').addEventListener('click', () => loadPage(currentPage));
+const logObserver = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting) && !tableContent.hidden && retryLogsButton.hidden) loadLogs(true);
+}, {rootMargin: '160px 0px'});
+retryLogsButton.addEventListener('click', () => loadLogs(true));
+document.getElementById('refreshButton').addEventListener('click', () => loadLogs());
 document.getElementById('openGrantDialogButton').addEventListener('click', () => openGrantDialog());
 closeGrantDialogButton.addEventListener('click', closeGrantDialog);
 cancelGrantButton.addEventListener('click', closeGrantDialog);
@@ -434,8 +445,7 @@ document.getElementById('clearFilterButton').addEventListener('click', clearFilt
 [fromFilterInput, toFilterInput].forEach(input => {
     input.addEventListener('input', () => toFilterInput.setCustomValidity(''));
 });
-pageSizeSelect.addEventListener('change', () => loadPage(1));
 window.addEventListener('scroll', hideTokenBreakdown, true);
 window.addEventListener('resize', hideTokenBreakdown);
 
-loadPage(1);
+loadLogs();

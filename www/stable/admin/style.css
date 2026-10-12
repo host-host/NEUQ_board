@@ -16,7 +16,6 @@ body:has(.grant-dialog[open]) { overflow:hidden; }
 h1 { margin:0; font-size:24px; font-weight:650; letter-spacing:0; }
 .panel-heading p { margin:7px 0 0; color:var(--muted); font-size:13px; }
 .list-controls { display:flex; align-items:center; gap:10px; }
-.page-size-control { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px; white-space:nowrap; }
 select, #refreshButton, .grant-open-button { height:36px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); outline:0; }
 select { padding:0 30px 0 10px; }
 #refreshButton { padding:0 14px; cursor:pointer; }
@@ -67,14 +66,11 @@ th:nth-child(n+6):not(:last-child), td:nth-child(n+6):not(:last-child) { text-al
 .token-breakdown-tooltip dl div { display:flex; align-items:center; justify-content:space-between; gap:24px; }
 .token-breakdown-tooltip dt { color:#d6d3d1; }
 .token-breakdown-tooltip dd { margin:0; color:#fff; font-weight:600; }
-.pagination { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px; min-height:36px; }
-.page-buttons { display:flex; gap:6px; }
-.page-buttons button { width:36px; height:36px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); font-size:20px; line-height:1; cursor:pointer; }
-.page-buttons button:hover:not(:disabled) { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
-.page-buttons button:disabled { color:#c7c2be; background:#f5f5f4; cursor:not-allowed; }
-#pageIndicator { min-width:92px; color:var(--muted); font-size:13px; text-align:center; }
+.log-load-state { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px; min-height:36px; color:var(--muted); font-size:13px; }
+#retryLogs { height:36px; padding:0 14px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer; }
+#retryLogs:hover { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
 .state-message { padding:40px 0 20px; color:var(--muted); font-size:14px; text-align:center; }
-.state-message.error { color:var(--danger); }
+.state-message.error, .log-load-state.error { color:var(--danger); }
 .login-button { display:inline-block; margin-top:8px; padding:9px 16px; border-radius:6px; background:var(--accent); color:#fff; text-decoration:none; }
 .grant-dialog { width:min(100% - 32px,520px); max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px); padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); box-shadow:0 18px 54px rgba(28,25,23,.2); }
 .grant-dialog::backdrop { background:rgba(28,25,23,.42); }

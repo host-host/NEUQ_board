@@ -153,7 +153,7 @@ void gpt5_log_list(http_para* a) {
     reslogs* logs=(reslogs*)ndb2_got(log_db,p->userid,0);
     int n=logs?logs->n:0;
     if(i<0||i>=n)i=n-1;
-    for(int start=i;;i>=0&&i>start-100;i--){
+    for(int start=i;i>=0&&i>start-100;i--){
         cppJSON item("{}");
         item.insert("model",logs->a[i].model);
         item.insert("provider",logs->a[i].provider);
