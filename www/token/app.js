@@ -12,7 +12,7 @@
         page: '', account: null, models: null, accountStatus: 'loading', modelStatus: 'loading',
         accountError: '', modelError: '', modelType: 'text', pending: 0, saving: false,
         accountRequest: 0, modelRequest: 0, stabilityRequest: 0, userRequest: 0, loggingOut: false,
-        logRequest: 0, logPage: 1, logNext: false, logs: [], logLoaded: false, logLoading: false
+        logRequest: 0, logStart: -1, logs: [], logLoaded: false, logLoading: false, logError: ''
     };
     const numberFormat = new Intl.NumberFormat('zh-CN');
     const overviewUsage = {request: 0, status: 'idle', key: '', rows: [], error: '', period: 'all', day: 0};
@@ -181,7 +181,9 @@
         state.logRequest++;
         state.logs = [];
         state.logLoaded = false;
-        state.logNext = false;
+        state.logStart = -1;
+        state.logLoading = false;
+        state.logError = '';
         $('logRows').replaceChildren();
         $('logTable').hidden = true;
         $('exportLogs').disabled = true;
@@ -192,7 +194,7 @@
         renderAccount();
         renderProviders();
         showMessage('historyState', '登录后查看 API 调用日志。', {login: true});
-        updatePagination();
+        updateLogLoading();
     }
 
     async function loadUser() {
@@ -959,67 +961,79 @@
         }
     }
 
-    function updatePagination() {
-        const disabled = state.logLoading || state.accountStatus === 'login';
-        $('firstPage').disabled = disabled || state.logPage <= 1;
-        $('previousPage').disabled = disabled || state.logPage <= 1;
-        $('nextPage').disabled = disabled || !state.logNext;
-        $('pageSize').disabled = state.logLoading;
-        $('pageIndicator').textContent = `第 ${state.logPage} 页`;
+    function updateLogLoading() {
+        logObserver.disconnect();
+        if (!state.logs.length) {
+            $('logLoadState').hidden = true;
+            return;
+        }
+        if (state.logError) {
+            showMessage('logLoadState', state.logError, {error: true, retry: () => loadLogs(true)});
+        } else {
+            showMessage('logLoadState', state.logLoading ? '正在加载更多记录…' : state.logStart >= 0 ? '继续向下滚动加载更多' : '已加载全部记录', {loading: state.logLoading});
+            if (state.logStart >= 0 && !state.logLoading) {
+                logObserver.observe($('logLoadState'));
+            }
+        }
     }
-    async function loadLogs(page = 1) {
-        hideTokenDetail();
+    async function loadLogs(append = false) {
+        if (state.logLoading || state.accountStatus === 'login') return;
+        if (append && state.logStart < 0) return;
         const id = ++state.logRequest;
-        const pageSize = Number($('pageSize').value);
-        const start = (page - 1) * pageSize + 1;
+        const start = append ? state.logStart : -1;
         state.logLoading = true;
-        state.logs = [];
-        $('exportLogs').disabled = true;
-        $('logTable').hidden = true;
-        $('recordSummary').textContent = '正在加载 API 调用记录';
-        updatePagination();
-        showMessage('historyState', '正在加载调用日志…', {loading: true});
+        state.logError = '';
+        if (!append) {
+            hideTokenDetail();
+            state.logs = [];
+            state.logLoaded = false;
+            state.logStart = -1;
+            $('logRows').replaceChildren();
+            $('exportLogs').disabled = true;
+            $('logTable').hidden = true;
+            $('recordSummary').textContent = '正在加载 API 调用记录';
+            showMessage('historyState', '正在加载调用日志…', {loading: true});
+        }
+        updateLogLoading();
         await busy(async () => {
             try {
-                // Existing endpoint uses inclusive, one-based ranges. Fetch one extra row for pagination.
-                const data = await api('/api/gpt5_log_list', {start, end: start + pageSize});
+                const data = await api('/api/gpt5_log_list', {start});
                 if (id !== state.logRequest) return;
-                if (!Array.isArray(data)) throw new Error('调用日志数据格式异常。');
-                state.logPage = page;
-                state.logNext = data.length > pageSize;
-                state.logs = data.slice(0, pageSize);
+                state.logStart = data.end;
+                state.logs.push(...data.item);
                 state.logLoaded = true;
-                $('logRows').replaceChildren();
                 if (!state.logs.length) {
-                    $('recordSummary').textContent = page > 1 ? '本页暂无调用记录' : '还没有 API 调用记录';
-                    showMessage('historyState', page > 1 ? '本页没有更多记录，可以返回上一页。' : '暂无调用记录。完成一次 API 请求后，可在这里查看。');
+                    $('recordSummary').textContent = '还没有 API 调用记录';
+                    showMessage('historyState', '暂无调用记录。完成一次 API 请求后，可在这里查看。');
                 } else {
-                    renderLogs();
-                    $('recordSummary').textContent = `当前显示第 ${tokens(start)}–${tokens(start + state.logs.length - 1)} 条记录`;
+                    renderLogs(data.item);
+                    $('recordSummary').textContent = `已加载 ${tokens(state.logs.length)} 条记录`;
                     $('historyState').hidden = true;
                     $('logTable').hidden = false;
-                    $('logTable').scrollLeft = 0;
+                    if (!append) $('logTable').scrollLeft = 0;
                     $('exportLogs').disabled = false;
                 }
                 updated();
             } catch (error) {
                 if (id !== state.logRequest) return;
-                state.logLoaded = false;
                 if (error.auth) return expireSession();
-                $('recordSummary').textContent = '调用记录加载失败';
-                showMessage('historyState', error.message, {error: true, retry: () => loadLogs(page)});
+                if (append) {
+                    state.logError = error.message;
+                } else {
+                    $('recordSummary').textContent = '调用记录加载失败';
+                    showMessage('historyState', error.message, {error: true, retry: () => loadLogs()});
+                }
             } finally {
                 if (id === state.logRequest || state.accountStatus === 'login') {
                     state.logLoading = false;
-                    updatePagination();
+                    updateLogLoading();
                 }
             }
         });
     }
-    function renderLogs() {
+    function renderLogs(logs) {
         const body = $('logRows');
-        body.replaceChildren();
-        state.logs.forEach(log => {
+        logs.forEach(log => {
             const image = isImage(log);
             const row = node('tr');
             const time = node('td');
@@ -1151,12 +1165,12 @@
         const url = URL.createObjectURL(new Blob(['\uFEFF', csv], {type: 'text/csv;charset=utf-8;'}));
         const link = node('a');
         link.href = url;
-        link.download = `api-logs-page-${state.logPage}.csv`;
+        link.download = 'api-logs.csv';
         document.body.append(link);
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        toast('已导出本页调用日志');
+        toast('已导出已加载的调用日志');
     }
 
     const mobile = window.matchMedia('(max-width: 960px)');
@@ -1201,14 +1215,14 @@
             $('toggleApiKey').setAttribute('aria-label', '显示 API Key');
             $('toggleApiKey').title = '显示 API Key';
         }
-        if (page === 'history' && !state.logLoaded && !state.logLoading) loadLogs(1);
+        if (page === 'history' && !state.logLoaded && !state.logLoading) loadLogs();
         if (page === 'models' && changed) renderProviders();
         if (page === 'overview' && changed) loadOverviewUsage();
         if (changed) window.scrollTo({top: 0, behavior: 'instant'});
     }
     async function refresh() {
         if (state.pending || state.saving) return;
-        if (state.page === 'history') return loadLogs(state.logPage);
+        if (state.page === 'history') return loadLogs();
         $('providerStatus').classList.remove('error-text');
         $('providerStatus').textContent = '切换 Provider 后，下次调用生效。';
         await Promise.allSettled([loadAccount(), loadModels(), loadUser()]);
@@ -1295,10 +1309,9 @@
         $('providerBilling').textContent = state.modelType === 'image' ? '单价：¥/次' : '单价：¥/M tokens';
         renderProviders();
     }));
-    $('firstPage').addEventListener('click', () => loadLogs(1));
-    $('previousPage').addEventListener('click', () => loadLogs(Math.max(1, state.logPage - 1)));
-    $('nextPage').addEventListener('click', () => loadLogs(state.logPage + 1));
-    $('pageSize').addEventListener('change', () => loadLogs(1));
+    const logObserver = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting) && state.page === 'history' && !state.logError) loadLogs(true);
+    }, {rootMargin: '160px 0px'});
     $('exportLogs').addEventListener('click', exportLogs);
     $('tokenTooltip').addEventListener('mouseenter', () => clearTimeout(tokenTooltipTimer));
     $('tokenTooltip').addEventListener('mouseleave', scheduleHideTokenDetail);

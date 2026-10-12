@@ -283,8 +283,8 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: var(--background); }
 #logTable table { table-layout: fixed; min-width: 1200px; }
 #logTable th { padding-top: 10px; padding-bottom: 10px; line-height: 1.4; }
-#logTable th:nth-child(1) { width: 14%; }
-#logTable th:nth-child(2) { width: 15%; }
+#logTable th:nth-child(1) { width: 11%; }
+#logTable th:nth-child(2) { width: 18%; }
 #logTable th:nth-child(3) { width: 10%; }
 #logTable th:nth-child(4) { width: 7%; }
 #logTable th:nth-child(5) { width: 8%; }
@@ -307,13 +307,7 @@ tbody tr:hover { background: var(--background); }
 .charged { color: var(--ink); font-weight: 600; }
 .image-count { color: #76518f; }
 .token-button.image-count { border-bottom: 0; padding: 0; }
-.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 25px; border-top: 1px solid var(--line); }
-.page-size { display: flex; align-items: center; gap: 8px; color: #57534e; font-size: 13px; }
-.page-size select { border: 1px solid var(--line); background: white; border-radius: 5px; padding: 5px 6px; font-size: 13px; color: #57534e; }
-.page-buttons { display: flex; align-items: center; gap: 7px; }
-.page-buttons button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: #57534e; font-size: 18px; }
-.page-buttons button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
-#pageIndicator { padding: 0 8px; font-size: 13px; color: #57534e; }
+.state-message.log-load-state { padding: 18px 25px; border-top: 1px solid var(--line); font-size: 13px; }
 .history-footnote { color: #57534e; font-size: 12px; margin-top: 17px; }
 .state-message { padding: 42px 22px; color: #57534e; text-align: center; font-size: 14px; }
 .state-message.compact { padding: 26px 12px; }
@@ -451,11 +445,7 @@ dialog::backdrop { background: #1c191755; backdrop-filter: blur(3px); }
     .history-info { padding: 17px; gap: 11px; }
     .history-panel > .panel-heading { padding: 20px 17px; gap: 14px; flex-wrap: wrap; }
     .history-panel .button { padding: 8px 10px; }
-    .pagination { padding: 15px 13px; gap: 10px; }
-    .page-buttons { gap: 4px; }
-    .page-buttons button { width: 27px; height: 29px; }
-    #pageIndicator { padding: 0 3px; }
-    .page-size { gap: 5px; }
+    .state-message.log-load-state { padding: 15px 13px; }
     .main-footer { font-size: 12px; gap: 12px; margin-top: 24px; }
     .state-message { font-size: 14px; }
     .state-message .button { margin: 8px; }

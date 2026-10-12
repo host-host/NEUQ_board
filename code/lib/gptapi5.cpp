@@ -148,12 +148,12 @@ void gpt5_apikey(http_para* a) {
 void gpt5_log_list(http_para* a) {
     user_* p=getuser(a->get);
     if(!p)return my_http_error(a,"Please log in first.");
-    cppJSON req(a->get+a->n),ans("[]");
-    int start=req["start"].valuedouble(),end=req["end"].valuedouble();
-    if(start<1)return my_http_error(a,"Bad request");
+    cppJSON req(a->get+a->n),ans(R"({"end":0,"item":[]})"),ite=ans["item"];
+    int i=req["start"].valuedouble();
     reslogs* logs=(reslogs*)ndb2_got(log_db,p->userid,0);
     int n=logs?logs->n:0;
-    for(int i=n-start;i>=0&&i>=n-end;i--){
+    if(i<0||i>=n)i=n-1;
+    for(int start=i;;i>=0&&i>start-100;i--){
         cppJSON item("{}");
         item.insert("model",logs->a[i].model);
         item.insert("provider",logs->a[i].provider);
@@ -179,8 +179,9 @@ void gpt5_log_list(http_para* a) {
         item.insert("time",(double)logs->a[i].time);
         item.insert("isauto",(double)logs->a[i].isauto);
         item.insert("info",logs->a[i].info);
-        ans.push_back(std::move(item));
+        ite.push_back(std::move(item));
     }
+    ans["end"]=(double)i;
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,bool isauto,bool isswitch,reslog* rl,double cost) {
