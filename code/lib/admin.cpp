@@ -102,6 +102,7 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("multiply",log.multiply);
     item.insert("isswitch",log.isswitch==1);
     item.insert("useage",(double)log.useage);
+    item.insert("cost",log.cost);
     item.insert("time",(double)log.time);
     item.insert("time_first_ns",(double)log.start);
     item.insert("stable",(double)log.stable);

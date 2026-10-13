@@ -67,7 +67,7 @@
         return Number.isFinite(log.useage) ? money(creditsToYuan(log.useage)) : '—';
     }
     function providerName(log) {
-        const name = Number(log.isauto) === 1 ? `auto (${log.provider || '—'})` : log.provider || '—';
+        const name = Number(log.isauto) === 1 ? 'auto' : log.provider || '—';
         return Number(log.isswitch) === 1 ? `${name}（已切换）` : name;
     }
     function logInfo(log) {

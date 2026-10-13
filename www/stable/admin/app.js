@@ -36,6 +36,12 @@ function formatQuota(value) {
     return Number.isFinite(quota) ? new Intl.NumberFormat('zh-CN').format(Math.trunc(quota)) : '-';
 }
 
+function formatCost(value) {
+    if (!Number.isFinite(value) || value < 0) return '-';
+    if (value > 0 && value < 0.0000001) return '<¥0.0000001';
+    return '¥' + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 7}).format(value);
+}
+
 function formatTokenDetail(value) {
     const tokens = Math.max(0, Math.floor(Number(value) || 0));
     return tokens ? formatTokens(tokens) : '-';
@@ -212,6 +218,7 @@ function renderRows(items) {
         appendTextCell(row, formatDuration(log.total));
         appendTextCell(row, formatTps(log));
         appendTextCell(row, formatTokens(chargedUsage(log)));
+        appendTextCell(row, formatCost(log.cost));
         appendInfoCell(row, log.info);
         body.appendChild(row);
     }

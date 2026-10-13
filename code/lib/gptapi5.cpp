@@ -156,7 +156,7 @@ void gpt5_log_list(http_para* a) {
     for(int start=i;i>=0&&i>start-100;i--){
         cppJSON item("{}");
         item.insert("model",logs->a[i].model);
-        item.insert("provider",logs->a[i].provider);
+        if(!logs->a[i].isauto)item.insert("provider",logs->a[i].provider);
         item.insert("isimage",(double)logs->a[i].isimage);
         item.insert("used_tokens",(double)logs->a[i].used_tokens);
         item.insert("input",(double)logs->a[i].input);
