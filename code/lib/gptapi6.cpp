@@ -385,7 +385,6 @@ string gpt6_request_model(http_para* a,const cppJSON& request,const string& form
 }
 static const set<string>responses_allow={"type","call_id","output","name","input","role","content","encrypted_content"};
 static const set<string>claude_allow={"role","content"};
-static const set<string>claude_allow2={"cache_control"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
     if(a.IsArray()){
         cppJSON result("[]");
@@ -406,6 +405,7 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
             }
             if(format=="claude" && k==-1) {
                 if(strcmp(item.a->string,"cache_control")==0)continue;
+                if(strcmp(item.a->string,"caller")==0)continue;
                 if(a["type"]=="tool_use" &&!a["id"].valuestring().empty() &&strcmp(item.a->string,"input")==0)continue;
             }
             if((k==1||k==-1)&&format=="claude"){
@@ -418,7 +418,7 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
                 }
             }
             cppJSON tmp=my_format(item,format,k-1);
-            if(tmp.IsNull()||((tmp.IsArray()||tmp.IsObject())&&!tmp.size()))continue;
+            if(tmp.IsNull()||((tmp.IsArray()||tmp.IsObject())&&!tmp.size())||(tmp.IsString()&&tmp.valuestring()==""))continue;
             items[item.a->string]=tmp;
         }
         cppJSON result("{}");
