@@ -606,7 +606,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         }
         reslog rl;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
-        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl);//成本
+        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)+((a->m+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量

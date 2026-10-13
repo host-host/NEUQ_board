@@ -4,6 +4,7 @@ const CNY_PER_MILLION_CREDITS = 0.3;
 
 const state = {
     items: [],
+    privateStatsLoaded: false,
     filter: 'all',
     search: '',
     sort: 'status'
@@ -20,7 +21,9 @@ const elements = {
     updatedAt: document.getElementById('updatedAt'),
     search: document.getElementById('searchInput'),
     filters: document.getElementById('statusFilter'),
-    sort: document.getElementById('sortSelect')
+    sort: document.getElementById('sortSelect'),
+    profitSummary: document.getElementById('autoProfitSummary'),
+    profit: document.getElementById('autoProfit')
 };
 
 function finalBucketNumber() {
@@ -162,6 +165,7 @@ async function loadPrivateStats(catalog) {
 async function loadData() {
     if (elements.refresh.disabled) return;
     state.items = [];
+    state.privateStatsLoaded = false;
     hideTooltip();
     render();
     elements.empty.hidden = true;
@@ -198,6 +202,7 @@ async function loadData() {
             const status = classifyItem(buckets);
             return {...entry, ...usage, privateStats: privateStats?.[entry.key] || null, buckets, total, hour, status};
         });
+        state.privateStatsLoaded = privateStats !== null;
 
         elements.notice.hidden = !privateError;
         if (privateError) {
@@ -397,12 +402,30 @@ function updateSummary(items) {
 
 function render() {
     updateSummary(state.items);
+    updateAutoProfit();
     const items = filteredItems();
     elements.list.innerHTML = '';
     const fragment = document.createDocumentFragment();
     items.forEach(item => fragment.appendChild(createProviderRow(item)));
     elements.list.appendChild(fragment);
     elements.empty.hidden = items.length > 0;
+}
+
+function updateAutoProfit() {
+    elements.profitSummary.hidden = !state.privateStatsLoaded;
+    if (!state.privateStatsLoaded) {
+        elements.profit.textContent = '--';
+        elements.profit.title = '';
+        return;
+    }
+    const profit = state.items.reduce((sum, item) => {
+        if (item.provider !== 'auto') return sum;
+        const stats = item.privateStats;
+        if (!Number.isFinite(stats?.sell) || !Number.isFinite(stats?.cost)) return NaN;
+        return sum + (stats.sell / 1000000 * CNY_PER_MILLION_CREDITS - stats.cost);
+    }, 0);
+    elements.profit.textContent = formatCost(profit);
+    elements.profit.title = Number.isFinite(profit) ? '' : '部分 auto 渠道费用数据缺失，无法计算完整差额';
 }
 
 elements.refresh.addEventListener('click', loadData);

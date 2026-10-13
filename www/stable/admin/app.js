@@ -21,6 +21,7 @@ const grantResult = document.getElementById('grantResult');
 const submitGrantButton = document.getElementById('submitGrantButton');
 const closeGrantDialogButton = document.getElementById('closeGrantDialogButton');
 const cancelGrantButton = document.getElementById('cancelGrantButton');
+const CNY_PER_MILLION_CREDITS = 0.3;
 let logStart = -1;
 let logLoading = false;
 let logCount = 0;
@@ -40,6 +41,14 @@ function formatCost(value) {
     if (!Number.isFinite(value) || value < 0) return '-';
     if (value > 0 && value < 0.0000001) return '<¥0.0000001';
     return '¥' + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 7}).format(value);
+}
+
+function formatProfit(log) {
+    const usage = chargedUsage(log);
+    if (!Number.isFinite(usage) || usage < 0 || !Number.isFinite(log.cost) || log.cost < 0) return '-';
+    const profit = usage / 1000000 * CNY_PER_MILLION_CREDITS - log.cost;
+    if (profit < 0 && profit > -0.0000001) return '>-¥0.0000001';
+    return (profit < 0 ? '-' : '') + formatCost(Math.abs(profit));
 }
 
 function formatTokenDetail(value) {
@@ -219,6 +228,7 @@ function renderRows(items) {
         appendTextCell(row, formatTps(log));
         appendTextCell(row, formatTokens(chargedUsage(log)));
         appendTextCell(row, formatCost(log.cost));
+        appendTextCell(row, formatProfit(log));
         appendInfoCell(row, log.info);
         body.appendChild(row);
     }
@@ -264,7 +274,7 @@ function selectedGrantMode() {
 function calculatedGrantAmount() {
     const amount = Number(grantAmountInput.value);
     if (selectedGrantMode() === 'direct') return Math.trunc(amount);
-    return Math.trunc(amount / 0.3 * 1000000);
+    return Math.trunc(amount / CNY_PER_MILLION_CREDITS * 1000000);
 }
 
 function updateGrantPreview() {

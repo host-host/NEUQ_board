@@ -225,6 +225,22 @@ button { color: inherit; }
     outline: none;
 }
 
+.auto-profit-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+}
+.auto-profit-summary[hidden] { display: none; }
+.auto-profit-summary strong { color: var(--text); font-size: 18px; font-variant-numeric: tabular-nums; }
+
 .legend { min-height: 46px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; color: var(--muted); font-size: 11px; }
 .legend-item { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
