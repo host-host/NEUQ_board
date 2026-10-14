@@ -32,6 +32,7 @@ ndb2 history_db;//user_id -> history
 ndb2 provider_db;//userid_model -> preferred provider
 ndb2 stable_db;//model_provider -> [3*24*4][2]
 ndb2 log_db;//userid -> reslogs
+ndb2 cache_db;//sha256(userid,format,model,tools,system,messages前缀) -> cache_entry
 struct history{
     int n;
     char user_id[10];
@@ -44,6 +45,7 @@ void gptapi5_init() {
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
     stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
+    cache_db=ndb2_init("/web/res/pri/gpt5cache.ndb2");
     curl_global_init(CURL_GLOBAL_DEFAULT);
     pthread_t thread_id;
     if(!pthread_create(&thread_id,0,gpt5_probe_loop,0))pthread_detach(thread_id);
@@ -163,6 +165,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
+        item.insert("cachereturn",(double)logs->a[i].cachereturn);
         item.insert("websearch",(double)logs->a[i].websearch);
         long long first=logs->a[i].start>0?logs->a[i].first-logs->a[i].start:-1;
         if(first>=0)item.insert("first",first/1000000000.0);
@@ -197,7 +200,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     memcpy(item->model,model.data(),min(model.size(),sizeof(item->model)-1));
     memcpy(item->provider,provider.data(),min(provider.size(),sizeof(item->provider)-1));
     // item->used_tokens;在gpt5_cost中填充
-    // item->bl;
+    // item->cachereturn;在gpt5_cost之后由缓存补偿填充
     // item->multiply;在gpt5_cost中填充
     item->time=time(0);
     item->input=b.input;
@@ -570,6 +573,41 @@ user_* gpt5_api_user(http_para* a,string* apikey=nullptr) {
     if(p&&apikey)*apikey="sk-"+string(tmp,27);
     return p;
 }
+struct cache_entry{
+    long long time,input;
+};
+#define CACHE_TTL (30*60)
+static void gpt5_cache_compensate(user_* p,const char* format,const string& model,const cppJSON& req,const char* array_name,const gpt6_ret& b,reslog* rl){
+    if(b.input<=0)return;
+    cppJSON arr=req[array_name];
+    if(!arr.IsArray())return;
+    string head=(string)"cache_"+p->userid+"\n"+format+"\n"+model;
+    for(const char* field:{"tools","system","instructions","systemInstruction"}){
+        cppJSON v=req[field];
+        if(v.a)head+=(string)"\n"+field+"="+my_format(v,format,0).stringify_Unformatted();
+    }
+    char st[44];
+    mylib_sha256(head.data(),head.size(),st);
+    int want=0;
+    time_t now=time(0);
+    for(cppJSON msg:arr){
+        string s=string(st)+my_format(msg,format,1).stringify_Unformatted();
+        mylib_sha256(s.data(),s.size(),st);
+        cache_entry* e=(cache_entry*)ndb2_got(cache_db,st,0);
+        if(e&&now-e->time<=CACHE_TTL)want=e->input;
+    }
+    cache_entry* e=(cache_entry*)ndb2_got(cache_db,st,sizeof(cache_entry));
+    if(e){
+        e->time=now;
+        e->input=b.input;
+    }
+    if(want>b.input)want=b.input;
+    rl->cachereturn=want;
+    if(rl->isimage==2&&want>b.cache){
+        long long comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
+        if(comp>0)rl->useage=max(0LL,rl->useage-comp);
+    }
+}
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     string apikey;
     user_* p=gpt5_api_user(a,&apikey);
@@ -608,6 +646,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
         double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)+((a->m+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
+        if(b.send&&b.used_tokens>0)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量
         gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);

@@ -98,6 +98,7 @@ function showTokenBreakdown(target, log) {
     document.getElementById('tooltipOutput').textContent = formatTokenDetail(log.output);
     document.getElementById('tooltipCache').textContent = formatTokenDetail(log.cache);
     document.getElementById('tooltipMakecache').textContent = formatTokenDetail(log.makecache);
+    document.getElementById('tooltipCachereturn').textContent = formatTokenDetail(log.cachereturn);
     document.getElementById('tooltipWebsearch').textContent = formatTokenDetail(log.websearch);
     tokenTooltip.hidden = false;
     const targetRect = target.getBoundingClientRect();

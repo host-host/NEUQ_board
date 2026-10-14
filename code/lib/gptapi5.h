@@ -25,7 +25,7 @@ struct content{
 struct reslog{
     char model[48],provider[48];
     int used_tokens;
-    int bl;
+    int cachereturn;//计算出的应缓存token，当cachereturn>cache时执行补偿
     double multiply;//沿用历史单位：isimage=0时为额度/token，1时为额度/次；100万额度=0.3元
     long long time;
     long long input,output,cache,makecache;
