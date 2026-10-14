@@ -165,7 +165,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
-        item.insert("cachereturn",(double)logs->a[i].cachereturn);
+        item.insert("cachereturn_refund",(double)logs->a[i].cachereturn_refund);
         item.insert("websearch",(double)logs->a[i].websearch);
         long long first=logs->a[i].start>0?logs->a[i].first-logs->a[i].start:-1;
         if(first>=0)item.insert("first",first/1000000000.0);
@@ -220,7 +220,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item->isauto=isauto;
     // item->other1,other2
     item->isswitch=isswitch;
-    // item->bl2
+    // item->cachereturn_refund;在gpt5_cost之后由缓存补偿填充
     // item->useage=useage;在gpt5_cost中填充
     // item->inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;在gpt5_cost中填充
     UNLOCK(logs->lock);
@@ -578,7 +578,7 @@ struct cache_entry{
 };
 #define CACHE_TTL (30*60)
 static void gpt5_cache_compensate(user_* p,const char* format,const string& model,const cppJSON& req,const char* array_name,const gpt6_ret& b,reslog* rl){
-    if(b.input<=0)return;
+    if(b.input<=1000)return;
     cppJSON arr=req[array_name];
     if(!arr.IsArray())return;
     string head=(string)"cache_"+p->userid+"\n"+format+"\n"+model;
@@ -603,9 +603,13 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
     }
     if(want>b.input)want=b.input;
     rl->cachereturn=want;
+    want*=0.95;
     if(rl->isimage==2&&want>b.cache){
-        long long comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
-        if(comp>0)rl->useage=max(0LL,rl->useage-comp);
+        int comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
+        if(comp<0)comp=0;
+        if(comp>rl->useage)comp=rl->useage;
+        rl->useage-=comp;
+        rl->cachereturn_refund=comp;
     }
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){

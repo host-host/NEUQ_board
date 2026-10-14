@@ -1135,6 +1135,14 @@
             item.append(node('dt', '', label), node('dd', '', tokens(log[field])), formula);
             $('tokenDetailList').append(item);
         });
+        if (itemized && numeric(log.cachereturn_refund) > 0) {
+            const refund = node('div');
+            const charged = node('dd', 'token-cost-formula token-cost-summary');
+            charged.append(node('span', '', '实际扣费'), node('strong', '', logCharge(log)));
+            refund.append(node('dt', '', '缓存补偿'),
+                node('dd', '', `-${money(creditsToYuan(log.cachereturn_refund))}`), charged);
+            $('tokenDetailList').append(refund);
+        }
         if (!itemized) {
             const total = node('div', 'token-cost-total');
             total.append(node('dt', '', '计算费用'), node('dd', '', totalAmount));

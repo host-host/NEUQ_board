@@ -39,7 +39,7 @@ struct reslog{
     char isauto;
     char other1,other2;//保留
     char isswitch;//1表示本次请求为auto请求并且失败了被下一个渠道自动切换
-    int bl2;
+    int cachereturn_refund;//真实退还金额，以这个为准
     long long useage;//事实扣费数额
     float inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;
 };
