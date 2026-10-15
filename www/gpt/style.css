@@ -66,6 +66,10 @@ body, html {
     z-index: 10;
     transition: transform 0.3s ease;
 }
+.sidebar-overlay { display: none; }
+@media (min-width: 769px) {
+    .app-layout.sidebar-collapsed .sidebar-aside { display: none; }
+}
 
 .new-chat-btn,
 .sidebar-console-link {
@@ -357,6 +361,7 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 10px 20px;
     background-color: #ffffff;
     border-bottom: 1px solid var(--border-color);
@@ -364,17 +369,37 @@ body, html {
 }
 
 .sidebar-toggle-btn {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
     background: none;
     border: none;
+    border-radius: 8px;
     cursor: pointer;
     color: var(--text-muted);
+}
+.sidebar-toggle-btn:hover {
+    background: var(--primary-light);
+    color: var(--primary-hover);
+}
+.sidebar-toggle-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+.sidebar-toggle-btn[aria-expanded="false"] .sidebar-toggle-direction {
+    transform: rotate(180deg);
+    transform-origin: 15px 12px;
 }
 
 .header-chat-title-container {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-right: auto;
     max-width: 60%;
     overflow: hidden;
 }
@@ -1197,10 +1222,6 @@ body, html {
     }
 
     .sidebar-overlay.active {
-        display: block;
-    }
-
-    .sidebar-toggle-btn {
         display: block;
     }
 

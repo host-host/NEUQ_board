@@ -495,8 +495,7 @@ async function selectHistoryChat(id, updateUrl = true, owned = true) {//选择�
     document.querySelectorAll('.history-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
     const chatBox = document.getElementById('chatBox');
     chatBox.innerHTML = '<div class="history-loading">正在拉取聊天记录...</div>';
-    document.getElementById('sidebarPanel').classList.remove('active');
-    document.getElementById('sidebarOverlay').classList.remove('active');
+    closeMobileSidebar();
 
     try {
         const data = await fetchGpt5History(id, false);

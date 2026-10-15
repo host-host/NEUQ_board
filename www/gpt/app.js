@@ -3,6 +3,39 @@ let currentChatOwned = false;
 let currentChatFormat = null;
 let currentResponsesInput = [];
 let pendingFiles = []; // 暂存待发送文件 [{id, name, content, type, large}]
+const sidebarMedia = window.matchMedia('(max-width: 768px)');
+let desktopSidebarCollapsed = false;
+try {
+    desktopSidebarCollapsed = localStorage.getItem('gpt.sidebarCollapsed') === '1';
+} catch (_) {}
+
+function syncSidebarState() {
+    const sidebar = document.getElementById('sidebarPanel');
+    const toggle = document.getElementById('sidebarToggle');
+    const expanded = sidebarMedia.matches ? sidebar.classList.contains('active') : !desktopSidebarCollapsed;
+    if (!expanded && sidebar.contains(document.activeElement)) toggle.focus();
+    document.querySelector('.app-layout').classList.toggle('sidebar-collapsed', desktopSidebarCollapsed);
+    document.getElementById('sidebarOverlay').classList.toggle('active', sidebarMedia.matches && expanded);
+    sidebar.inert = !expanded;
+    sidebar.setAttribute('aria-hidden', String(!expanded));
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', expanded ? '收起侧栏' : '展开侧栏');
+    toggle.title = expanded ? '收起侧栏' : '展开侧栏';
+}
+function closeMobileSidebar() {
+    if (!sidebarMedia.matches) return;
+    document.getElementById('sidebarPanel').classList.remove('active');
+    syncSidebarState();
+}
+sidebarMedia.addEventListener('change', () => {
+    document.getElementById('sidebarPanel').classList.remove('active');
+    syncSidebarState();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeMobileSidebar();
+});
+syncSidebarState();
+
 function toggleHistoryList() {//展开/折叠历史记录
     const list = document.getElementById('historyList');
     const icon = document.getElementById('historyToggleIcon');
@@ -15,10 +48,15 @@ function toggleHistoryList() {//展开/折叠历史记录
     }
 }
 function toggleSidebar() {//打开/关闭侧边栏
-    const sidebar = document.getElementById('sidebarPanel');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.toggle('active');
-    overlay.classList.toggle('active');
+    if (sidebarMedia.matches) {
+        document.getElementById('sidebarPanel').classList.toggle('active');
+    } else {
+        desktopSidebarCollapsed = !desktopSidebarCollapsed;
+        try {
+            localStorage.setItem('gpt.sidebarCollapsed', desktopSidebarCollapsed ? '1' : '0');
+        } catch (_) {}
+    }
+    syncSidebarState();
 }
 function startNewChat() {//新建对话
     currentChatId = null;
@@ -36,8 +74,7 @@ function startNewChat() {//新建对话
     `;
     document.getElementById('currentChatTitleDisplay').textContent = "新对话";
     document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
-    document.getElementById('sidebarPanel').classList.remove('active');
-    document.getElementById('sidebarOverlay').classList.remove('active');
+    closeMobileSidebar();
     const selectButton = document.getElementById('selectButton');
     if (selectButton && modelCatalog.has(selectButton.textContent))
         setSelectedModel(selectButton.textContent);

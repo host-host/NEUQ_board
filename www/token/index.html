@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1012v5">
+    <link rel="stylesheet" href="style.css?v=1015v8">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1014v1" defer></script>
+    <script src="app.js?v=1015v8" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -171,6 +171,7 @@
     <dialog id="rotateDialog" class="small-dialog" aria-labelledby="rotateTitle" aria-describedby="rotateDescription"><div class="dialog-heading"><h2 id="rotateTitle">重置 API Key</h2><button class="icon-button" type="button" data-close-dialog aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div><p id="rotateDescription">重置后，旧密钥将立即失效。使用旧密钥的应用需要更新为新密钥。</p><p id="rotateError" class="error-text" role="alert" hidden></p><div class="dialog-actions"><button class="button button-white" type="button" data-close-dialog autofocus>取消</button><button id="confirmRotate" class="button button-danger" type="button">确认重置</button></div></dialog>
     <div id="tokenTooltip" class="token-tooltip" role="tooltip" hidden><dl id="tokenDetailList" class="token-detail-list"></dl></div>
     <div id="modelLogTooltip" class="model-log-tooltip" role="tooltip" hidden></div>
+    <div id="providerOptions" class="provider-options" role="listbox" aria-label="Provider" hidden></div>
     <div id="pricePopover" class="price-popover" role="dialog" aria-modal="false" aria-labelledby="pricePopoverTitle" hidden>
         <div class="price-popover-heading"><h2 id="pricePopoverTitle"></h2><button id="closePricePopover" class="icon-button" type="button" aria-label="关闭价格详情"><svg class="icon small" aria-hidden="true"><use href="#i-close"/></svg></button></div>
         <section class="site-price-section" aria-labelledby="sitePriceTitle">

@@ -735,7 +735,7 @@ void gpt5_image_generations(http_para* a) {
 }
 void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);
-    if(!p)return http_send(a,H401 Hjson Hc0,"{\"error\":{\"message\":\"Invalid API key.\"}}",0);
+    if(!p)return http_send(a,H404 Hc0 Htxt,"Not Found",0);
     cppJSON config=cppJSON::from_file(CONFIG);
     if(!config)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"can not read gpt4.json.\"}}",0);
     cppJSON data("[]");

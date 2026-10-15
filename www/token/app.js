@@ -33,6 +33,10 @@
     let pricePopoverTimer;
     let pricePopoverTarget;
     let pricePopoverPinned = false;
+    let providerPickerSelect;
+    let providerPickerIndex = -1;
+    let providerSearch = '';
+    let providerSearchTime = 0;
     const priceFormats = new Set(['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude']);
     const officialPriceFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 10});
     const summaryPriceFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 3});
@@ -58,9 +62,9 @@
     }
     function logPrice(log) {
         const itemized = Number(log.isimage) === 2;
-        if (itemized ? !Number.isFinite(log.inputm) || !Number.isFinite(log.outputm) || !Number.isFinite(log.cachem) : !Number.isFinite(log.multiply)) return '—';
+        if (itemized ? !Number.isFinite(log.inputm) || !Number.isFinite(log.outputm) : !Number.isFinite(log.multiply)) return '—';
         return providerPrice({format: itemized ? 'normal' : isImage(log) ? 'per' : 'token',
-            input: itemized ? log.inputm : logUnitPrice(log), output: log.outputm, cache: log.cachem}, true);
+            input: itemized ? log.inputm : logUnitPrice(log), output: log.outputm}, true);
     }
     function isImage(log) { return log?.isimage === true || Number(log?.isimage) === 1; }
     function logCharge(log) {
@@ -551,7 +555,7 @@
             const amounts = columns.map(column => numeric(column.price?.[field]) * column.factor * multiplier);
             return format(Math.min(...amounts));
         };
-        return `${summary('input')}/${summary('output')}/${summary('cache')} per 1M`;
+        return `${summary('input')} / Input MTok\u2002\u2002${summary('output')} / Output MTok`;
     }
     function renderPriceTable(price, content, site = false) {
         content.replaceChildren();
@@ -684,16 +688,13 @@
         popover.style.top = `${Math.max(margin, Math.min(top, innerHeight - bounds.height - margin))}px`;
     }
     function createPriceButton(name) {
-        const button = node('button', 'model-price-button');
+        const button = node('button', 'model-price-button', '详情');
         button.type = 'button';
         button.dataset.model = name;
-        button.setAttribute('aria-label', `查看 ${name} 的本站价格与官方定价`);
+        button.setAttribute('aria-label', `查看 ${name} 的本站价格与官方定价详情`);
         button.setAttribute('aria-haspopup', 'dialog');
         button.setAttribute('aria-controls', 'pricePopover');
         button.setAttribute('aria-expanded', 'false');
-        const icon = node('span', 'model-price-info', 'i');
-        icon.setAttribute('aria-hidden', 'true');
-        button.append(icon);
         button.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') showPricePopover(button); });
         button.addEventListener('pointerleave', scheduleHidePricePopover);
         button.addEventListener('focus', () => { if (button.matches(':focus-visible')) showPricePopover(button); });
@@ -763,7 +764,133 @@
         return Array.isArray(config?.format) && config.format.some(format => type === 'image'
             ? format === 'image' : ['completions', 'responses', 'claude', 'gemini'].includes(format));
     }
+    function syncProviderSelect(select) {
+        const trigger = select.parentElement.querySelector('.provider-select-trigger');
+        trigger.textContent = select.selectedOptions[0]?.textContent || '';
+        trigger.disabled = select.disabled;
+    }
+    function hideProviderOptions() {
+        const trigger = providerPickerSelect?.parentElement.querySelector('.provider-select-trigger');
+        trigger?.setAttribute('aria-expanded', 'false');
+        trigger?.removeAttribute('aria-activedescendant');
+        $('providerOptions').hidden = true;
+        providerPickerSelect = null;
+        providerPickerIndex = -1;
+        providerSearch = '';
+    }
+    function activateProviderOption(index) {
+        if (!providerPickerSelect) return;
+        const panel = $('providerOptions');
+        providerPickerIndex = Math.max(0, Math.min(index, panel.children.length - 1));
+        [...panel.children].forEach((option, i) => option.classList.toggle('is-active', i === providerPickerIndex));
+        const option = panel.children[providerPickerIndex];
+        providerPickerSelect.parentElement.querySelector('.provider-select-trigger').setAttribute('aria-activedescendant', option.id);
+        if (option.offsetTop < panel.scrollTop) panel.scrollTop = option.offsetTop;
+        else if (option.offsetTop + option.offsetHeight > panel.scrollTop + panel.clientHeight) {
+            panel.scrollTop = option.offsetTop + option.offsetHeight - panel.clientHeight;
+        }
+    }
+    function showProviderOptions(select) {
+        if (select.disabled || !select.options.length) return;
+        hideProviderOptions();
+        hidePricePopover();
+        hideModelLog();
+        providerPickerSelect = select;
+        const trigger = select.parentElement.querySelector('.provider-select-trigger');
+        const panel = $('providerOptions');
+        panel.replaceChildren();
+        panel.setAttribute('aria-label', select.getAttribute('aria-label'));
+        [...select.options].forEach((option, index) => {
+            const item = node('div', 'provider-option');
+            item.id = `provider-option-${index}`;
+            item.dataset.index = String(index);
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', String(option.selected));
+            item.title = option.textContent;
+            const content = node('span', 'provider-option-content');
+            content.append(node('span', 'provider-option-name', option.value), node('span', 'provider-option-price', `· ${option.dataset.price}`));
+            const check = node('span', 'provider-option-check', '✓');
+            check.setAttribute('aria-hidden', 'true');
+            item.append(content, check);
+            panel.append(item);
+        });
+        const anchor = trigger.getBoundingClientRect();
+        const margin = 12;
+        const gap = 6;
+        const below = innerHeight - anchor.bottom - margin - gap;
+        const above = anchor.top - margin - gap;
+        const openAbove = below < Math.min(320, select.options.length * 47 + 11) && above > below;
+        const width = Math.min(Math.max(anchor.width, 280), innerWidth - margin * 2);
+        panel.style.width = `${width}px`;
+        panel.style.maxHeight = `${Math.max(0, Math.min(320, openAbove ? above : below))}px`;
+        panel.style.left = `${Math.max(margin, Math.min(anchor.left, innerWidth - width - margin))}px`;
+        panel.hidden = false;
+        panel.style.top = `${openAbove ? anchor.top - gap - panel.offsetHeight : anchor.bottom + gap}px`;
+        trigger.setAttribute('aria-expanded', 'true');
+        activateProviderOption(select.selectedIndex);
+    }
+    function chooseProviderOption(index) {
+        const select = providerPickerSelect;
+        if (!select || select.disabled || !select.options[index]) return;
+        const changed = select.selectedIndex !== index;
+        select.selectedIndex = index;
+        hideProviderOptions();
+        syncProviderSelect(select);
+        if (changed) select.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+    function createProviderPicker(select) {
+        const picker = node('div', 'provider-picker');
+        const trigger = node('button', 'provider-select-trigger');
+        trigger.type = 'button';
+        trigger.setAttribute('role', 'combobox');
+        trigger.setAttribute('aria-label', select.getAttribute('aria-label'));
+        trigger.setAttribute('aria-haspopup', 'listbox');
+        trigger.setAttribute('aria-controls', 'providerOptions');
+        trigger.setAttribute('aria-expanded', 'false');
+        select.hidden = true;
+        picker.append(select, trigger);
+        syncProviderSelect(select);
+        trigger.addEventListener('click', () => providerPickerSelect === select ? hideProviderOptions() : showProviderOptions(select));
+        trigger.addEventListener('blur', hideProviderOptions);
+        trigger.addEventListener('keydown', event => {
+            if (event.key === 'Tab') return hideProviderOptions();
+            if (event.key === 'Escape') {
+                if (providerPickerSelect !== select) return;
+                event.preventDefault();
+                return hideProviderOptions();
+            }
+            if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '].includes(event.key)) {
+                event.preventDefault();
+                const open = providerPickerSelect === select;
+                if (!open) showProviderOptions(select);
+                if (open && (event.key === 'Enter' || event.key === ' ')) return chooseProviderOption(providerPickerIndex);
+                if (event.key === 'Home') activateProviderOption(0);
+                else if (event.key === 'End') activateProviderOption(select.options.length - 1);
+                else if (open && event.key === 'ArrowDown') activateProviderOption(providerPickerIndex + 1);
+                else if (open && event.key === 'ArrowUp') activateProviderOption(providerPickerIndex - 1);
+                return;
+            }
+            if (event.key.length !== 1 || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+            event.preventDefault();
+            if (providerPickerSelect !== select) showProviderOptions(select);
+            const now = Date.now();
+            providerSearch = now - providerSearchTime < 700 ? providerSearch + event.key.toLocaleLowerCase() : event.key.toLocaleLowerCase();
+            providerSearchTime = now;
+            const repeated = [...providerSearch].every(char => char === providerSearch[0]);
+            const query = repeated ? providerSearch[0] : providerSearch;
+            const start = providerPickerIndex + (repeated ? 1 : 0);
+            for (let i = 0; i < select.options.length; i++) {
+                const index = (start + i) % select.options.length;
+                if (select.options[index].value.toLocaleLowerCase().startsWith(query)) {
+                    activateProviderOption(index);
+                    break;
+                }
+            }
+        });
+        return picker;
+    }
     function renderProviders() {
+        hideProviderOptions();
         hidePricePopover();
         hideModelLog();
         state.stabilityRequest++;
@@ -791,14 +918,16 @@
             const row = node('div', 'provider-row');
             const info = node('div', 'model-info');
             info.append(node('span', 'model-name', name));
-            if (priceFormats.has(config.price?.format)) info.append(createPriceButton(name));
             if (typeof config.log === 'string' && config.log.trim()) info.append(createModelLogButton(name, config.log));
+            if (priceFormats.has(config.price?.format)) info.append(createPriceButton(name));
             const select = node('select', 'provider-select');
             select.dataset.model = name;
             select.setAttribute('aria-label', `${name} Provider`);
             providers.forEach(id => {
-                const option = node('option', '', `${id} · ${providerPrice(modelProviderPrice(config, id), true)}`);
+                const price = providerPrice(modelProviderPrice(config, id), true);
+                const option = node('option', '', `${id} · ${price}`);
                 option.value = id;
+                option.dataset.price = price;
                 select.append(option);
             });
             select.value = providers.includes(state.account.selected_provider?.[name]) ? state.account.selected_provider[name] : providers[0];
@@ -820,7 +949,7 @@
                 item.append(node('dt', '', title), node('dd', className, '—'));
                 performance.append(item);
             });
-            row.append(info, select, stability, performance);
+            row.append(info, createProviderPicker(select), stability, performance);
             rows.append(row);
         });
         if (state.page === 'models') loadStability();
@@ -831,11 +960,17 @@
         $('logoutButton').disabled = value;
         $('rotateApiKey').disabled = value || state.accountStatus !== 'ready';
         $('confirmRotate').disabled = value;
-        document.querySelectorAll('.provider-select').forEach(select => { select.disabled = value; });
+        if (value) hideProviderOptions();
+        document.querySelectorAll('.provider-select').forEach(select => {
+            select.disabled = value;
+            syncProviderSelect(select);
+        });
     }
     async function saveProvider(model, select) {
         if (state.saving) return;
         const selected = select.value;
+        const trigger = select.parentElement.querySelector('.provider-select-trigger');
+        const restoreFocus = document.activeElement === trigger;
         const previous = state.account.selected_provider?.[model] || select.options[0]?.value;
         updateSitePrice();
         setSaving(true);
@@ -858,6 +993,10 @@
             toast(`保存失败：${error.message}`, true);
         } finally {
             setSaving(false);
+            if (restoreFocus && (document.activeElement === document.body || document.activeElement === trigger)) {
+                const current = [...document.querySelectorAll('.provider-select')].find(item => item.dataset.model === model);
+                current?.parentElement.querySelector('.provider-select-trigger').focus({preventScroll: true});
+            }
         }
     }
     async function loadStability() {
@@ -1138,7 +1277,7 @@
         if (itemized && numeric(log.cachereturn_refund) > 0) {
             const refund = node('div');
             const charged = node('dd', 'token-cost-formula token-cost-summary');
-            charged.append(node('span', '', '实际扣费'), node('strong', '', logCharge(log)));
+            charged.append(node('span', '', '计算费用(补偿)'), node('strong', '', logCharge(log)));
             refund.append(node('dt', '', '缓存补偿'),
                 node('dd', '', `-${money(creditsToYuan(log.cachereturn_refund))}`), charged);
             $('tokenDetailList').append(refund);
@@ -1194,6 +1333,7 @@
         if (visible) $('sidebar').querySelector('a').focus();
     }
     function route() {
+        hideProviderOptions();
         hideTokenDetail();
         hidePricePopover();
         hideModelLog();
@@ -1335,15 +1475,27 @@
         if (event.key !== 'Tab') return;
         event.preventDefault();
         const target = pricePopoverTarget;
-        const next = target?.closest('.provider-row')?.querySelector('.provider-select');
+        const next = target?.closest('.provider-row')?.querySelector('.provider-select-trigger');
         closePricePopover();
         if (!event.shiftKey) next?.focus({preventScroll: true});
     });
     document.addEventListener('pointerdown', event => {
+        if (!event.target.closest('.provider-picker, #providerOptions')) hideProviderOptions();
         if (!event.target.closest('.token-button, #tokenTooltip')) hideTokenDetail();
         if (!event.target.closest('.model-price-button, #pricePopover')) hidePricePopover();
         if (!event.target.closest('.model-log-button, #modelLogTooltip')) hideModelLog();
     });
+    $('providerOptions').addEventListener('pointerdown', event => event.preventDefault());
+    $('providerOptions').addEventListener('pointermove', event => {
+        const option = event.target.closest('.provider-option');
+        if (option && event.pointerType === 'mouse') activateProviderOption(Number(option.dataset.index));
+    });
+    $('providerOptions').addEventListener('click', event => {
+        const option = event.target.closest('.provider-option');
+        if (option) chooseProviderOption(Number(option.dataset.index));
+    });
+    window.addEventListener('scroll', event => { if (!$('providerOptions').contains(event.target)) hideProviderOptions(); }, true);
+    window.addEventListener('resize', hideProviderOptions);
     window.addEventListener('scroll', event => { if (!$('modelLogTooltip').contains(event.target)) hideModelLog(); }, true);
     window.addEventListener('resize', hideModelLog);
     window.addEventListener('scroll', event => { if (!$('pricePopover').contains(event.target)) hidePricePopover(); }, true);

@@ -45,8 +45,8 @@ int main() {
     http_add(&a,"POST /api/gpt5_model_list ",gpt5_model_list);
     http_add(&a,"POST /api/gpt5_askstable ",gpt5_askstable);
 
-    // http_add(&a,"GET /v1/models ",gpt5_models);
-    // http_add(&a,"GET /v1/models?",gpt5_models);
+    http_add(&a,"GET /v1/models ",gpt5_models);
+    http_add(&a,"GET /v1/models?",gpt5_models);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
     http_add(&a,"POST /v1/responses?",gpt5_responses);
