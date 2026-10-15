@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zlib.h>
 using namespace std;
 #define ll long long
 static const ll NANOSECONDS_PER_SECOND=1000000000LL;
@@ -301,6 +302,27 @@ static size_t gpt6body(void* ptr,size_t size,size_t count,void* userdata) {
     else if(ans->stable>=1000)return 0;//渠道炸了，立刻切下一个渠道
     return n;
 }
+static bool gpt6_gzip(const string& input,string& output){
+    if(input.size()<1024||input.size()>UINT_MAX)return false;
+    z_stream stream{};
+    if(deflateInit2(&stream,Z_BEST_SPEED,Z_DEFLATED,MAX_WBITS+16,8,Z_DEFAULT_STRATEGY)!=Z_OK)return false;
+    stream.next_in=(Bytef*)input.data();
+    stream.avail_in=(uInt)input.size();
+    int result;
+    do{
+        char buffer[16384];
+        stream.next_out=(Bytef*)buffer;
+        stream.avail_out=sizeof(buffer);
+        result=deflate(&stream,Z_FINISH);
+        output.append(buffer,sizeof(buffer)-stream.avail_out);
+    }while(result==Z_OK&&output.size()<input.size());
+    deflateEnd(&stream);
+    if(result!=Z_STREAM_END||output.size()+sizeof("Content-Encoding: gzip\r\n")-1>=input.size()){
+        output.clear();
+        return false;
+    }
+    return true;
+}
 gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON conf,const char* format,bool send_before_first){
     if(conf["map"][model].IsString())model=conf["map"][model].a->valuestring;
     gpt6_ret ans{};
@@ -331,7 +353,6 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(strcmp(format,"image")==0)url+="/v1/images/generations";
     if(strcmp(format,"gemini")==0)url=url+"/v1beta/models/"+model+":streamGenerateContent?alt=sse";
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
-    curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
     cppJSON u(message);
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
     if(strcmp(format,"completions")==0&&u["stream"]==true){
@@ -340,6 +361,15 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     }
     if(strcmp(format,"gemini"))u["model"]=model;//执行名字map映射
     mm=u.stringify_Unformatted();
+    if(conf["gzip"]==true){
+        string compressed;
+        if(gpt6_gzip(mm,compressed)){
+            headers=curl_slist_append(headers,"Content-Encoding: gzip");
+            mm.swap(compressed);
+        }
+    }
+    curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
+    curl_easy_setopt(curl,CURLOPT_POSTFIELDSIZE_LARGE,(curl_off_t)mm.size());
     curl_easy_setopt(curl,CURLOPT_POSTFIELDS,mm.c_str());
     curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,gpt6header);
     curl_easy_setopt(curl,CURLOPT_HEADERDATA,&ans);
@@ -357,6 +387,9 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     ans.end_ns=gpt6_now_ns();
     if(!ans.issse)gpt6body(0,0,0,&ans);
     curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&ans.httpcode);
+    curl_off_t upload_bytes=0;
+    curl_easy_getinfo(curl,CURLINFO_SIZE_UPLOAD_T,&upload_bytes);
+    ans.upload_bytes=upload_bytes;
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     if(ans.issse==1)gpt6_parse(&ans,ans.body,false);

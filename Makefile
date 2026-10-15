@@ -1,5 +1,5 @@
 CFLAGS = -O2 -Wall
-LDFLAGS = -lssl -lcrypto -lcurl
+LDFLAGS = -lssl -lcrypto -lcurl -lz
 CC = gcc
 CXX = g++
 

@@ -58,9 +58,6 @@ int main(){
         for(auto j:mp){
             content *q=j.second.p;
             if(p==q)continue;
-            if(q->deleted==2)continue;
-            if(strcmp(q->ownerid,p->ownerid))continue;
-            if(strcmp(q->format,p->format))continue;
             vector<string>&w=j.second.v;
             if(w.size()<v.size())continue;
             int v1=0;
@@ -68,6 +65,9 @@ int main(){
                 if(tmp==v[v1])if(++v1==(int)v.size())break;
             }
             if(v1==(int)v.size()){
+                if(q->deleted==2)continue;
+                if(strcmp(q->ownerid,p->ownerid))continue;
+                if(strcmp(q->format,p->format))continue;
                 p->deleted=2;//////////////////
                 cout<<"DELETE "<<p->con_id<<endl;
                 break;

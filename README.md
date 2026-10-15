@@ -4,12 +4,12 @@
 
 ## 构建
 
-本项目由makefile构建，依赖：`gcc` / `g++`、`make`，以及 libcurl 开发库。
+本项目由makefile构建，依赖：`gcc` / `g++`、`make`，以及 OpenSSL、libcurl、zlib 开发库。
 > 注意：需要x86 cpu和linux系统。
 
 ```bash
 # 安装依赖
-# sudo apt install build-essential libssl-dev libcurl4-openssl-dev
+# sudo apt install build-essential libssl-dev libcurl4-openssl-dev zlib1g-dev
 # 编译，产物输出到 build/
 make
 ```

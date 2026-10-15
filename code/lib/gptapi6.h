@@ -15,6 +15,7 @@ struct gpt6_ret{
     long long input,output,cache,makecache;//总输入（包含缓存读写），总输出，缓存读，缓存写
     long long websearch;
     long long start_ns,first_ns,last_ns,end_ns;
+    long long upload_bytes;//实际上传的请求体大小（压缩后）
     int curlcode;
     long long httpcode;
     std::string response_id,header,body,bodydelta,info;

@@ -547,6 +547,7 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     field("last",to_string(ans->last_ns/1000000000LL));
     field("end",to_string(ans->end_ns/1000000000LL));
     field("curlcode",to_string(ans->curlcode));
+    field("upload_bytes",to_string(ans->upload_bytes));
     field("httpcode",to_string(ans->httpcode));
     field("issse",to_string(ans->issse));
     field("response_id",ans->response_id);
@@ -603,7 +604,7 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
     }
     if(want>b.input)want=b.input;
     rl->cachereturn=want;
-    want*=0.95;
+    want*=0.9;
     if(rl->isimage==2&&want>b.cache){
         int comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
         if(comp<0)comp=0;
@@ -648,7 +649,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         }
         reslog rl;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
-        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)+((a->m+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
+        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
         if(b.send&&b.used_tokens>0)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
