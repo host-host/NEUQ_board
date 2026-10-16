@@ -24,6 +24,9 @@
     const balanceFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const STABILITY_BUCKETS = 3 * 24 * 4;
     const STABILITY_BUCKET_MS = 15 * 60 * 1000;
+    const NOTICE_LAST_SHOWN_KEY = 'neuq.token.noticeLastShownAt';
+    const NOTICE_POPUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+    let noticeShownThisVisit = false;
     let toastTimer;
     let searchTimer;
     let tokenTooltipTimer;
@@ -502,6 +505,28 @@
         $('allNoticesButton').hidden = notices.length <= 3;
         $('noticeState').hidden = notices.length > 0;
         if (!notices.length) showMessage('noticeState', '暂无公告，有新的消息会在这里告诉你。');
+        maybeShowNotices();
+    }
+    function showNotices() {
+        if ($('noticeDialog').open || !$('allNoticeList').children.length) return;
+        $('noticeDialog').showModal();
+        noticeShownThisVisit = true;
+        try {
+            localStorage.setItem(NOTICE_LAST_SHOWN_KEY, String(Date.now()));
+        } catch (_) {
+            // 本地存储不可用时，本次访问仍只自动展示一次。
+        }
+    }
+    function maybeShowNotices() {
+        if (noticeShownThisVisit || document.hidden || !$('allNoticeList').children.length || document.querySelector('dialog[open]')) return;
+        const now = Date.now();
+        try {
+            const lastShown = Number(localStorage.getItem(NOTICE_LAST_SHOWN_KEY));
+            if (Number.isFinite(lastShown) && lastShown > 0 && lastShown <= now && now - lastShown < NOTICE_POPUP_INTERVAL_MS) return;
+        } catch (_) {
+            // 不因浏览器禁用本地存储而阻断公告展示。
+        }
+        showNotices();
     }
 
     function providerConfig(config, id) { return id === 'auto' ? config?.auto : state.models?.provider?.[id]; }
@@ -1429,8 +1454,10 @@
             }
         }
     });
-    $('allNoticesButton').addEventListener('click', () => $('noticeDialog').showModal());
+    $('allNoticesButton').addEventListener('click', showNotices);
+    document.addEventListener('visibilitychange', maybeShowNotices);
     document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+    document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('close', maybeShowNotices));
     document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('click', event => {
         const rect = dialog.getBoundingClientRect();
         if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();

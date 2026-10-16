@@ -8,7 +8,7 @@
     <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" href="style.css?v=1015v8">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1015v8" defer></script>
+    <script src="app.js?v=1016v1" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -167,7 +167,7 @@
             <footer class="main-footer"><span>NEUQ Board <span class="footer-divider">/</span> Console</span><span id="updatedAt">欢迎使用控制台</span></footer>
         </main>
     </div>
-    <dialog id="noticeDialog" aria-labelledby="noticeDialogTitle"><div class="dialog-heading"><div><p class="eyebrow">ANNOUNCEMENTS</p><h2 id="noticeDialogTitle">全部公告</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭公告"><svg class="icon"><use href="#i-close"/></svg></button></div><ul id="allNoticeList" class="notice-list"></ul></dialog>
+    <dialog id="noticeDialog" aria-labelledby="noticeDialogTitle"><div class="dialog-heading"><div><p class="eyebrow">ANNOUNCEMENTS</p><h2 id="noticeDialogTitle">全部公告</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭公告"><svg class="icon"><use href="#i-close"/></svg></button></div><ul id="allNoticeList" class="notice-list"></ul><div class="dialog-actions"><button class="button button-primary" type="button" data-close-dialog>我知道了</button></div></dialog>
     <dialog id="rotateDialog" class="small-dialog" aria-labelledby="rotateTitle" aria-describedby="rotateDescription"><div class="dialog-heading"><h2 id="rotateTitle">重置 API Key</h2><button class="icon-button" type="button" data-close-dialog aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div><p id="rotateDescription">重置后，旧密钥将立即失效。使用旧密钥的应用需要更新为新密钥。</p><p id="rotateError" class="error-text" role="alert" hidden></p><div class="dialog-actions"><button class="button button-white" type="button" data-close-dialog autofocus>取消</button><button id="confirmRotate" class="button button-danger" type="button">确认重置</button></div></dialog>
     <div id="tokenTooltip" class="token-tooltip" role="tooltip" hidden><dl id="tokenDetailList" class="token-detail-list"></dl></div>
     <div id="modelLogTooltip" class="model-log-tooltip" role="tooltip" hidden></div>

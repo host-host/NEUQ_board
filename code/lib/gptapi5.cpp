@@ -604,7 +604,8 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
     }
     if(want>b.input)want=b.input;
     rl->cachereturn=want;
-    want*=0.9;
+    if(b.cache*2<want)want*=0.9;
+    else want*=0.8;
     if(rl->isimage==2&&want>b.cache){
         int comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
         if(comp<0)comp=0;
