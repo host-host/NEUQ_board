@@ -18,12 +18,12 @@
     const providerSuccessRate = document.getElementById('providerSuccessRate');
     const providerStatsStatus = document.getElementById('providerStatsStatus');
     const providerStatus = document.getElementById('providerStatus');
-    const size = document.getElementById('size');
-    const customSizeFields = document.getElementById('customSizeFields');
+    const aspectRatio = document.getElementById('aspectRatio');
+    const customRatioFields = document.getElementById('customRatioFields');
     const customWidth = document.getElementById('customWidth');
     const customHeight = document.getElementById('customHeight');
-    const count = document.getElementById('count');
     const quality = document.getElementById('quality');
+    const background = document.getElementById('background');
     const extraJson = document.getElementById('extraJson');
     const generateButton = document.getElementById('generateButton');
     const generateLabel = document.getElementById('generateLabel');
@@ -276,23 +276,23 @@
         }
     }
 
-    function syncCustomSize() {
-        const custom = size.value === 'custom';
-        customSizeFields.hidden = !custom;
+    function syncCustomRatio() {
+        const custom = aspectRatio.value === 'custom';
+        customRatioFields.hidden = !custom;
         for (const input of [customWidth, customHeight]) {
             input.disabled = !custom;
             input.required = custom;
         }
     }
 
-    function selectedSize() {
-        if (size.value !== 'custom') return size.value;
+    function selectedAspectRatio() {
+        if (aspectRatio.value !== 'custom') return aspectRatio.value;
         const width = Number(customWidth.value);
         const height = Number(customHeight.value);
         if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
-            throw new Error('自定义尺寸的宽度和高度必须为正整数');
+            throw new Error('自定义宽高比的宽和高必须为正整数');
         }
-        return `${width}x${height}`;
+        return `${width}:${height}`;
     }
 
     async function readJson(response) {
@@ -543,14 +543,16 @@
         const payload = {
             model: model.value,
             prompt: text,
-            size: selectedSize(),
-            n: Number(count.value)
+            aspect_ratio: selectedAspectRatio(),
+            quality: quality.value,
+            background: background.value
         };
-        // 暂按上游接受 image 为单个 Data URL 或 Data URL 数组处理。
         if (sourceImages.length) {
-            payload.image = sourceImages.length === 1 ? sourceImages[0].dataUrl : sourceImages.map(image => image.dataUrl);
+            payload.input_references = sourceImages.map(image => ({
+                type: 'image_url',
+                image_url: {url: image.dataUrl}
+            }));
         }
-        if (quality.value) payload.quality = quality.value;
         const extraText = extraJson.value.trim();
         if (extraText) {
             let extra;
@@ -642,7 +644,7 @@
         let payload;
         try { payload = createPayload(); } catch (error) { return setMessage(error.message, 'error'); }
         showRequest(payload);
-        const action = payload.image ? '编辑' : '生成';
+        const action = Array.isArray(payload.input_references) && payload.input_references.length ? '编辑' : '生成';
         isSubmitting = true;
         syncFormState();
         generateButton.classList.add('loading');
@@ -696,7 +698,7 @@
         renderProviders();
     });
     provider.addEventListener('change', saveProvider);
-    size.addEventListener('change', syncCustomSize);
+    aspectRatio.addEventListener('change', syncCustomRatio);
     prompt.addEventListener('input', updateCount);
     sourceImageInput.addEventListener('change', () => {
         const files = Array.from(sourceImageInput.files);
@@ -716,7 +718,8 @@
     clearButton.addEventListener('click', () => {
         prompt.value = '';
         extraJson.value = '';
-        quality.value = '';
+        quality.value = 'auto';
+        background.value = 'auto';
         clearSourceImages();
         updateCount();
         latestRequest = null;
@@ -737,6 +740,6 @@
     });
 
     updateCount();
-    syncCustomSize();
+    syncCustomRatio();
     loadAccount();
 })();
