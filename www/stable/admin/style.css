@@ -64,6 +64,7 @@ th:nth-child(n+6):not(:last-child), td:nth-child(n+6):not(:last-child) { text-al
 .token-breakdown-tooltip { position:fixed; z-index:100; width:196px; padding:10px 12px; border:1px solid #44403c; border-radius:6px; background:#292524; color:#fafaf9; box-shadow:0 10px 24px rgba(28,25,23,.22); font-size:12px; font-variant-numeric:tabular-nums; pointer-events:none; }
 .token-breakdown-tooltip dl { display:grid; gap:6px; margin:0; }
 .token-breakdown-tooltip dl div { display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.token-breakdown-tooltip dl div[hidden] { display:none; }
 .token-breakdown-tooltip dt { color:#d6d3d1; }
 .token-breakdown-tooltip dd { margin:0; color:#fff; font-weight:600; }
 .log-load-state { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px; min-height:36px; color:var(--muted); font-size:13px; }

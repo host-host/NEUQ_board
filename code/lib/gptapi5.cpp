@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cctype>
 #include <climits>
+#include <cstddef>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -165,6 +166,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("output",(double)logs->a[i].output);
         item.insert("cache",(double)logs->a[i].cache);
         item.insert("makecache",(double)logs->a[i].makecache);
+        item.insert("makecache_1h",(double)logs->a[i].makecache_1h);
         item.insert("cachereturn_refund",(double)logs->a[i].cachereturn_refund);
         item.insert("websearch",(double)logs->a[i].websearch);
         long long first=logs->a[i].start>0?logs->a[i].first-logs->a[i].start:-1;
@@ -176,6 +178,7 @@ void gpt5_log_list(http_para* a) {
         item.insert("outputm",(double)logs->a[i].outputm);
         item.insert("cachem",(double)logs->a[i].cachem);
         item.insert("makecachem",(double)logs->a[i].makecachem);
+        item.insert("makecache_1hm",(double)logs->a[i].makecache_1hm);
         item.insert("websearchm",(double)logs->a[i].websearchm);
         item.insert("isswitch",logs->a[i].isswitch==1);
         item.insert("useage",(double)logs->a[i].useage);
@@ -208,7 +211,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item->cache=b.cache;
     item->makecache=b.makecache;
     item->websearch=b.websearch;
-    // item->makecache_1h
+    item->makecache_1h=b.makecache_1h;
     item->cost=cost;
     item->start=b.start_ns;
     item->first=b.first_ns;
@@ -366,11 +369,13 @@ double gpt5_cost(gpt6_ret* usage,const cppJSON& price,reslog* rl) {//填充倍�
         rl->outputm=a["output"].valuedouble()*mu;
         rl->cachem=a["cache"].valuedouble()*mu;
         rl->makecachem=a["makecache"].valuedouble()*mu;
+        rl->makecache_1hm=a["makecache_1h"].IsNumber()?a["makecache_1h"].valuedouble()*mu:rl->makecachem;
         rl->websearchm=a["websearch"].valuedouble()*mu;
         double ans=rl->inputm*(input>0?input:0)/1000000+
             rl->outputm*usage->output/1000000+
             rl->cachem*usage->cache/1000000+
-            rl->makecachem*usage->makecache/1000000+
+            rl->makecachem*(usage->makecache-usage->makecache_1h)/1000000+
+            rl->makecache_1hm*usage->makecache_1h/1000000+
             rl->websearchm*usage->websearch;
         rl->useage=ceil(ans/0.3*1000000);
         return ans;
@@ -385,7 +390,6 @@ double gpt5_cost(gpt6_ret* usage,const cppJSON& price,reslog* rl) {//填充倍�
         return f(usage,price,mul*(d?2:1),rl);
     }
     if(format=="lengthdouble")return usage->input>price["length"].valuedouble()?f(usage,price["newprice"],mul,rl):f(usage,price,mul,rl);
-    if(format=="claude")return f(usage,price,mul,rl);
     return 0;
 }
 void gpt5_add(string a,bool stable,gpt6_ret* b,double o_cost=0,double cost=0,long long sell=0){
@@ -541,6 +545,7 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     field("output",to_string(ans->output));
     field("cache",to_string(ans->cache));
     field("makecache",to_string(ans->makecache));
+    field("makecache_1h",to_string(ans->makecache_1h));
     field("websearch",to_string(ans->websearch));
     field("start",to_string(ans->start_ns/1000000000LL));
     field("first",to_string(ans->first_ns/1000000000LL));

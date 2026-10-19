@@ -28,12 +28,12 @@ struct reslog{
     int cachereturn;//计算出的应缓存token，当cachereturn>cache时执行补偿
     double multiply;//沿用历史单位：isimage=0时为额度/token，1时为额度/次；100万额度=0.3元
     long long time;
-    long long input,output,cache,makecache;
+    long long input,output,cache,makecache;//makecache 包含 makecache_1h
     int websearch;
-    int makecache_1h;//现在还没有实现这个，先放着
+    int makecache_1h;
     double cost;//真实成本
     long long start,first,last,end;
-    int isimage;//计费方式，0按总token(used_tokens*multiply) 1按次(used_tokens*multiply) 2按((input-cache-makecache)*inputm+output*outputm+cache*cachem+makecache*makecachem)
+    int isimage;//计费方式，0按总token(used_tokens*multiply)，1按次(used_tokens*multiply)，2按(max(input-cache-makecache,0)*inputm+output*outputm+cache*cachem+(makecache-makecache_1h)*makecachem+makecache_1h*makecache_1hm)/1000000+websearch*websearchm
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
     char info[128];
     char isauto;

@@ -147,7 +147,9 @@ void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
         ll input=max(ans->input-ans->cache-ans->makecache,usage["input_tokens"].valuedouble());
         ans->output=max(ans->output,usage["output_tokens"].valuedouble());
         ans->cache=max(ans->cache,usage["cache_read_input_tokens"].valuedouble());
+        ans->makecache_1h=max(ans->makecache_1h,usage["cache_creation"]["ephemeral_1h_input_tokens"].valuedouble());
         ans->makecache=max(ans->makecache,usage["cache_creation_input_tokens"].valuedouble());
+        ans->makecache=max(ans->makecache,ans->makecache_1h);
         ans->input=input+ans->cache+ans->makecache;
         ans->used_tokens=ans->input+ans->output;
     };

@@ -40,7 +40,7 @@
     let providerPickerIndex = -1;
     let providerSearch = '';
     let providerSearchTime = 0;
-    const priceFormats = new Set(['per', 'token', 'normal', 'deepseek', 'lengthdouble', 'claude']);
+    const priceFormats = new Set(['per', 'token', 'normal', 'deepseek', 'lengthdouble']);
     const officialPriceFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 10});
     const summaryPriceFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 3});
     const calculationPriceFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 6});
@@ -592,17 +592,19 @@
         const unit = price.format === 'per' ? `${currency}/次` : `${currency}/M tokens`;
         const multiplier = priceMultiplier(price, site);
         const columns = priceColumns(price);
+        const hasHourlyCache = columns.some(column => Number.isFinite(column.price?.makecache_1h));
         let fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'], ['makecache', '缓存写入']];
         let note = '';
         if (price.format === 'per' || price.format === 'token') {
             fields = [['input', price.format === 'per' ? '每次调用' : '总 Token']];
-        } else if (price.format === 'deepseek') {
-            note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍。';
-        } else if (price.format === 'claude' && !site) {
-            fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'],
-                ['makecache', '缓存写入（5 分钟）'], ['makecache(1h)', '缓存写入（1 小时）']];
+        } else {
+            if (hasHourlyCache) {
+                fields[3] = ['makecache', '缓存写入（5 分钟）'];
+                fields.push(['makecache_1h', '缓存写入（1 小时）']);
+            }
+            fields.push(['websearch', '联网搜索']);
+            if (price.format === 'deepseek') note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍。';
         }
-        if (price.format !== 'per' && price.format !== 'token') fields.push(['websearch', '联网搜索']);
         const table = node('table', 'official-price-table');
         table.classList.toggle('tiered-price-table', columns.length > 1);
         table.setAttribute('aria-label', `${site ? '本站价格' : '官方定价'}，${currency === '$' ? '美元' : '人民币'}`);
@@ -629,7 +631,8 @@
             heading.scope = 'row';
             row.append(heading);
             const amounts = columns.map(column => {
-                const value = column.price?.[field];
+                let value = column.price?.[field];
+                if (field === 'makecache_1h' && !Number.isFinite(value)) value = numeric(column.price?.makecache);
                 return site ? numeric(value) * column.factor * multiplier
                     : typeof value === 'number' ? value * column.factor * multiplier : NaN;
             });
@@ -1268,7 +1271,14 @@
                 Math.max(0, input - cache - makecache), log.inputm, 1000000);
             add('output', tokens(log.output), numeric(log.output), log.outputm, 1000000);
             add('cache', tokens(cache), cache, log.cachem, 1000000);
-            add('makecache', tokens(makecache), makecache, log.makecachem, 1000000);
+            const hourlyCache = numeric(log.makecache_1h);
+            if (hourlyCache > 0) {
+                add('makecache', `(${tokens(makecache)} - ${tokens(hourlyCache)})`, Math.max(0, makecache - hourlyCache), log.makecachem, 1000000);
+                const hourlyRate = Number.isFinite(log.makecache_1hm) ? log.makecache_1hm : log.makecachem;
+                add('makecache_1h', tokens(hourlyCache), hourlyCache, hourlyRate, 1000000);
+            } else {
+                add('makecache', tokens(makecache), makecache, log.makecachem, 1000000);
+            }
             if (numeric(log.websearch) > 0) add('websearch', tokens(log.websearch), numeric(log.websearch), log.websearchm, 1);
         } else {
             add('used_tokens', tokens(log.used_tokens), numeric(log.used_tokens), logUnitPrice(log), isImage(log) ? 1 : 1000000);
@@ -1284,6 +1294,11 @@
         $('tokenDetailList').classList.toggle('itemized', itemized);
         const details = isImage(log) ? [['次数', 'used_tokens']] : [['输入', 'input'], ['输出', 'output'],
             ['缓存读取', 'cache'], ['缓存创建', 'makecache'], ['实际 Token', 'used_tokens']];
+        const hourlyCache = numeric(log.makecache_1h);
+        const splitCache = !isImage(log) && hourlyCache > 0;
+        if (splitCache) {
+            details.splice(3, 1, ['缓存创建（普通）', 'makecache'], ['缓存创建（1 小时）', 'makecache_1h']);
+        }
         if (numeric(log.websearch) > 0) {
             details.splice(itemized ? details.length - 1 : details.length, 0, ['联网搜索（次）', 'websearch']);
         }
@@ -1296,7 +1311,8 @@
                 formula.classList.add('token-cost-summary');
                 formula.append(node('span', '', '计算费用'), node('strong', '', totalAmount));
             }
-            item.append(node('dt', '', label), node('dd', '', tokens(log[field])), formula);
+            const count = splitCache && field === 'makecache' ? Math.max(0, numeric(log.makecache) - hourlyCache) : log[field];
+            item.append(node('dt', '', label), node('dd', '', tokens(count)), formula);
             $('tokenDetailList').append(item);
         });
         if (itemized && numeric(log.cachereturn_refund) > 0) {
@@ -1324,9 +1340,9 @@
     }
     function exportLogs() {
         if (!state.logs.length) return;
-        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token', '输入', '输出', '缓存读取', '缓存创建', '联网搜索（次）', '首字(s)', '总耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）', '附加信息']];
+        const rows = [['时间', '模型', 'Provider', '类型', '实际 Token', '输入', '输出', '缓存读取', '缓存创建总量', '其中一小时缓存创建', '联网搜索（次）', '首字(s)', '总耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）', '附加信息']];
         state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
-            numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.websearch),
+            numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.makecache_1h), numeric(log.websearch),
             isImage(log) ? '—' : duration(log.first, true), duration(log.total), tps(log), logPrice(log), logCharge(log), logInfo(log)]));
         const csv = rows.map(row => row.map(value => {
             let text = String(value);

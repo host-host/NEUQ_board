@@ -163,7 +163,7 @@
             const charge = Math.ceil(amount / CNY_PER_MILLION_CREDITS * 1000000);
             return `${format(charge / 1000000 * CNY_PER_MILLION_CREDITS)}/次`;
         }
-        if (!['normal', 'deepseek', 'lengthdouble', 'claude'].includes(price.format)) return '价格未配置';
+        if (!['normal', 'deepseek', 'lengthdouble'].includes(price.format)) return '价格未配置';
         const input = price.input * factor, output = price.output * factor;
         if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0) return '价格未配置';
         const tiered = price.format === 'lengthdouble' || price.format === 'deepseek';
