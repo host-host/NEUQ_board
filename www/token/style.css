@@ -247,8 +247,8 @@ input::placeholder { color: var(--muted); }
 .provider-row { min-height: 92px; border-top: 1px solid var(--line); }
 .provider-row:hover { background: var(--background); }
 .model-info { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.model-name { display: block; min-width: 0; font-size: 14px; color: var(--ink); font-weight: 550; overflow-wrap: anywhere; }
-.model-price-button { display: inline-grid; place-items: center; flex-shrink: 0; height: 26px; margin-left: auto; padding: 0 4px; background: transparent; color: #57534e; font-size: 12px; white-space: nowrap; }
+.model-name { display: block; min-width: 0; margin-right: auto; font-size: 14px; color: var(--ink); font-weight: 550; overflow-wrap: anywhere; }
+.model-price-button { display: inline-grid; place-items: center; flex-shrink: 0; height: 26px; padding: 0 4px; background: transparent; color: #57534e; font-size: 12px; white-space: nowrap; }
 .model-price-button:hover, .model-price-button[aria-expanded="true"] { color: var(--accent-hover); }
 .model-log-button { display: inline-grid; place-items: center; flex-shrink: 0; width: 22px; height: 26px; padding: 0; background: transparent; color: #b45309; cursor: help; }
 .model-log-button:hover, .model-log-button:focus-visible { color: #92400e; }
