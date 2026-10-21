@@ -309,6 +309,10 @@
             overviewUsage.rows = [];
         }
         renderOverviewUsage();
+        const noticesAllowed = canShowNotices();
+        $('noticePanel').hidden = !noticesAllowed;
+        if (!noticesAllowed && $('noticeDialog').open) $('noticeDialog').close();
+        if (noticesAllowed) maybeShowNotices();
     }
     function usageDay() { return Math.floor((Date.now() / 1000 + 8 * 3600) / 86400); }
     async function loadOverviewUsage() {
@@ -507,8 +511,11 @@
         if (!notices.length) showMessage('noticeState', '暂无公告，有新的消息会在这里告诉你。');
         maybeShowNotices();
     }
+    function canShowNotices() {
+        return state.accountStatus === 'ready' && state.account?.admin === true;
+    }
     function showNotices() {
-        if ($('noticeDialog').open || !$('allNoticeList').children.length) return;
+        if (!canShowNotices() || $('noticeDialog').open || !$('allNoticeList').children.length) return;
         $('noticeDialog').showModal();
         noticeShownThisVisit = true;
         try {
@@ -518,7 +525,7 @@
         }
     }
     function maybeShowNotices() {
-        if (noticeShownThisVisit || document.hidden || !$('allNoticeList').children.length || document.querySelector('dialog[open]')) return;
+        if (!canShowNotices() || noticeShownThisVisit || document.hidden || !$('allNoticeList').children.length || document.querySelector('dialog[open]')) return;
         const now = Date.now();
         try {
             const lastShown = Number(localStorage.getItem(NOTICE_LAST_SHOWN_KEY));
@@ -565,6 +572,38 @@
         }
         return [{price, factor: 1}];
     }
+    function officialPriceRatio(official, price) {
+        if (!priceFormats.has(official?.format) || official.format !== price.format) return null;
+        if (official.format === 'lengthdouble' && official.length !== price.length) return null;
+        const fields = ['per', 'token'].includes(official.format) ? ['input']
+            : ['input', 'output', 'cache', 'makecache', 'makecache_1h', 'websearch'];
+        const officialColumns = priceColumns(official);
+        const providerColumns = priceColumns(price);
+        const officialMultiplier = priceMultiplier(official, true);
+        const providerMultiplier = priceMultiplier(price, true);
+        let ratio = null;
+        for (let i = 0; i < officialColumns.length; i++) {
+            for (const field of fields) {
+                const amount = (column, multiplier) => {
+                    let value = column.price?.[field];
+                    if (field === 'makecache_1h' && !Number.isFinite(value)) value = column.price?.makecache;
+                    return numeric(value) * column.factor * multiplier;
+                };
+                const base = amount(officialColumns[i], officialMultiplier);
+                const current = amount(providerColumns[i], providerMultiplier);
+                if (!Number.isFinite(base) || !Number.isFinite(current) || base < 0 || current < 0) return null;
+                if (base === 0) {
+                    if (current !== 0) return null;
+                    continue;
+                }
+                const value = current / base;
+                if (!Number.isFinite(value)) return null;
+                if (ratio === null) ratio = value;
+                else if (Math.abs(value - ratio) > Math.max(Math.abs(value), Math.abs(ratio)) * 1e-9) return null;
+            }
+        }
+        return ratio;
+    }
     function providerPrice(price, compact = false) {
         if (!priceFormats.has(price?.format)) return '价格未配置';
         const multiplier = priceMultiplier(price, true);
@@ -580,7 +619,7 @@
             const amounts = columns.map(column => numeric(column.price?.[field]) * column.factor * multiplier);
             return format(Math.min(...amounts));
         };
-        return `${summary('input')} / Input MTok\u2002\u2002${summary('output')} / Output MTok`;
+        return `${summary('input')} / Input\u2002\u2002${summary('output')} / Output`;
     }
     function renderPriceTable(price, content, site = false) {
         content.replaceChildren();
@@ -794,7 +833,9 @@
     }
     function syncProviderSelect(select) {
         const trigger = select.parentElement.querySelector('.provider-select-trigger');
-        trigger.textContent = select.selectedOptions[0]?.textContent || '';
+        const option = select.selectedOptions[0];
+        trigger.textContent = option ? `${option.value} · ${option.dataset.price}` : '';
+        if (option?.dataset.ratio) trigger.append(node('span', 'provider-price-ratio', ` (x${option.dataset.ratio})`));
         trigger.disabled = select.disabled;
     }
     function hideProviderOptions() {
@@ -836,7 +877,9 @@
             item.setAttribute('aria-selected', String(option.selected));
             item.title = option.textContent;
             const content = node('span', 'provider-option-content');
-            content.append(node('span', 'provider-option-name', option.value), node('span', 'provider-option-price', `· ${option.dataset.price}`));
+            const price = node('span', 'provider-option-price', `· ${option.dataset.price}`);
+            if (option.dataset.ratio) price.append(node('span', 'provider-price-ratio', ` (x${option.dataset.ratio})`));
+            content.append(node('span', 'provider-option-name', option.value), price);
             const check = node('span', 'provider-option-check', '✓');
             check.setAttribute('aria-hidden', 'true');
             item.append(content, check);
@@ -952,10 +995,14 @@
             select.dataset.model = name;
             select.setAttribute('aria-label', `${name} Provider`);
             providers.forEach(id => {
-                const price = providerPrice(modelProviderPrice(config, id), true);
-                const option = node('option', '', `${id} · ${price}`);
+                const provider = modelProviderPrice(config, id);
+                const price = providerPrice(provider, true);
+                const ratio = officialPriceRatio(config.price, provider);
+                const ratioText = ratio === null ? '' : String(Number(ratio.toPrecision(10)));
+                const option = node('option', '', `${id} · ${price}${ratioText ? ` (x${ratioText})` : ''}`);
                 option.value = id;
                 option.dataset.price = price;
+                option.dataset.ratio = ratioText;
                 select.append(option);
             });
             select.value = providers.includes(state.account.selected_provider?.[name]) ? state.account.selected_provider[name] : providers[0];
