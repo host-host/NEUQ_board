@@ -602,7 +602,9 @@
                 else if (Math.abs(value - ratio) > Math.max(Math.abs(value), Math.abs(ratio)) * 1e-9) return null;
             }
         }
-        return ratio;
+        if (ratio === null || official.dollar !== true) return ratio;
+        const dollar2cny = numeric(state.models?.dollar2cny);
+        return dollar2cny > 0 ? ratio * (CNY_PER_USD / dollar2cny) : null;
     }
     function providerPrice(price, compact = false) {
         if (!priceFormats.has(price?.format)) return '价格未配置';
@@ -975,6 +977,10 @@
         if (state.accountStatus === 'error') return showMessage('providerState', '账户信息加载失败，暂时无法选择 Provider。', {error: true, retry: loadAccount});
         if (state.modelStatus === 'error') return showMessage('providerState', state.modelError, {error: true, retry: loadModels});
         if (state.accountStatus !== 'ready' || state.modelStatus !== 'ready') return showMessage('providerState', '正在加载模型…', {loading: true});
+        const dollar2cny = numeric(state.models.dollar2cny);
+        document.querySelectorAll('.provider-exchange-rate').forEach(element => {
+            element.textContent = dollar2cny > 0 ? `实时汇率(1$=${dollar2cny}¥)` : '实时汇率暂不可用';
+        });
         const entries = Object.entries(state.models.model || {}).map(([name, config]) => ({name, config, providers: availableProviders(config)})).filter(item => item.providers.length);
         const textCount = entries.filter(item => supportsModelType(item.config, 'text')).length;
         $('textModelCount').textContent = String(textCount);
@@ -998,7 +1004,7 @@
                 const provider = modelProviderPrice(config, id);
                 const price = providerPrice(provider, true);
                 const ratio = officialPriceRatio(config.price, provider);
-                const ratioText = ratio === null ? '' : String(Number(ratio.toPrecision(10)));
+                const ratioText = ratio === null ? '' : String(Number(ratio.toPrecision(3)));
                 const option = node('option', '', `${id} · ${price}${ratioText ? ` (x${ratioText})` : ''}`);
                 option.value = id;
                 option.dataset.price = price;

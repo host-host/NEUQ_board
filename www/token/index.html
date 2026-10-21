@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1021v4">
+    <link rel="stylesheet" href="style.css?v=1021v7">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1021v3" defer></script>
+    <script src="app.js?v=1021v7" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -146,7 +146,8 @@
                     <div class="provider-tabs" role="group" aria-label="模型类型"><button class="active" type="button" data-model-type="text" aria-pressed="true">文本模型 <span id="textModelCount">0</span></button><button type="button" data-model-type="image" aria-pressed="false">图像模型 <span id="imageModelCount">0</span></button><span id="providerBilling">单价：¥/M tokens</span></div>
                     <div id="providerState" class="state-message" role="status">正在加载模型…</div>
                     <div class="provider-table" id="providerTable" hidden>
-                        <div class="provider-table-heading" aria-hidden="true"><span>模型</span><span>Provider · 本站单价（¥）</span><span>近 24h 成功率</span><span>平均延迟 / TPS</span></div>
+                        <div class="provider-table-heading" aria-hidden="true"><span>模型</span><span>Provider · 本站单价（¥） · <span id="providerExchangeRate" class="provider-exchange-rate"></span></span><span>近 24h 成功率</span><span>平均延迟 / TPS</span></div>
+                        <div class="provider-mobile-exchange"><span class="provider-exchange-rate"></span></div>
                         <div id="providerRows"></div>
                     </div>
                     <div class="provider-footer"><span id="providerStatus" role="status">切换 Provider 后，下次调用生效。</span></div>
