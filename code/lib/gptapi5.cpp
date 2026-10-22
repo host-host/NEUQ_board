@@ -323,11 +323,13 @@ void gpt5_share(http_para* a) {
     con->publish=true;
     http_send(a,Hok Hjson Hc0,"{\"ok\":true}",0);
 }
-void insert2index_db(const string&a,const string&b){
-    char tmp[48]={0};
-    mylib_sha256(a.c_str(),a.length(),tmp);
+void insert2index_db(const char* tmp,const string&b){
     char* p=(char*)ndb2_got(index_db,tmp,b.length()+10);
     if(p)memcpy(p,b.c_str(),b.length());
+}
+const char* stringshatmp(char *tmp,const string&a){
+    mylib_sha256(a.c_str(),a.length(),tmp);
+    return tmp;
 }
 void maketitle(char*name,string b,const cppJSON& config){
     if(!name[0]){
@@ -620,6 +622,7 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
     }
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
+    if(a->m>50*1024*1024)return ERROR(H400,"请求体太长了");
     string apikey;
     user_* p=gpt5_api_user(a,&apikey);
     if(!p)return ERROR(H400,"Invalid API key.");
@@ -655,7 +658,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         }
         reslog rl;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
-        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
+        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl);//+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
         if(b.send&&b.used_tokens>0)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
@@ -670,11 +673,21 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     }
     if(config["nohistory"]==true)return;//可以在配置文件里不让进历史记录（磁盘要满了的临时处理方法）
     if(!array_name)return;//image 不进历史记录功能
-    cppJSON input=req[array_name].clone(),oldinput=my_format(input,format);
+    cppJSON input=req[array_name].clone();
+    req.clear();//内存优化
+    cppJSON oldinput=my_format(input,format);
+    free(a->get);
+    a->get=0;//内存优化
+    string().swap(b.body);
+    string().swap(b.bodydelta);
+    string().swap(b.ca);//内存优化
     for(auto i:b.append)input.push_back(i);
-    string inp=input.stringify_Unformatted(),new_input=(string)"new_input_"+p->userid+my_format(input,format).stringify_Unformatted();
     char con_id[32]={0},newhash[44],hash[44];
-    mylib_sha256(new_input.c_str(),new_input.length(),newhash);
+    {
+        string new_input=(string)"new_input_"+p->userid+my_format(input,format).stringify_Unformatted();
+        mylib_sha256(new_input.c_str(),new_input.length(),newhash);
+    }//内存优化
+    string inp=input.stringify_Unformatted();
     for(int i=1;i<=50&&oldinput.a&&oldinput.a->child;i++){
         string s=(string)"new_input_"+p->userid+oldinput.stringify_Unformatted();
         mylib_sha256(s.c_str(),s.length(),hash);
@@ -690,8 +703,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
             memcpy(cont->hash,newhash,44);
             cont->updatetime=time(0);
             memcpy(cont->content,inp.c_str(),inp.length()+1);
-            if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,cont->con_id);
-            insert2index_db(new_input,cont->con_id);
+            char tmp[48];
+            if(!b.response_id.empty())insert2index_db(stringshatmp(tmp,"response_id_"+b.response_id),cont->con_id);
+            insert2index_db(newhash,cont->con_id);
             UNLOCK(cont->isusing);
             return;
         }
@@ -716,8 +730,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         if(n==1)memcpy(h->user_id,p->userid,8);
         memcpy(h->con_id[n-1],con_id,32);
     }
-    if(!b.response_id.empty())insert2index_db("response_id_"+b.response_id,con_id);
-    insert2index_db(new_input,con_id);
+    char tmppp[48];
+    if(!b.response_id.empty())insert2index_db(stringshatmp(tmppp,"response_id_"+b.response_id),con_id);
+    insert2index_db(newhash,con_id);
     if(b.used_tokens<=0||(b.append.IsArray()&&b.append.size()==0))return;
     char title[64]={0};
     maketitle(title,b.append.stringify_Unformatted(),config["title"]);

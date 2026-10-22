@@ -363,6 +363,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     }
     if(strcmp(format,"gemini"))u["model"]=model;//执行名字map映射
     mm=u.stringify_Unformatted();
+    u.clear();//提前释放，防止内存爆
     if(conf["gzip"]==true){
         string compressed;
         if(gpt6_gzip(mm,compressed)){
@@ -448,7 +449,7 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
                     cppJSON tmp("[{}]");
                     tmp[0].insert("text",item.valuestring());
                     tmp[0].insert("type","text");
-                    items[item.a->string]=tmp;
+                    items[item.a->string]=std::move(tmp);
                     continue;
                 }
             }
