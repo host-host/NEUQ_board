@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1021v7">
+    <link rel="stylesheet" href="style.css?v=1023v5">
     <script src="/auth.js?v=0918v1" defer></script>
     <script src="app.js?v=1021v7" defer></script>
 </head>
@@ -142,7 +142,7 @@
 
             <section id="modelsPage" class="page-section" aria-label="模型广场" hidden>
                 <section class="panel provider-panel" aria-labelledby="providerTitle">
-                    <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>为每个模型选择服务商，选择后自动保存。</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
+                    <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>openai/anthropic/google-ai-studio渠道正在致力于实现<span class="availability-highlight">99.9%可用性</span>保障（全年不可用时间不超过9小时）放心使用</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
                     <div class="provider-tabs" role="group" aria-label="模型类型"><button class="active" type="button" data-model-type="text" aria-pressed="true">文本模型 <span id="textModelCount">0</span></button><button type="button" data-model-type="image" aria-pressed="false">图像模型 <span id="imageModelCount">0</span></button><span id="providerBilling">单价：¥/M tokens</span></div>
                     <div id="providerState" class="state-message" role="status">正在加载模型…</div>
                     <div class="provider-table" id="providerTable" hidden>

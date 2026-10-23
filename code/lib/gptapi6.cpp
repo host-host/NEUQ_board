@@ -455,7 +455,7 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
             }
             cppJSON tmp=my_format(item,format,k-1);
             if(tmp.IsNull()||((tmp.IsArray()||tmp.IsObject())&&!tmp.size())||(tmp.IsString()&&tmp.valuestring()==""))continue;
-            items[item.a->string]=tmp;
+            items[item.a->string]=std::move(tmp);
         }
         cppJSON result("{}");
         for(auto& item:items)result.insert(item.first.c_str(),std::move(item.second));

@@ -235,6 +235,7 @@ main:has(#credentialsPage:not([hidden]), #modelsPage:not([hidden]), #historyPage
 .key-footer { border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; }
 .key-footer p { color: #57534e; font-size: 13px; }
 .provider-heading { padding: 25px 28px; }
+.provider-heading .availability-highlight { color: var(--accent-hover); font-weight: 700; }
 .search-field { display: flex; align-items: center; gap: 9px; padding: 7px 12px; color: #57534e; border: 1px solid var(--line); border-radius: 7px; background: var(--background); }
 .search-field input { min-width: 0; width: 160px; background: transparent; border: 0; font-size: 14px; color: var(--ink); padding: 3px 0; }
 input::placeholder { color: var(--muted); }
