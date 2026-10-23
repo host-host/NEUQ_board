@@ -288,7 +288,7 @@ input::placeholder { color: var(--muted); }
 .provider-option-name { min-width: 0; max-width: 45%; flex-shrink: 0; color: var(--ink); font-size: 14px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .provider-option-price { min-width: 0; color: #57534e; font-size: 14px; font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: anywhere; }
 .provider-price-ratio, .provider-exchange-rate { color: #c2410c; }
-.provider-exchange-rate { display: inline-block; padding: 2px 7px; border: 1px solid #fdba74; border-radius: 5px; background: #ffedd5; font-weight: 700; white-space: nowrap; }
+.provider-exchange-rate { display: inline-block; padding: 2px 7px;  border-radius: 5px; font-weight: 700; white-space: nowrap; }
 .provider-mobile-exchange { display: none; padding: 12px 20px; font-size: 13px; }
 .provider-price-ratio { font-weight: 700; white-space: nowrap; }
 .provider-option-check { margin-left: auto; flex-shrink: 0; color: #c2410c; font-size: 16px; font-weight: 600; visibility: hidden; }
