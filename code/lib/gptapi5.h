@@ -33,7 +33,7 @@ struct reslog{
     int makecache_1h;
     double cost;//真实成本
     long long start,first,last,end;
-    int isimage;//计费方式，0按总token(used_tokens*multiply)，1按次(used_tokens*multiply)，2按(max(input-cache-makecache,0)*inputm+output*outputm+cache*cachem+(makecache-makecache_1h)*makecachem+makecache_1h*makecache_1hm)/1000000+websearch*websearchm
+    int isimage;//计费方式，0按总token(used_tokens*multiply)，1按次(used_tokens*multiply)，2按(max(input-cache-makecache,0)*inputm+output*outputm+cache*cachem+(makecache-makecache_1h)*makecachem+makecache_1h*makecache_1hm)/1000000+websearch*websearchm，3表示卡密充值(useage为增加的额度)
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
     char info[128];
     char isauto;
@@ -60,6 +60,7 @@ struct stablelog{
 extern ndb2 log_db;
 extern ndb2 stable_db;
 void gptapi5_init();
+void gpt5_log_append(const char* userid,const reslog* rl);//追加一条个人日志
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);
 void gpt5_log_list(http_para* a);

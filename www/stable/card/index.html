@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡密生成</title>
+    <link rel="stylesheet" href="style.css?v=1025v1">
+    <script src="/auth.js?v=0910v2" defer></script>
+</head>
+<body>
+    <main class="card-page">
+        <header class="page-header">
+            <a class="brand" href="/gpt"><img src="/newintown.png" alt="newintown"></a>
+            <nav class="page-nav" aria-label="页面导航">
+                <a class="back-link" href="/stable/">稳定性概览</a>
+                <a class="back-link" href="/stable/admin/">全用户日志</a>
+                <a class="back-link" href="/token">控制台</a>
+            </nav>
+        </header>
+
+        <section class="card-panel" aria-labelledby="pageTitle">
+            <div class="panel-heading">
+                <div>
+                    <h1 id="pageTitle">卡密生成</h1>
+                    <p>生成的卡密可在控制台「钱包」中兑换，兑换后额度立即到账。</p>
+                </div>
+                <span id="accountState" class="account-state" hidden></span>
+            </div>
+
+            <form id="cardForm" class="card-form" novalidate>
+                <fieldset class="mode-field">
+                    <legend>面额单位</legend>
+                    <div class="mode-control">
+                        <label><input type="radio" name="unit" value="convert" checked><span>按金额换算</span></label>
+                        <label><input type="radio" name="unit" value="direct"><span>直接额度</span></label>
+                    </div>
+                </fieldset>
+
+                <div class="field-row">
+                    <label class="field">
+                        <span id="valueLabel">单张金额（元）</span>
+                        <input id="cardValue" type="number" min="0" step="any" inputmode="decimal" placeholder="3" autocomplete="off" required>
+                    </label>
+                    <label class="field">
+                        <span>生成数量</span>
+                        <input id="cardCount" type="number" min="1" max="1000" step="1" inputmode="numeric" value="1" autocomplete="off" required>
+                    </label>
+                </div>
+
+                <div class="preview" aria-live="polite">
+                    <div><span>单张面额</span><strong id="previewValue">-</strong></div>
+                    <p id="previewFormula">每 0.3 元换算为 1,000,000 额度</p>
+                </div>
+
+                <div class="form-actions">
+                    <button id="submitButton" class="primary-button" type="submit">生成卡密</button>
+                    <button id="resetButton" type="button">重置</button>
+                </div>
+                <p id="formStatus" class="form-status" role="status" hidden></p>
+            </form>
+
+            <section id="resultSection" class="result-section" aria-labelledby="resultTitle" hidden>
+                <div class="result-heading">
+                    <h2 id="resultTitle">已生成 <span id="resultCount">0</span> 张卡密</h2>
+                    <div class="result-actions">
+                        <button id="copyAllButton" type="button">复制全部</button>
+                        <button id="downloadButton" type="button">下载 TXT</button>
+                    </div>
+                </div>
+                <p class="result-note">卡密仅在此处显示一次，请及时保存或下载；离开页面后无法再次查看。</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th scope="col">#</th><th scope="col">卡密</th><th scope="col">面额</th><th scope="col"></th></tr></thead>
+                        <tbody id="resultBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <script src="app.js?v=1025v1"></script>
+</body>
+</html>

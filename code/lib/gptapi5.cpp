@@ -190,16 +190,21 @@ void gpt5_log_list(http_para* a) {
     ans["end"]=(double)i;
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,bool isauto,bool isswitch,reslog* rl,double cost) {
+void gpt5_log_append(const char* userid,const reslog* rl) {
     reslogs* logs;
     retry:
-    logs=(reslogs*)ndb2_got(log_db,p->userid,0);
-    if(!logs)if(!(logs=(reslogs*)ndb2_got(log_db,p->userid,sizeof(reslogs)+sizeof(reslog))))return;//db error
+    logs=(reslogs*)ndb2_got(log_db,userid,0);
+    if(!logs)if(!(logs=(reslogs*)ndb2_got(log_db,userid,sizeof(reslogs)+sizeof(reslog))))return;//db error
     if(TRY(&logs->lock))goto retry;
     int n=++logs->n;
-    logs=(reslogs*)ndb2_got(log_db,p->userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
-    reslog* item=&logs->a[n-1];
-    memcpy(item,rl,sizeof(reslog));
+    logs=(reslogs*)ndb2_got(log_db,userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
+    memcpy(&logs->a[n-1],rl,sizeof(reslog));
+    UNLOCK(logs->lock);
+}
+static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,bool isauto,bool isswitch,reslog* rl,double cost) {
+    reslog log;
+    reslog* item=&log;
+    memcpy(item,rl,sizeof(reslog));//rl已在gpt5_cost中清零
     memcpy(item->model,model.data(),min(model.size(),sizeof(item->model)-1));
     memcpy(item->provider,provider.data(),min(provider.size(),sizeof(item->provider)-1));
     // item->used_tokens;在gpt5_cost中填充
@@ -226,7 +231,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     // item->cachereturn_refund;在gpt5_cost之后由缓存补偿填充
     // item->useage=useage;在gpt5_cost中填充
     // item->inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;在gpt5_cost中填充
-    UNLOCK(logs->lock);
+    gpt5_log_append(p->userid,item);
 }
 void gpt5_resolve(http_para* a) {
     cppJSON re(a->get+a->n);
@@ -658,9 +663,9 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         }
         reslog rl;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
-        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl);//+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
+        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)*1.018;//+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
-        if(b.send&&b.used_tokens>0)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
+        if(b.send&&b.used_tokens>0&&proret.isauto)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量
         gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);

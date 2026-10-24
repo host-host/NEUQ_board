@@ -18,6 +18,7 @@ const elements = {
     tooltip: document.getElementById('heatTooltip'),
     refresh: document.getElementById('refreshButton'),
     adminLink: document.getElementById('adminLink'),
+    cardLink: document.getElementById('cardLink'),
     updatedAt: document.getElementById('updatedAt'),
     search: document.getElementById('searchInput'),
     filters: document.getElementById('statusFilter'),
@@ -144,9 +145,11 @@ async function updateAdminLink() {
     try {
         const user = await fetchJson('/api/user');
         elements.adminLink.hidden = user?.admin !== true;
+        if (elements.cardLink) elements.cardLink.hidden = user?.admin !== true;
         return user?.admin === true;
     } catch (_) {
         elements.adminLink.hidden = true;
+        if (elements.cardLink) elements.cardLink.hidden = true;
         return false;
     }
 }
@@ -188,7 +191,10 @@ async function loadData() {
         if (admin) {
             try { privateStats = await loadPrivateStats(catalog); }
             catch (error) {
-                if (error.status === 401 || error.status === 403) elements.adminLink.hidden = true;
+                if (error.status === 401 || error.status === 403) {
+                    elements.adminLink.hidden = true;
+                    if (elements.cardLink) elements.cardLink.hidden = true;
+                }
                 else privateError = `管理员用量和费用加载失败：${error.message}`;
             }
         }

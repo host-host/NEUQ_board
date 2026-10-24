@@ -3,6 +3,7 @@
 #include"lib/chat.h"
 #include"lib/check48.h"
 #include"lib/admin.h"
+#include"lib/pay.h"
 // #include"lib/word.h"
 #include"lib/gptapi4.h"
 #include"lib/gptapi5.h"
@@ -26,6 +27,7 @@ int main() {
     gpt4_init();
     gptapi5_init();
     user_init();
+    card_init();
     http a;
     http_init(&a);
     http_add(&a,"POST /api/chat_list ",chat_list);
@@ -75,6 +77,8 @@ int main() {
     http_add(&a,"POST /api/gpt5_admin_log_list ",admin_log_list);
     http_add(&a,"POST /api/gpt5_admin_stable_stats ",admin_stable_stats);
     http_add(&a,"POST /api/gpt5_admin_add_token ",admin_add_token);
+    http_add(&a,"POST /api/admin_card_create ",admin_card_create);
+    http_add(&a,"POST /api/card_redeem ",card_redeem);
     http_add(&a,"POST /api/gpt5_resolve ",gpt5_resolve);
     http_add(&a,"POST /api/gpt5_history_list ",gpt5_history_list);
     http_add(&a,"POST /api/gpt5_history_get ",gpt5_history_get);

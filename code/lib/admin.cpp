@@ -88,7 +88,7 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("model",log.model);
     item.insert("provider",log.provider);
     item.insert("isauto",log.isauto==1);
-    item.insert("isimage",log.isimage==1);
+    item.insert("isimage",(double)log.isimage);
     item.insert("used_tokens",(double)log.used_tokens);
     item.insert("input",(double)log.input);
     item.insert("output",(double)log.output);

@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1023v6">
+    <link rel="stylesheet" href="style.css?v=1025v5">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1021v7" defer></script>
+    <script src="app.js?v=1025v5" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -39,6 +39,7 @@
         <div class="workspace-label">工作空间 <span>WORKSPACE</span></div>
         <nav class="primary-nav">
             <a href="#overview" data-page="overview" class="nav-link active" aria-current="page"><svg class="icon"><use href="#i-grid"/></svg><span>概览</span><span class="nav-dot"></span></a>
+            <a href="#wallet" data-page="wallet" class="nav-link"><svg class="icon"><use href="#i-wallet"/></svg><span>钱包</span><span class="nav-dot"></span></a>
             <a href="#credentials" data-page="credentials" class="nav-link"><svg class="icon"><use href="#i-key"/></svg><span>API Key</span><span class="nav-dot"></span></a>
             <a href="#models" data-page="models" class="nav-link"><svg class="icon"><use href="#i-stack"/></svg><span>模型广场</span><span class="nav-dot"></span></a>
             <a href="#history" data-page="history" class="nav-link"><svg class="icon"><use href="#i-history"/></svg><span>历史记录</span><span class="nav-dot"></span></a>
@@ -79,6 +80,7 @@
                         <div class="welcome-actions">
                             <a class="button button-primary" href="/gpt">开始对话 <svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a>
                             <a class="button button-white" href="/draw/">AI 画图 <svg class="icon small" aria-hidden="true"><use href="#i-image"/></svg></a>
+                            <a class="button button-white" href="#wallet">钱包 <svg class="icon small" aria-hidden="true"><use href="#i-wallet"/></svg></a>
                         </div>
                     </div>
                 </div>
@@ -128,6 +130,27 @@
                 </section>
             </section>
 
+            <section id="walletPage" class="page-section" aria-label="钱包" hidden>
+                <div id="walletState" class="state-message" role="status" hidden></div>
+                <section class="panel wallet-panel" aria-labelledby="walletBalanceTitle">
+                    <div class="panel-heading"><h2 id="walletBalanceTitle"><span class="quick-icon accent-soft"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg></span>账户余额</h2><span class="tag">人民币</span></div>
+                    <div id="walletBalance" class="wallet-balance">—</div>
+                    <p class="wallet-balance-note">可用余额 = 总额度 − 已用额度</p>
+                    <div class="wallet-meta"><span>总额度 <strong id="walletLimit">—</strong></span><span>已用额度 <strong id="walletUsed">—</strong></span></div>
+                    <a class="button button-primary wallet-buy" href="https://catfk.com/shop/XVKVH2CO" target="_blank" rel="noopener noreferrer">充值<svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                    <div class="wallet-redeem">
+                        <div class="wallet-redeem-heading"><h3>兑换码兑换余额</h3></div>
+                        <form id="redeemForm" class="redeem-form" novalidate>
+                            <div class="input-group">
+                                <input id="cardCode" type="text" autocomplete="off" spellcheck="false" maxlength="40" placeholder="请输入兑换码">
+                                <button id="redeemButton" class="button button-primary redeem-submit" type="submit">兑换</button>
+                            </div>
+                            <p id="redeemState" class="redeem-state" role="status" hidden></p>
+                        </form>
+                    </div>
+                </section>
+            </section>
+
             <section id="credentialsPage" class="page-section" aria-label="API Key" hidden>
                 <div id="credentialsState" class="state-message" role="status" hidden></div>
                 <section class="panel key-panel" aria-labelledby="keyTitle">
@@ -142,7 +165,7 @@
 
             <section id="modelsPage" class="page-section" aria-label="模型广场" hidden>
                 <section class="panel provider-panel" aria-labelledby="providerTitle">
-                    <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>openai/anthropic/google-ai-studio渠道正在致力于实现<span class="availability-highlight">99.9%可用性</span>保障（全年不可用时间不超过9小时）放心使用</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
+                    <div class="panel-heading provider-heading"><div><h2 id="providerTitle">模型列表 <span class="count-badge" id="modelCount">—</span></h2><p>为每个模型选择服务商，选择后自动保存。</p></div><label class="search-field"><svg class="icon small"><use href="#i-search"/></svg><input id="modelSearch" type="search" placeholder="搜索模型" aria-label="搜索模型"></label></div>
                     <div class="provider-tabs" role="group" aria-label="模型类型"><button class="active" type="button" data-model-type="text" aria-pressed="true">文本模型 <span id="textModelCount">0</span></button><button type="button" data-model-type="image" aria-pressed="false">图像模型 <span id="imageModelCount">0</span></button><span id="providerBilling">单价：¥/M tokens</span></div>
                     <div id="providerState" class="state-message" role="status">正在加载模型…</div>
                     <div class="provider-table" id="providerTable" hidden>

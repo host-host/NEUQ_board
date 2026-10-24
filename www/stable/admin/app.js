@@ -215,11 +215,37 @@ function appendInfoCell(row, info) {
     row.appendChild(cell);
 }
 
+function appendRechargeRow(row, log) {
+    appendTextCell(row, formatTime(log.time));
+    appendUserCell(row, log);
+    const statusCell = document.createElement('td');
+    const label = document.createElement('span');
+    label.className = 'status-label request';
+    label.textContent = '充值';
+    statusCell.appendChild(label);
+    row.appendChild(statusCell);
+    appendTextCell(row, '卡密充值', 'model-cell');
+    appendTextCell(row, '卡密兑换');
+    appendTextCell(row, '-');
+    appendTextCell(row, '-');
+    appendTextCell(row, '-');
+    appendTextCell(row, '-');
+    appendTextCell(row, '+' + formatTokens(chargedUsage(log)));
+    appendTextCell(row, '-');
+    appendTextCell(row, '-');
+    appendInfoCell(row, log.info);
+}
+
 function renderRows(items) {
     const body = document.getElementById('logBody');
     for (const log of items) {
         const image = isImageLog(log);
         const row = document.createElement('tr');
+        if (Number(log.isimage) === 3) {
+            appendRechargeRow(row, log);
+            body.appendChild(row);
+            continue;
+        }
         appendTextCell(row, formatTime(log.time));
         appendUserCell(row, log);
         appendStatusCell(row, log.stable);

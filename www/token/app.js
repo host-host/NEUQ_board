@@ -4,6 +4,7 @@
     const $ = id => document.getElementById(id);
     const pages = {
         overview: ['概览', 'OVERVIEW', '用量、余额与最新动态，一目了然。'],
+        wallet: ['钱包', 'WALLET', '查看余额、兑换卡密，随时为账户补充额度。'],
         credentials: ['API Key', 'API KEY', '管理你的密钥，连接应用。'],
         models: ['模型广场', 'MODELS', '浏览模型价格与服务表现，选择合适的 Provider。'],
         history: ['历史记录', 'REQUEST HISTORY', '回顾每一次 API 调用，了解用量与响应表现。']
@@ -16,6 +17,8 @@
     };
     const numberFormat = new Intl.NumberFormat('zh-CN');
     const overviewUsage = {request: 0, status: 'idle', key: '', rows: [], error: '', period: 'all', day: 0};
+    const wallet = {submitting: false};
+    const CARD_CODE_PATTERN = /^[A-Za-z0-9]{40}$/;
     const usageColors = ['#f97316', '#5b8def', '#36a58b', '#a78bda', '#e7b34f', '#dc8194', '#56b5ce', '#8c94a4'];
     const usageCompactNumber = new Intl.NumberFormat('zh-CN', {notation: 'compact', maximumFractionDigits: 2});
     const CNY_PER_MILLION_CREDITS = 0.3;
@@ -70,8 +73,10 @@
             input: itemized ? log.inputm : logUnitPrice(log), output: log.outputm}, true);
     }
     function isImage(log) { return log?.isimage === true || Number(log?.isimage) === 1; }
+    function isRecharge(log) { return Number(log?.isimage) === 3; }
     function logCharge(log) {
-        return Number.isFinite(log.useage) ? money(creditsToYuan(log.useage)) : '—';
+        if (!Number.isFinite(log.useage)) return '—';
+        return isRecharge(log) ? `+${money(creditsToYuan(log.useage))}` : money(creditsToYuan(log.useage));
     }
     function providerName(log) {
         const name = Number(log.isauto) === 1 ? 'auto' : log.provider || '—';
@@ -309,10 +314,76 @@
             overviewUsage.rows = [];
         }
         renderOverviewUsage();
+        renderWallet();
         const noticesAllowed = canShowNotices();
         $('noticePanel').hidden = !noticesAllowed;
         if (!noticesAllowed && $('noticeDialog').open) $('noticeDialog').close();
         if (noticesAllowed) maybeShowNotices();
+    }
+
+    function walletRemaining() {
+        return Math.max(0, numeric(state.account?.token_limit) - numeric(state.account?.token_used));
+    }
+    function renderWallet() {
+        const ready = state.accountStatus === 'ready';
+        $('walletBalance').textContent = ready ? money(creditsToYuan(walletRemaining()), true) : '—';
+        $('walletLimit').textContent = ready ? money(creditsToYuan(numeric(state.account.token_limit))) : '—';
+        $('walletUsed').textContent = ready ? money(creditsToYuan(numeric(state.account.token_used))) : '—';
+        $('cardCode').disabled = !ready || wallet.submitting;
+        $('redeemButton').disabled = !ready || wallet.submitting;
+        $('redeemButton').textContent = wallet.submitting ? '兑换中…' : '兑换';
+        if (!ready) {
+            if (state.accountStatus === 'loading') showMessage('walletState', '正在加载账户信息…', {loading: true});
+            if (state.accountStatus === 'login') showMessage('walletState', '登录后可查看余额并兑换兑换码。', {login: true});
+            if (state.accountStatus === 'error') showMessage('walletState', state.accountError, {error: true, retry: loadAccount});
+        } else {
+            $('walletState').hidden = true;
+        }
+    }
+    function setRedeemMessage(message, error = false) {
+        const element = $('redeemState');
+        element.hidden = !message;
+        element.className = `redeem-state${error ? ' error' : ''}`;
+        element.textContent = message || '';
+    }
+    async function submitRedeem(event) {
+        event.preventDefault();
+        if (wallet.submitting || state.accountStatus !== 'ready') return;
+        const input = $('cardCode');
+        const code = input.value.trim();
+        if (!CARD_CODE_PATTERN.test(code)) {
+            setRedeemMessage('兑换码格式不正确，请检查后重试。', true);
+            input.focus();
+            return;
+        }
+        wallet.submitting = true;
+        setRedeemMessage('正在兑换…');
+        renderWallet();
+        try {
+            const response = await fetch('/api/card_redeem', {
+                method: 'POST', credentials: 'same-origin', cache: 'no-store',
+                headers: {'Content-Type': 'application/json'}, body: JSON.stringify({card: code})
+            });
+            const text = await response.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
+            const message = data?.error?.message || '';
+            if (response.status === 401) {
+                expireSession();
+                throw new Error('登录已失效，请重新登录。');
+            }
+            if (!response.ok || message) throw new Error(message || `兑换失败（HTTP ${response.status}）`);
+            setRedeemMessage('兑换成功，额度已到账。');
+            input.value = '';
+            toast('兑换成功');
+            await Promise.allSettled([loadAccount()]);
+        } catch (error) {
+            if (error instanceof TypeError) setRedeemMessage('网络连接失败，请重试。', true);
+            else setRedeemMessage(error.message || '兑换失败，请稍后重试。', true);
+        } finally {
+            wallet.submitting = false;
+            renderWallet();
+        }
     }
     function usageDay() { return Math.floor((Date.now() / 1000 + 8 * 3600) / 86400); }
     async function loadOverviewUsage() {
@@ -1251,9 +1322,22 @@
             }
         });
     }
+    function renderRechargeLog(body, log) {
+        const row = node('tr');
+        const time = node('td');
+        const [day, hour] = timeParts(log.time);
+        time.append(node('span', 'log-date', day), ' ', node('span', 'log-time', hour));
+        const model = node('td');
+        model.append(node('span', 'log-model', '卡密充值'), node('span', 'log-provider', ' / 账户充值'));
+        row.append(time, model, node('td', 'muted', '—'), node('td', 'muted', '—'), node('td', 'muted', '—'),
+            node('td', 'muted', '—'), node('td', 'muted', '—'), node('td', 'charged increase', logCharge(log)),
+            node('td', 'log-info', logInfo(log) || '—'));
+        body.append(row);
+    }
     function renderLogs(logs) {
         const body = $('logRows');
         logs.forEach(log => {
+            if (isRecharge(log)) return renderRechargeLog(body, log);
             const image = isImage(log);
             const row = node('tr');
             const time = node('td');
@@ -1394,7 +1478,8 @@
     function exportLogs() {
         if (!state.logs.length) return;
         const rows = [['时间', '模型', 'Provider', '类型', '实际 Token', '输入', '输出', '缓存读取', '缓存创建总量', '其中一小时缓存创建', '联网搜索（次）', '首字(s)', '总耗时(s)', 'TPS', '单价（人民币）', '实际扣费（人民币）', '附加信息']];
-        state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), log.model || '', providerName(log), isImage(log) ? '图像' : '文本',
+        state.logs.forEach(log => rows.push([timeParts(log.time).join(' '), isRecharge(log) ? '卡密充值' : log.model || '', providerName(log),
+            isRecharge(log) ? '充值' : isImage(log) ? '图像' : '文本',
             numeric(log.used_tokens), numeric(log.input), numeric(log.output), numeric(log.cache), numeric(log.makecache), numeric(log.makecache_1h), numeric(log.websearch),
             isImage(log) ? '—' : duration(log.first, true), duration(log.total), tps(log), logPrice(log), logCharge(log), logInfo(log)]));
         const csv = rows.map(row => row.map(value => {
@@ -1457,6 +1542,7 @@
             $('toggleApiKey').setAttribute('aria-label', '显示 API Key');
             $('toggleApiKey').title = '显示 API Key';
         }
+        if (page === 'wallet') renderWallet();
         if (page === 'history' && !state.logLoaded && !state.logLoading) loadLogs();
         if (page === 'models' && changed) renderProviders();
         if (page === 'overview' && changed) loadOverviewUsage();
@@ -1471,6 +1557,7 @@
     }
 
     $('refreshButton').addEventListener('click', refresh);
+    $('redeemForm').addEventListener('submit', submitRedeem);
     document.querySelectorAll('[data-usage-period]').forEach(button => button.addEventListener('click', () => {
         overviewUsage.period = button.dataset.usagePeriod;
         renderOverviewUsage();
