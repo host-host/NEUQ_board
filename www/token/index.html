@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light">
     <title>概览 · NEUQ Console</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1025v5">
+    <link rel="stylesheet" href="style.css?v=1025v6">
     <script src="/auth.js?v=0918v1" defer></script>
-    <script src="app.js?v=1025v5" defer></script>
+    <script src="app.js?v=1025v6" defer></script>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -137,8 +137,8 @@
                     <div id="walletBalance" class="wallet-balance">—</div>
                     <p class="wallet-balance-note">可用余额 = 总额度 − 已用额度</p>
                     <div class="wallet-meta"><span>总额度 <strong id="walletLimit">—</strong></span><span>已用额度 <strong id="walletUsed">—</strong></span></div>
-                    <a class="button button-primary wallet-buy" href="https://catfk.com/shop/XVKVH2CO" target="_blank" rel="noopener noreferrer">充值<svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-                    <div class="wallet-redeem">
+                    <a id="walletBuy" class="button button-primary wallet-buy" href="https://catfk.com/shop/XVKVH2CO" target="_blank" rel="noopener noreferrer">充值<svg class="icon small" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                    <div id="walletRedeem" class="wallet-redeem">
                         <div class="wallet-redeem-heading"><h3>兑换码兑换余额</h3></div>
                         <form id="redeemForm" class="redeem-form" novalidate>
                             <div class="input-group">

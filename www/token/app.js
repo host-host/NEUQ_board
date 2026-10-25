@@ -329,12 +329,15 @@
         $('walletBalance').textContent = ready ? money(creditsToYuan(walletRemaining()), true) : '—';
         $('walletLimit').textContent = ready ? money(creditsToYuan(numeric(state.account.token_limit))) : '—';
         $('walletUsed').textContent = ready ? money(creditsToYuan(numeric(state.account.token_used))) : '—';
+        const admin = ready && state.account?.admin === true;
+        $('walletBuy').hidden = !admin;
+        $('walletRedeem').hidden = !admin;
         $('cardCode').disabled = !ready || wallet.submitting;
         $('redeemButton').disabled = !ready || wallet.submitting;
         $('redeemButton').textContent = wallet.submitting ? '兑换中…' : '兑换';
         if (!ready) {
             if (state.accountStatus === 'loading') showMessage('walletState', '正在加载账户信息…', {loading: true});
-            if (state.accountStatus === 'login') showMessage('walletState', '登录后可查看余额并兑换兑换码。', {login: true});
+            if (state.accountStatus === 'login') showMessage('walletState', '登录后可查看余额。', {login: true});
             if (state.accountStatus === 'error') showMessage('walletState', state.accountError, {error: true, retry: loadAccount});
         } else {
             $('walletState').hidden = true;
