@@ -3,8 +3,7 @@
 
     const $ = id => document.getElementById(id);
     const CNY_PER_MILLION_CREDITS = 0.3;
-    // 后端卡密面额是 int，超过该值会溢出。
-    const MAX_CARD_VALUE = 2000000000;
+    const MAX_CARD_VALUE = 1e15;
     const quotaFormat = new Intl.NumberFormat('zh-CN');
     const moneyFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const state = {user: null, ready: false, submitting: false, cards: [], value: 0};

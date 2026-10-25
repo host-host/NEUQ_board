@@ -24,7 +24,7 @@ void admin_card_create(http_para* a){
     if(!p||!(p->admin&2))return http_send(a,H403 Hjson Hc0,"{\"error\":{\"message\":\"Permission denied.\"}}",0);
     cppJSON req(a->get+a->n);
     int amount=req["amount"].valuedouble();
-    int value=req["value"].valuedouble();
+    long long value=req["value"].valuedouble();
     if(amount>1000||value<0)return http_send(a,H403 Hjson Hc0,"{\"error\":{\"message\":\"amount or value error.\"}}",0);
     cppJSON ans("[]");
     for(int i=1;i<=amount;i++){
