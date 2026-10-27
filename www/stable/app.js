@@ -121,7 +121,8 @@ function buildCatalog(config) {
     Object.entries(models).forEach(([model, modelConfig]) => {
         const providers = modelConfig?.provider;
         const all = modelConfig?.all;
-        const channels = new Set([...(Array.isArray(all) ? all : []), ...(Array.isArray(providers) ? providers : [])]);
+        const autoProviders = modelConfig?.auto?.provider;
+        const channels = new Set([...(Array.isArray(all) ? all : []), ...(Array.isArray(providers) ? providers : []), ...(Array.isArray(autoProviders) ? autoProviders : [])]);
         channels.forEach(provider => {
             if (typeof provider !== 'string') return;
             catalog.push({model, provider, key: `${model}_${provider}`});
