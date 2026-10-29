@@ -9,7 +9,7 @@
 using namespace std;
 #define ll long long
 static const ll NANOSECONDS_PER_SECOND=1000000000LL;
-static ll gpt6_now_ns(){
+ll gpt6_now_ns(){
     timespec now;
     if(clock_gettime(CLOCK_REALTIME,&now))return (ll)time(0)*NANOSECONDS_PER_SECOND;
     return (ll)now.tv_sec*NANOSECONDS_PER_SECOND+now.tv_nsec;
@@ -356,7 +356,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     ans.a=a;
     ans.format=format;
     ans.append=cppJSON("[]");
-    ans.start_ns=gpt6_now_ns();
+    // ans.start_ns=gpt6_now_ns();
     CURL* curl=curl_easy_init();
     if(!curl) {
         ans.curlcode=CURLE_FAILED_INIT;

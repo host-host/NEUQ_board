@@ -26,5 +26,6 @@ struct gpt6_ret{
     std::string ca;
 };
 void gpt6_flush(gpt6_ret* ans);
+long long gpt6_now_ns();
 gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format,bool send_before_first=true);
 #endif

@@ -512,6 +512,7 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
     }
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
+    long long startns_p=gpt6_now_ns();
     if(a->m>50*1024*1024)return ERROR(H400,"请求体太长了");
     string apikey;
     user_* p=gpt5_api_user(a,&apikey);
@@ -534,6 +535,8 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         bool isauto=proret.isauto,last=k+1==(int)proret.providers.size();
         if(isauto&&!last&&gpt5_should_skip(model+"_"+provider))continue;
         b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last);
+        b.start_ns=startns_p;
+        startns_p=b.end_ns;
         if(b.stable==0||config["file"]==true)makelog(&b,model.c_str(),a->get+a->n,p->name,provider,isauto);//写入日志文件
         if(!b.send){
             if(!startns)startns=b.start_ns;
