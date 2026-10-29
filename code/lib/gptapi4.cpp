@@ -1,4 +1,5 @@
 #include"gptapi4.h"
+#include"gptapi6.h"
 #include"cppJSON.h"
 #include"ndb2.h"
 #include"user.h"
@@ -7,8 +8,10 @@
 #include<ctime>
 #include<string>
 ndb2 useagedb;//apikey[3:20]+modelname -> gpt4_uses
+ndb2 stable_db;//model_provider -> [3*24*4][2]
 void gpt4_init(){
     useagedb=ndb2_init("/web/res/pri/useage.ndb2");
+    stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
 }
 static long long useage_day(long long time){
     return (time+8*3600)/86400;//北京时间自然日
@@ -56,4 +59,62 @@ void gpt4_askuseage(http_para* a){
         ans.insert(key+16,std::move(item));
     }
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
+}
+void gpt4_addstable(const char* a,bool stable,gpt6_ret* b,double o_cost,double cost,long long sell){
+    stablelog* c=(stablelog*)ndb2_got(stable_db,a,sizeof(stablelog));
+    if(!c)return;//DB ERROR
+    LOCK(&c->lock);
+    int t=time(0)/(15*60),l=c->uptime;
+    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c->c[i%ST_D][0]=c->c[i%ST_D][1]=0;
+    c->c[t%ST_D][0]+=stable;
+    c->c[t%ST_D][1]++;
+    c->uptime=t;
+    if(b&&b->used_tokens>0){
+        c->s++;
+        c->input+=b->input;
+        c->output+=b->output;
+        c->cache+=b->cache;
+        c->makecache+=b->makecache;
+        c->tokens+=b->used_tokens;
+        c->allwebsearch+=b->websearch;
+        if(b->start_ns>0&&b->first_ns>=b->start_ns){
+            c->latency+=(b->first_ns-b->start_ns)/1000000000LL;
+            c->latency_n++;
+        }
+        if(b->start_ns>0&&b->end_ns>=b->start_ns){
+            c->alltime+=(b->end_ns-b->start_ns)/1000000000LL;
+            c->alltime_tokens+=b->output;
+        }
+    }
+    c->o_cost+=o_cost;
+    c->cost+=cost;
+    c->sell+=sell;
+    UNLOCK(c->lock);
+}
+void gpt4_askstable(http_para* a) {
+    cppJSON ask(a->get+a->n),ans("{}");
+    for(cppJSON i:ask){
+        std::string tp=i;
+        stablelog* cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),0);
+        if(!cc)continue;
+        if((unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),sizeof(stablelog));
+        if(!cc)continue;//db error
+        stablelog c1=*cc;
+        int (*c)[2]=c1.c;
+        int t=time(0)/(15*60),l=c1.uptime;
+        for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
+        cppJSON tmp("[]");
+        for(int i=0;i<ST_D;i++){
+            tmp.push_back((double)c[i][0]);
+            tmp.push_back((double)c[i][1]);
+        }
+        cppJSON stats("{}");
+        stats.insert("buckets",std::move(tmp));
+        stats.insert("latency",(double)c1.latency);
+        stats.insert("latency_n",(double)c1.latency_n);
+        stats.insert("alltime",(double)c1.alltime);
+        stats.insert("alltime_tokens",(double)c1.alltime_tokens);
+        ans.insert(i.valuestring().c_str(),std::move(stats));
+    }
+    return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }

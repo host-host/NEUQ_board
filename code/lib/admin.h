@@ -5,6 +5,7 @@ extern "C"{
 #endif
 
 #include "http.h"
+#include "gptapi4.h"
 void admin_log_list(http_para* a);
 void admin_add_token(http_para* a);
 void admin_stable_stats(http_para* a);

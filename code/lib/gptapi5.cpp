@@ -31,7 +31,6 @@ ndb2 content_db;//con_id -> content
 ndb2 index_db;//sha256(response_id) -> con_id
 ndb2 history_db;//user_id -> history
 ndb2 provider_db;//userid_model -> preferred provider
-ndb2 stable_db;//model_provider -> [3*24*4][2]
 ndb2 log_db;//userid -> reslogs
 ndb2 cache_db;//sha256(userid,format,model,tools,system,messages前缀) -> cache_entry
 struct history{
@@ -44,7 +43,6 @@ void gptapi5_init() {
     index_db=ndb2_init("/web/res/pri/gpt5sha256.ndb2");
     history_db=ndb2_init("/web/res/pri/gpt5userhistory.ndb2");
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
-    stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
     cache_db=ndb2_init("/web/res/pri/gpt5cache.ndb2");
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -399,37 +397,6 @@ double gpt5_cost(gpt6_ret* usage,const cppJSON& price,reslog* rl) {//填充倍�
     if(format=="lengthdouble")return usage->input>price["length"].valuedouble()?f(usage,price["newprice"],mul,rl):f(usage,price,mul,rl);
     return 0;
 }
-void gpt5_add(string a,bool stable,gpt6_ret* b,double o_cost=0,double cost=0,long long sell=0){
-    stablelog* c=(stablelog*)ndb2_got(stable_db,a.c_str(),sizeof(stablelog));
-    if(!c)return;//DB ERROR
-    LOCK(&c->lock);
-    int t=time(0)/(15*60),l=c->uptime;
-    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c->c[i%ST_D][0]=c->c[i%ST_D][1]=0;
-    c->c[t%ST_D][0]+=stable;
-    c->c[t%ST_D][1]++;
-    c->uptime=t;
-    if(b&&b->used_tokens>0){
-        c->s++;
-        c->input+=b->input;
-        c->output+=b->output;
-        c->cache+=b->cache;
-        c->makecache+=b->makecache;
-        c->tokens+=b->used_tokens;
-        c->allwebsearch+=b->websearch;
-        if(b->start_ns>0&&b->first_ns>=b->start_ns){
-            c->latency+=(b->first_ns-b->start_ns)/1000000000LL;
-            c->latency_n++;
-        }
-        if(b->start_ns>0&&b->end_ns>=b->start_ns){
-            c->alltime+=(b->end_ns-b->start_ns)/1000000000LL;
-            c->alltime_tokens+=b->output;
-        }
-    }
-    c->o_cost+=o_cost;
-    c->cost+=cost;
-    c->sell+=sell;
-    UNLOCK(c->lock);
-}
 static bool gpt5_should_skip(const string& key) {
     stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),0);
     if(!cc||(unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))return false;
@@ -475,7 +442,7 @@ static void gpt5_probe(const string& model,const string& provider,const cppJSON&
     request.insert("model",model);
     gpt6_ret a=gpt6_work3(0,request.stringify_Unformatted().c_str(),model.c_str(),conf,"completions");
     string key=model+"_"+provider;
-    gpt5_add(key,a.used_tokens>0,0);
+    gpt4_addstable(key.c_str(),a.used_tokens>0,0,0,0,0);
 }
 void* gpt5_probe_loop(void*) {
     const time_t interval=2*60*60;
@@ -499,33 +466,6 @@ void* gpt5_probe_loop(void*) {
         }
     }
     return 0;
-}
-void gpt5_askstable(http_para* a) {
-    cppJSON ask(a->get+a->n),ans("{}");
-    for(cppJSON i:ask){
-        string tp=i;
-        stablelog* cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),0);
-        if(!cc)continue;
-        if((unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))cc=(stablelog*)ndb2_got(stable_db,tp.c_str(),sizeof(stablelog));
-        if(!cc)continue;//db error
-        stablelog c1=*cc;
-        int (*c)[2]=c1.c;
-        int t=time(0)/(15*60),l=c1.uptime;
-        for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
-        cppJSON tmp("[]");
-        for(int i=0;i<ST_D;i++){
-            tmp.push_back((double)c[i][0]);
-            tmp.push_back((double)c[i][1]);
-        }
-        cppJSON stats("{}");
-        stats.insert("buckets",std::move(tmp));
-        stats.insert("latency",(double)c1.latency);
-        stats.insert("latency_n",(double)c1.latency_n);
-        stats.insert("alltime",(double)c1.alltime);
-        stats.insert("alltime_tokens",(double)c1.alltime_tokens);
-        ans.insert(i.valuestring().c_str(),std::move(stats));
-    }
-    return http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
 void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,string&provider,bool isauto){
     if(!ans||!ans->format||!ans->format[0])return;
@@ -669,10 +609,10 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量
         gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);
-        if(b.stable<2||b.stable>=1000)gpt5_add(model+"_"+provider,b.stable==1,&b,ori,cost,rl.useage);//稳定性统计
+        if(b.stable<2||b.stable>=1000)gpt4_addstable((model+"_"+provider).c_str(),b.stable==1,&b,ori,cost,rl.useage);//稳定性统计
         gpt5_log(p,model,provider,b,isauto,!b.send,&rl,cost);//写入个人日志
         if(b.send){
-            if(isauto)if(b.stable<2||b.stable>=1000)gpt5_add(model+"_auto",b.stable==1,&b,ori,cost,rl.useage);//稳定性统计auto
+            if(isauto)if(b.stable<2||b.stable>=1000)gpt4_addstable((model+"_auto").c_str(),b.stable==1,&b,ori,cost,rl.useage);//稳定性统计auto
             break;
         }
     }
