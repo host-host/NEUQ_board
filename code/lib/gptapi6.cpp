@@ -325,6 +325,30 @@ static bool gpt6_gzip(const string& input,string& output){
     }
     return true;
 }
+static void gpt6_responses_sum2rea(cppJSON& request){//这个函数ai写的！
+    if(!request["input"].IsArray())return;
+    for(cppJSON item:request["input"]){
+        if(!(item["type"]=="reasoning")||!item["summary"].IsArray())continue;
+        cppJSON content=item["content"];
+        if(content&&!content.IsNull()&&!content.IsArray())continue;
+        bool has_reasoning=false;
+        for(cppJSON part:content)if(part["type"]=="reasoning_text"&&!part["text"].valuestring().empty())has_reasoning=true;
+        if(has_reasoning)continue;//已有原生推理正文，不用摘要覆盖或重复追加
+        cppJSON converted=content.IsArray()?content.clone():cppJSON("[]"),remaining("[]");
+        bool changed=false;
+        for(cppJSON part:item["summary"]){
+            if(part["type"]=="summary_text"&&!part["text"].valuestring().empty()){
+                cppJSON text("{\"type\":\"reasoning_text\"}");
+                text.insert("text",part["text"].valuestring());
+                converted.push_back(std::move(text));
+                changed=true;
+            }else remaining.push_back(part.clone());
+        }
+        if(!changed)continue;//缺少摘要时不伪造推理内容
+        item.insert("content",std::move(converted));
+        item.insert("summary",std::move(remaining));
+    }
+}
 gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON conf,const char* format,bool send_before_first){
     if(conf["map"][model].IsString())model=conf["map"][model].a->valuestring;
     gpt6_ret ans{};
@@ -357,6 +381,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
     cppJSON u(message);
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
+    if(strcmp(format,"responses")==0&&conf["responses_sum2rea"]==true)gpt6_responses_sum2rea(u);//deepseek特例，需要 return the reasoning_content
     if(strcmp(format,"completions")==0&&u["stream"]==true){
         if(!u["stream_options"].IsObject())u.insert("stream_options",cppJSON("{}"));
         u["stream_options"].insert("include_usage",true);
