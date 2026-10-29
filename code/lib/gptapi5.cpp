@@ -31,7 +31,6 @@ ndb2 content_db;//con_id -> content
 ndb2 index_db;//sha256(response_id) -> con_id
 ndb2 history_db;//user_id -> history
 ndb2 provider_db;//userid_model -> preferred provider
-ndb2 log_db;//userid -> reslogs
 ndb2 cache_db;//sha256(userid,format,model,tools,system,messages前缀) -> cache_entry
 struct history{
     int n;
@@ -43,7 +42,6 @@ void gptapi5_init() {
     index_db=ndb2_init("/web/res/pri/gpt5sha256.ndb2");
     history_db=ndb2_init("/web/res/pri/gpt5userhistory.ndb2");
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
-    log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
     cache_db=ndb2_init("/web/res/pri/gpt5cache.ndb2");
     curl_global_init(CURL_GLOBAL_DEFAULT);
     pthread_t thread_id;
@@ -146,59 +144,6 @@ void gpt5_apikey(http_para* a) {
     ans.insert("selected_provider",std::move(selected));
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-void gpt5_log_list(http_para* a) {
-    user_* p=getuser(a->get);
-    if(!p)return my_http_error(a,"Please log in first.");
-    cppJSON req(a->get+a->n),ans(R"({"end":0,"item":[]})"),ite=ans["item"];
-    int i=req["start"].valuedouble();
-    reslogs* logs=(reslogs*)ndb2_got(log_db,p->userid,0);
-    int n=logs?logs->n:0;
-    if(i<0||i>=n)i=n-1;
-    for(int start=i;i>=0&&i>start-100;i--){
-        cppJSON item("{}");
-        item.insert("model",logs->a[i].model);
-        if(!logs->a[i].isauto)item.insert("provider",logs->a[i].provider);
-        item.insert("isimage",(double)logs->a[i].isimage);
-        item.insert("used_tokens",(double)logs->a[i].used_tokens);
-        item.insert("input",(double)logs->a[i].input);
-        item.insert("output",(double)logs->a[i].output);
-        item.insert("cache",(double)logs->a[i].cache);
-        item.insert("makecache",(double)logs->a[i].makecache);
-        item.insert("makecache_1h",(double)logs->a[i].makecache_1h);
-        item.insert("cachereturn_refund",(double)logs->a[i].cachereturn_refund);
-        item.insert("websearch",(double)logs->a[i].websearch);
-        long long first=logs->a[i].start>0?logs->a[i].first-logs->a[i].start:-1;
-        if(first>=0)item.insert("first",first/1000000000.0);
-        else item.insert("first",(const char*)0);
-        item.insert("total",(logs->a[i].end-logs->a[i].start)/1000000000.0);
-        item.insert("multiply",logs->a[i].multiply);
-        item.insert("inputm",(double)logs->a[i].inputm);
-        item.insert("outputm",(double)logs->a[i].outputm);
-        item.insert("cachem",(double)logs->a[i].cachem);
-        item.insert("makecachem",(double)logs->a[i].makecachem);
-        item.insert("makecache_1hm",(double)logs->a[i].makecache_1hm);
-        item.insert("websearchm",(double)logs->a[i].websearchm);
-        item.insert("isswitch",logs->a[i].isswitch==1);
-        item.insert("useage",(double)logs->a[i].useage);
-        item.insert("time",(double)logs->a[i].time);
-        item.insert("isauto",(double)logs->a[i].isauto);
-        item.insert("info",logs->a[i].info);
-        ite.push_back(std::move(item));
-    }
-    ans["end"]=(double)i;
-    http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
-}
-void gpt5_log_append(const char* userid,const reslog* rl) {
-    reslogs* logs;
-    retry:
-    logs=(reslogs*)ndb2_got(log_db,userid,0);
-    if(!logs)if(!(logs=(reslogs*)ndb2_got(log_db,userid,sizeof(reslogs)+sizeof(reslog))))return;//db error
-    if(TRY(&logs->lock))goto retry;
-    int n=++logs->n;
-    logs=(reslogs*)ndb2_got(log_db,userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
-    memcpy(&logs->a[n-1],rl,sizeof(reslog));
-    UNLOCK(logs->lock);
-}
 static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_ret&b,bool isauto,bool isswitch,reslog* rl,double cost) {
     reslog log;
     reslog* item=&log;
@@ -229,7 +174,7 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     // item->cachereturn_refund;在gpt5_cost之后由缓存补偿填充
     // item->useage=useage;在gpt5_cost中填充
     // item->inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;在gpt5_cost中填充
-    gpt5_log_append(p->userid,item);
+    gpt4_addlog(p->userid,item);
 }
 void gpt5_resolve(http_para* a) {
     cppJSON re(a->get+a->n);

@@ -6,6 +6,7 @@ extern "C"{
 
 #include "http.h"
 #include "ndb2.h"
+#include "gptapi4.h"
 #include <time.h>
 struct content{
     bool publish;
@@ -22,37 +23,10 @@ struct content{
     char other[1024-44];
     char content[0];
 };
-struct reslog{
-    char model[48],provider[48];
-    int used_tokens;
-    int cachereturn;//计算出的应缓存token，当cachereturn>cache时执行补偿
-    double multiply;//沿用历史单位：isimage=0时为额度/token，1时为额度/次；100万额度=0.3元
-    long long time;
-    long long input,output,cache,makecache;//makecache 包含 makecache_1h
-    int websearch;
-    int makecache_1h;
-    double cost;//真实成本
-    long long start,first,last,end;
-    int isimage;//计费方式，0按总token(used_tokens*multiply)，1按次(used_tokens*multiply)，2按(max(input-cache-makecache,0)*inputm+output*outputm+cache*cachem+(makecache-makecache_1h)*makecachem+makecache_1h*makecache_1hm)/1000000+websearch*websearchm，3表示卡密充值(useage为增加的额度)
-    int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
-    char info[128];
-    char isauto;
-    char other1,other2;//保留
-    char isswitch;//1表示本次请求为auto请求并且失败了被下一个渠道自动切换
-    int cachereturn_refund;//真实退还金额，以这个为准
-    long long useage;//事实扣费数额
-    float inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;
-};
-struct reslogs{
-    int lock,n;
-    reslog a[];
-};
-extern ndb2 log_db;
 void gptapi5_init();
-void gpt5_log_append(const char* userid,const reslog* rl);//追加一条个人日志
+void gpt4_addlog(const char* userid,const reslog* rl);//追加一条个人日志
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);
-void gpt5_log_list(http_para* a);
 void gpt5_resolve(http_para* a);
 void gpt5_history_list(http_para* a);
 void gpt5_history_get(http_para* a);
