@@ -23,7 +23,7 @@ ndb2 ndb2_init_readonly(const char* file);
  *  - 若扩容，可能会返回不同的内存地址，旧地址依然可用，不过旧地址以后不再会被返回，数据竞争行为由调用者保证。
  *  - 若未扩容，会返回相同的内存地址，数据竞争行为由调用者保证。
  */
-void* ndb2_got(ndb2 a,const char* key,int valuelen);
+void* ndb2_got(ndb2 a,const char* key,long long valuelen);
 #define ndb2_gotmaxlen(p) (*(((long long*)(p))-1))
 
 /**
