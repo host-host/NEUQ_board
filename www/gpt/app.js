@@ -400,8 +400,8 @@ function buildPayloadFromDOM() {//组装发送给 AI 的上下文数据
     let payload = [{"role": "system", "content": "You are a helpful assistant."}];
     const wrappers = document.querySelectorAll('.chat-message-wrapper');
     wrappers.forEach(el => {
-        if (el.dataset.raw) {
-            let contentVal = el.dataset.raw;
+        if (el.dataset.raw || (el.dataset.role === 'assistant' && el.dataset.reasoningContent !== undefined)) {
+            let contentVal = el.dataset.raw || '';
             if (contentVal.trim().startsWith('[') && contentVal.trim().endsWith(']')) {
                 try {
                     contentVal = JSON.parse(contentVal);
@@ -409,10 +409,14 @@ function buildPayloadFromDOM() {//组装发送给 AI 的上下文数据
                     console.error("解析图片多模态格式出错:", e);
                 }
             }
-            payload.push({
+            const message = {
                 "role": el.dataset.role,
                 "content": contentVal
-            });
+            };
+            if (message.role === 'assistant' && el.dataset.reasoningContent !== undefined) {
+                message.reasoning_content = el.dataset.reasoningContent;
+            }
+            payload.push(message);
         }
     });
     return payload;

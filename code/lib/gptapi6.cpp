@@ -100,6 +100,7 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
         if(!delta.IsObject())return;
         if(!delta["content"].valuestring().empty()||!delta["reasoning_content"].valuestring().empty()||!delta["reasoning"].valuestring().empty())gpt6_mark_first(ans);
         if(!ans->append[0].IsObject())ans->append=cppJSON("[{\"role\":\"assistant\",\"content\":\"\"}]");
+        if(delta["reasoning_content"].IsString())ans->append[0].insert("reasoning_content",ans->append[0]["reasoning_content"].valuestring()+delta["reasoning_content"].valuestring());
         string tmp=delta["content"];
         if(!tmp.empty())ans->append[0]["content"]=ans->append[0]["content"].valuestring()+tmp;
         cppJSON tool_calls=delta["tool_calls"];
@@ -130,7 +131,7 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
             gpt6_set_info(ans,res["error"]);
             f(ans,res["usage"]);
             cppJSON message=res["choices"][0]["message"].clone();
-            message.erase("reasoning_content");//我不知道应不应该删
+            // message.erase("reasoning_content");//我不知道应不应该删
             if(message)ans->append.push_back(std::move(message));
             ans->response_id=res["id"].valuestring();
         }
@@ -325,6 +326,12 @@ static bool gpt6_gzip(const string& input,string& output){
     }
     return true;
 }
+static void gpt6_chat_res2recon(cppJSON& request){
+    if(!request["messages"].IsArray())return;
+    for(cppJSON item:request["messages"]){
+        if(item.has("tool_calls")&&!item.has("reasoning_content"))item.insert("reasoning_content","");
+    }
+}
 static void gpt6_responses_sum2rea(cppJSON& request){//这个函数ai写的！
     if(!request["input"].IsArray())return;
     for(cppJSON item:request["input"]){
@@ -381,6 +388,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
     cppJSON u(message);
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
+    if(strcmp(format,"completions")==0&&conf["responses_sum2rea"]==true)gpt6_chat_res2recon(u);
     if(strcmp(format,"responses")==0&&conf["responses_sum2rea"]==true)gpt6_responses_sum2rea(u);//deepseek特例，需要 return the reasoning_content
     if(strcmp(format,"completions")==0&&u["stream"]==true){
         if(!u["stream_options"].IsObject())u.insert("stream_options",cppJSON("{}"));

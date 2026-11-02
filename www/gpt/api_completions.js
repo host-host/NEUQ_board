@@ -20,7 +20,9 @@ function renderGpt5History(data) {
         } else if (msg.role === 'assistant') {
             let text = historyMessageText(msg.content);
             if (!text && Array.isArray(msg.tool_calls)) text = JSON.stringify(msg.tool_calls, null, 2);
-            renderAssistantMessage(text);
+            const reasoning = typeof msg.reasoning_content === 'string' ? msg.reasoning_content : '';
+            const wrapper = renderAssistantMessage(text, reasoning);
+            if (typeof msg.reasoning_content === 'string') wrapper.dataset.reasoningContent = reasoning;
         }
     });
 }
@@ -67,7 +69,10 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
                         const parsed = JSON.parse(trimmedLine.slice(6));
                         if (!responseId && parsed.id) responseId = parsed.id;
                         const deltaContent = parsed.choices[0]?.delta?.content || '';
-                        const reasoningContent = parsed.choices[0]?.delta?.reasoning_content || '';
+                        const reasoningContent = parsed.choices[0]?.delta?.reasoning_content;
+                        if (typeof reasoningContent === 'string') {
+                            wrapper.dataset.reasoningContent = (wrapper.dataset.reasoningContent || '') + reasoningContent;
+                        }
                         const time = ((new Date().getTime() - startTime) / 1000).toFixed(2);
 
                         if (parsed.usage) {
@@ -102,7 +107,7 @@ async function callStreamingApi(response, wrapper, contentDiv, thinkTextarea, st
                             }
                         }
 
-                        if (reasoningContent !== '') {
+                        if (typeof reasoningContent === 'string' && reasoningContent !== '') {
                             const thinkHeader = thinkTextarea.previousElementSibling;
                             if (thinkHeader) thinkHeader.style.display = 'flex';
                             thinkTextarea.style.display = 'block';
