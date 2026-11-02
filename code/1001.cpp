@@ -14,6 +14,9 @@
 void other(http_para* a){
     http_send(a,H404 Hc0 Htxt,"Not Found",0);
 }
+static void models_options(http_para* a){
+    http_send(a,Hok Hc0 "Allow: GET, OPTIONS\r\n","",0);
+}
 void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
     a->get[a->n]=0;
     if(strstr(a->get,"\r\nX-Forwarded-For:")||strstr(a->get,"\r\nX-Real-IP:"))
@@ -49,6 +52,8 @@ int main() {
 
     http_add(&a,"GET /v1/models ",gpt5_models);
     http_add(&a,"GET /v1/models?",gpt5_models);
+    http_add(&a,"OPTIONS /v1/models ",models_options);
+    http_add(&a,"OPTIONS /v1/models?",models_options);
 
     http_add(&a,"POST /v1/responses ",gpt5_responses);
     http_add(&a,"POST /v1/responses?",gpt5_responses);
