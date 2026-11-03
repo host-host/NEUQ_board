@@ -650,9 +650,9 @@ void gpt5_image_generations(http_para* a) {
 }
 void gpt5_models(http_para* a) {
     user_* p=gpt5_api_user(a);
-    if(!p)return http_send(a,H404 Hc0 Htxt,"Not Found",0);
+    if(!p)return http_send(a,H404 Hc0 Htxt "Access-Control-Allow-Origin: *\r\n","Not Found",0);
     cppJSON config=cppJSON::from_file(CONFIG);
-    if(!config)return http_send(a,H500 Hjson Hc0,"{\"error\":{\"message\":\"can not read gpt4.json.\"}}",0);
+    if(!config)return http_send(a,H500 Hjson Hc0 "Access-Control-Allow-Origin: *\r\n","{\"error\":{\"message\":\"can not read gpt4.json.\"}}",0);
     cppJSON data("[]");
     for(cppJSON model:config["model"]) {
         bool available=false;
@@ -675,7 +675,7 @@ void gpt5_models(http_para* a) {
     cppJSON response("{}");
     response.insert("object","list");
     response.insert("data",std::move(data));
-    http_send(a,Hok Hjson Hc0,response.stringify_Unformatted().c_str(),0);
+    http_send(a,Hok Hjson Hc0 "Access-Control-Allow-Origin: *\r\n",response.stringify_Unformatted().c_str(),0);
 }
 void gpt5_model_list(http_para* a) {
     cppJSON config=cppJSON::from_file(CONFIG);
