@@ -515,7 +515,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(a->m>50*1024*1024)return ERROR(H400,"请求体太长了");
     string apikey;
     user_* p=gpt5_api_user(a,&apikey);
-    if(!p)return ERROR(H400,"Invalid API key.");
+    if(!p)return http_send(a,H404 Hc0 Htxt,"Not Found",0);//return ERROR(H400,"Invalid API key."); 藏好了
     cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
     string model=gpt6_request_model(a,req,format);
     if(!config["model"].has(model))return ERROR(H400,"Model not found.");
