@@ -45,7 +45,7 @@ struct reslog{
     long long start,first,last,end;
     int isimage;//计费方式，0按总token(used_tokens*multiply)，1按次(used_tokens*multiply)，2按(max(input-cache-makecache,0)*inputm+output*outputm+cache*cachem+(makecache-makecache_1h)*makecachem+makecache_1h*makecache_1hm)/1000000+websearch*websearchm，3表示卡密充值(useage为增加的额度)
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
-    char info[128];
+    char info[10],other0[128-10];
     char isauto;
     char other1,other2;//保留
     char isswitch;//1表示本次请求为auto请求并且失败了被下一个渠道自动切换
@@ -58,8 +58,9 @@ struct reslogs{
     reslog a[];
 };
 extern ndb2 log_db;//userid -> reslogs
+extern ndb2 loginfo_db;//info(char[9]) -> char*
 void gpt4_asklog(http_para* a);
-void gpt4_addlog(const char* userid,const reslog* rl);
+void gpt4_addlog(const char* userid,const reslog* rl,const char* info);
 
 #ifdef __cplusplus
 }

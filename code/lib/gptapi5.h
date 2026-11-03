@@ -24,7 +24,6 @@ struct content{
     char content[0];
 };
 void gptapi5_init();
-void gpt4_addlog(const char* userid,const reslog* rl);//追加一条个人日志
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);
 void gpt5_resolve(http_para* a);

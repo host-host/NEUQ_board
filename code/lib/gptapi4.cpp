@@ -7,11 +7,12 @@
 #include<cstring>
 #include<ctime>
 #include<string>
-ndb2 useagedb,stable_db,log_db;
+ndb2 useagedb,stable_db,log_db,loginfo_db;
 void gpt4_init(){
     useagedb=ndb2_init("/web/res/pri/useage.ndb2");
     stable_db=ndb2_init("/web/res/pri/gpt5stable.ndb2");
     log_db=ndb2_init("/web/res/pri/gpt5log.ndb2");
+    loginfo_db=ndb2_init("/web/res/pri/gpt5loginfo.ndb2");
 }
 static long long useage_day(long long time){
     return (time+8*3600)/86400;//北京时间自然日
@@ -154,13 +155,21 @@ void gpt4_asklog(http_para* a) {
         item.insert("useage",(double)logs->a[i].useage);
         item.insert("time",(double)logs->a[i].time);
         item.insert("isauto",(double)logs->a[i].isauto);
-        item.insert("info",logs->a[i].info);
+        const char* info=logs->a[i].info[0]?(const char*)ndb2_got(loginfo_db,logs->a[i].info,0):0;
+        item.insert("info",info?info:"");
         ite.push_back(std::move(item));
     }
     ans["end"]=(double)i;
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
 }
-void gpt4_addlog(const char* userid,const reslog* rl) {
+void gpt4_addlog(const char* userid,const reslog* rl,const char* info) {
+    char id[10]={0};
+    if(info&&*info){
+        mylib_random_string(id,9);
+        size_t size=strlen(info)+1;
+        char* c=(char*)ndb2_got(loginfo_db,id,size);
+        if(c)memcpy(c,info,size);
+    }
     reslogs* logs;
     retry:
     logs=(reslogs*)ndb2_got(log_db,userid,0);
@@ -169,5 +178,6 @@ void gpt4_addlog(const char* userid,const reslog* rl) {
     int n=++logs->n;
     logs=(reslogs*)ndb2_got(log_db,userid,sizeof(reslogs)+n*sizeof(reslog));// if(!logs)return;//db error 由于持有锁，直接崩溃吧
     memcpy(&logs->a[n-1],rl,sizeof(reslog));
+    memcpy(logs->a[n-1].info,id,sizeof(id));
     UNLOCK(logs->lock);
 }

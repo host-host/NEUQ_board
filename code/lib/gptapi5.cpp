@@ -167,14 +167,13 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item->end=b.end_ns;
     // item->isimage;在gpt5_cost中填充
     item->stable=b.stable;
-    memcpy(item->info,b.info.data(),min(b.info.size(),sizeof(item->info)-1));
     item->isauto=isauto;
     // item->other1,other2
     item->isswitch=isswitch;
     // item->cachereturn_refund;在gpt5_cost之后由缓存补偿填充
     // item->useage=useage;在gpt5_cost中填充
     // item->inputm,outputm,cachem,makecachem,websearchm,makecache_1hm;在gpt5_cost中填充
-    gpt4_addlog(p->userid,item);
+    gpt4_addlog(p->userid,item,b.info.c_str());
 }
 void gpt5_resolve(http_para* a) {
     cppJSON re(a->get+a->n);

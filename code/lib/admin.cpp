@@ -108,7 +108,8 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("time",(double)log.time);
     item.insert("time_first_ns",(double)log.start);
     item.insert("stable",(double)log.stable);
-    item.insert("info",string(log.info,strnlen(log.info,sizeof(log.info))));
+    const char* info=log.info[0]?(const char*)ndb2_got(loginfo_db,log.info,0):0;
+    item.insert("info",info?info:"");
     return item;
 }
 void admin_log_list(http_para* a){

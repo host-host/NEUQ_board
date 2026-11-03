@@ -60,7 +60,6 @@ void card_redeem(http_para* a){
     rl.stable=1;
     rl.useage=c->value;
     string masked=key.substr(0,4)+"****"+key.substr(36);
-    memcpy(rl.info,masked.data(),masked.size());
-    gpt4_addlog(p->userid,&rl);
+    gpt4_addlog(p->userid,&rl,masked.c_str());
     http_send(a,Hok Hjson Hc0,"ok",0);
 }
