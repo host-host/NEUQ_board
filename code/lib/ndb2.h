@@ -26,6 +26,8 @@ ndb2 ndb2_init_readonly(const char* file);
 void* ndb2_got(ndb2 a,const char* key,long long valuelen);
 #define ndb2_gotmaxlen(p) (*(((long long*)(p))-1))
 
+int ndb2_del(ndb2 a,const char* key);//逻辑删除key，不回收空间，成功返回1
+
 /**
  * 用该函数可以遍历数据库或者查找下一个节点，遍历数据库使用方法如下
  *  char key[48]={0};

@@ -209,6 +209,7 @@ void* ndb2_got(ndb2 handle,const char* key,ll flag){
         child=p2p(p[p[0]])->child;
         point*cont=p2p(child);
         if(check(a,p,name))goto https;
+        if(flag==0&&child==(BLOCK-64))return 0;
         if(flag<=cont->next)return cont->name;
         int nlen=cont->next*2>MAXLEN?MAXLEN:cont->next*2;
         if(flag>nlen)nlen=flag;
@@ -235,6 +236,35 @@ void* ndb2_got(ndb2 handle,const char* key,ll flag){
     if(!child||!(ret=ndb_c(a,p,name,child)))return 0;
     if(ret==-1)goto https;
     return p2p(child)->name;
+}
+int ndb2_del(ndb2 handle,const char* key){
+    ndb* a=(ndb*)handle;
+    if(!a||!key||!a->lock[0])return 0;
+    char name[48]={0};
+    int n=strnlen(key,48);
+    if(n<=0||n>47)return 0;
+    memcpy(name,key,n);
+    ll p[10],child;
+    retry:
+    p[9]=a->lev;
+    for(p[p[1]=0]=1;p2p(p[p[0]])->child;p[0]++){
+        p[p[0]]=ndb_w(a,name,p[p[0]]);
+        p[p[0]+1]=p2p(p[p[0]])->child;
+    }
+    p[0]--;
+    child=p2p(p[p[0]])->child;
+    if(check(a,p,name))goto retry;
+    if(memcmp(p2p(p[p[0]])->name,name,48)||child==(BLOCK-64))return 0;
+    char* tmplock=gotlock(p[p[0]]);
+    LOCK(tmplock);
+    if(check(a,p,name)||p2p(p[p[0]])->child!=child){
+        *tmplock=0;
+        goto retry;
+    }
+    p2p(p[p[0]])->child=(BLOCK-64);
+    wmb();
+    *tmplock=0;
+    return 1;
 }
 void ndb2_free(ndb2 handle){
     ndb* a=(ndb*)handle;
@@ -271,6 +301,7 @@ void* ndb2_next(ndb2 handle,char* key){
     if(check(a,p,key))goto out;
     if(!succ)return 0;
     memcpy(key,outname,48);
+    if(content==(BLOCK-64))goto out;
     return p2p(content)->name;
 }
 /*以上代码由nit保证正确性，以下代码由AI生成 */
@@ -279,7 +310,7 @@ void* ndb2_next(ndb2 handle,char* key){
 #define FX_CONT 2
 typedef struct{
     ndb* a; char* role; ll nblk;
-    ndb2_fix_return* r; ndb2 nb;
+    ndb2_fix_return* r; ndb2 nb,deleted;
     int op, leafdepth; ll lossy;
 }fixctx;
 static int fx_voff(ndb*a,ll p){ return p>=0 && p<a->filelen && a->a[p>>27]; }
@@ -333,6 +364,11 @@ static void fx_node(fixctx*c,ll head,int depth){
         /* child 分类与空名无关: 节点头(child!=0)→下钻; content→叶值; 否则终止符 */
         if(child && !(child&63) && fx_voff(a,child) && p2p(child)->child!=0){
             fx_node(c,child,depth+1);
+        }else if(child==(BLOCK-64)){
+            if(!empty && c->deleted && !ndb2_got(c->deleted,pe->name,1)){
+                ndb2_free(c->deleted);
+                c->deleted=0;              /* 记录失败时停止强力恢复，避免恢复已删除的key */
+            }
         }else if(fx_content(a,child)){
             if(c->leafdepth<0)c->leafdepth=depth;
             else if(c->leafdepth!=depth)c->r->error++;
@@ -363,6 +399,7 @@ static void fx_scan(fixctx*c){
         if(!fx_name(pe->name))continue;
         ll child=pe->child;
         if(!fx_content(a,child))continue;        /* 必须精确锚定到 content 头 */
+        if(ndb2_got(c->deleted,pe->name,0))continue; /* 有效树上的删除标记优先于历史副本 */
         fx_emit(c,pe->name,child);
     }
 }
@@ -385,11 +422,12 @@ ndb2_fix_return* ndb2_fix(ndb2 handle,int op,const char* new_file_path){
     }
     if(op==2 && c.nb){
         /* 强力修复: 不信拓扑, 但仍先跑一遍检测填 error/统计(不写入) */
+        c.deleted=ndb2_init(0);
         ndb2 save=c.nb; c.nb=0;
         fx_node(&c,0,1);
         c.nb=save;
         c.r->fixed_keys=0;
-        fx_scan(&c);
+        if(c.deleted)fx_scan(&c);
     }else{
         /* op=0 检测; op=1 检测同时写入(c.nb 非空则写) */
         fx_node(&c,0,1);
@@ -400,6 +438,7 @@ ndb2_fix_return* ndb2_fix(ndb2 handle,int op,const char* new_file_path){
         r->fixed_filelen=((ndb*)c.nb)->filelen;
         ndb2_free(c.nb);
     }
+    ndb2_free(c.deleted);
     if(c.role)free(c.role);
     return r;
 }
