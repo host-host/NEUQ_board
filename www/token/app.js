@@ -718,6 +718,7 @@
                 fields.push(['makecache_1h', '缓存写入（1 小时）']);
             }
             fields.push(['websearch', '联网搜索']);
+            fields.push(['imageinput', '图片输入'], ['imageoutput', '图片输出']);
             if (price.format === 'deepseek') note = '北京时间周一至周五 9:00–12:00、14:00–18:00 为高峰时段，价格翻倍。';
         }
         const table = node('table', 'official-price-table');
@@ -739,7 +740,7 @@
         }
         const body = node('tbody');
         fields.forEach(([field, label]) => {
-            if ((field.startsWith('makecache') || field === 'websearch') && !columns.some(column => Object.hasOwn(column.price || {}, field))) return;
+            if ((field.startsWith('makecache') || field.startsWith('image') || field === 'websearch') && !columns.some(column => Object.hasOwn(column.price || {}, field))) return;
             const fieldUnit = field === 'websearch' ? `${currency}/次` : unit;
             const row = node('tr');
             const heading = node('th', '', label);
