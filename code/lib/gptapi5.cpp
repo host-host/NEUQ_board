@@ -194,7 +194,7 @@ void gpt5_history_list(http_para* a) {
     history*h=(history*)ndb2_got(history_db,p->userid,0);
     if(!h)return http_send(a,Hok Hjson Hc0,"[]",0);
     cppJSON ans("[]");
-    for(int i=h->n>50?h->n-50:0;i<h->n;i++){
+    for(int i=h->n>100?h->n-100:0;i<h->n;i++){
         content* con=(content*)ndb2_got(content_db,h->con_id[i],0);
         if(!con||con->deleted)continue;
         cppJSON item("{}");

@@ -452,6 +452,7 @@ string gpt6_request_model(http_para* a,const cppJSON& request,const string& form
     for(char c:model)if(!isalnum((unsigned char)c)&&c!='-'&&c!='_'&&c!='.')return string();
     return model;
 }
+static const set<string>completions_allow={"role","tool_calls","tool_call_id","content","name","function_call","refusal","audio","reasoning_content"};
 static const set<string>responses_allow={"type","call_id","output","name","input","role","content","encrypted_content"};
 static const set<string>claude_allow={"role","content"};
 cppJSON my_format(const cppJSON& a,const string& format,int k){
@@ -464,6 +465,9 @@ cppJSON my_format(const cppJSON& a,const string& format,int k){
         map<string,cppJSON> items;
         for(cppJSON item:a){
             if(item.IsNull()||((item.IsArray()||item.IsObject())&&!item.size()))continue;
+            if(format=="completions"&&k==1){
+                if(!completions_allow.count(item.a->string))continue;
+            }
             if(format=="responses"&&k==1){
                 if(!responses_allow.count(item.a->string))continue;
             }

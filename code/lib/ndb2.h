@@ -13,6 +13,7 @@ extern "C"{
 typedef void* ndb2;
 ndb2 ndb2_init(const char* file);//file==0表示仅内存，不持久化
 ndb2 ndb2_init_readonly(const char* file);
+ndb2 ndb2_init_freespace(const char* file);
 
 /**
  * valuelen==0表示不创建新节点

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #if !defined(__linux__)
 #error "ndb2 requires Linux"
 #endif
@@ -13,6 +14,7 @@
 #include<fcntl.h>
 #include<sys/mman.h>
 #include<stdio.h>
+#include<stdint.h>
 #define BLOCK 0x1000
 #define LIMIT 1024//128GB限制
 #define RESERVE (256*1024)
@@ -76,6 +78,34 @@ ndb2 ndb2_init(const char* file){
     out:
     ndb2_free(a);
     return 0;
+}
+static void ndb_dfsr(ndb* a,ll p,char* bj){
+    point* p1=p2p(p);
+    if(p1->child==0){
+        ll len=p1->next+16;
+        for(int i=p/BLOCK;i<=(p+len-1)/BLOCK;i++)bj[i]=1;
+    }else{
+        bj[p/BLOCK]=1;
+        do{
+            ndb_dfsr(a,p2p(p)->child,bj);
+        }while((p=p2p(p)->next));
+    }
+}
+ndb2 ndb2_init_freespace(const char* file){
+    ndb2 ans=ndb2_init(file);
+    if(!ans)return 0;
+    ndb* a=(ndb*)ans;
+    char *bj=malloc(a->filelen/BLOCK);
+    if(!bj)return ans;
+    memset(bj,0,a->filelen/BLOCK);
+    ndb_dfsr(a,0,bj);
+    for(ll i=0;i<a->filelen;i+=BLOCK){
+        ll begin=i;
+        for(;i<a->filelen&&!bj[i/BLOCK];i+=BLOCK);
+        if(i-begin)fallocate(a->fd,FALLOC_FL_PUNCH_HOLE|FALLOC_FL_KEEP_SIZE,begin,i-begin);
+    }
+    free(bj);
+    return ans;
 }
 static inline ll min(ll a,ll b){
     return a<b?a:b;
