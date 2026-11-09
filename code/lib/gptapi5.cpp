@@ -512,7 +512,7 @@ static void gpt5_cache_compensate(user_* p,const char* format,const string& mode
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     long long startns_p=gpt6_now_ns();
-    if(a->m>50*1024*1024)return ERROR(H400,"请求体太长了");
+    if(a->m>128*1024*1024)return ERROR(H400,"请求体太长了");
     string apikey;
     user_* p=gpt5_api_user(a,&apikey);
     if(!p)return http_send(a,H404 Hc0 Htxt,"Not Found",0);//return ERROR(H400,"Invalid API key."); 藏好了

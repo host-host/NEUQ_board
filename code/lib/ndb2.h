@@ -1,7 +1,6 @@
 /**
  * ndb数据库为key-value数据库
  * key为\0结尾的非空字符串，不超过47B
- * value不超过100MB
  * 数据库总大小不超过128GB
  */
 #ifndef NDB2_H

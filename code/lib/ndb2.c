@@ -111,9 +111,9 @@ static inline ll min(ll a,ll b){
     return a<b?a:b;
 }
 static ll ndb_allocate(ndb*a,ll len){
-    if(len<=0||len>SEG)return 0;
+    if(len<=0||len>SEG*LIMIT)return 0;
     len=(len+15)/16*16;
-    ll cptr,cptr2,need=(len+BLOCK-1)/BLOCK*BLOCK,filelen,end,i,newptr2;
+    ll cptr,cptr2,need=(len+BLOCK-1)/BLOCK*BLOCK,filelen,end,newptr2;
     retry:
     cptr=a->cptr;
     if((cptr+BLOCK-1)/BLOCK==(cptr+len+BLOCK-1)/BLOCK){
@@ -140,16 +140,24 @@ static ll ndb_allocate(ndb*a,ll len){
     end=min((end+SEG-1)/SEG*SEG,end+RESERVE);
     if(end>(ll)LIMIT*SEG)return a->lenlock=0;
     if(a->fd!=-1)if(posix_fallocate(a->fd,filelen,end-filelen))return a->lenlock=0;
-    i=(end-1)/SEG;
-    if(a->a[i]==0||a->a[i]==MAP_FAILED){
-        a->a[i]=a->fd==-1?mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0):mmap(0,SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)i*SEG);
-        if(a->a[i]==MAP_FAILED||a->a[i]==0)return a->lenlock=0;
-        if((a->lock[i]=malloc(SEG/BLOCK))==0){
-            munmap(a->a[i],SEG);
-            a->a[i]=0;
-            return a->lenlock=0;
+    ll tt=(end-1)/SEG-(filelen-1)/SEG;
+    if(tt){
+        ll s=(filelen-1)/SEG+1,e=(end-1)/SEG;
+        a->a[s]=a->fd==-1?mmap(0,tt*SEG,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0):mmap(0,tt*SEG,PROT_READ|PROT_WRITE,MAP_SHARED,a->fd,(ll)s*SEG);
+        if(a->a[s]==0||a->a[s]==MAP_FAILED)return a->lenlock=0;
+        for(int i=s+1;i<=e;i++)a->a[i]=a->a[i-1]+SEG;
+        for(int i=s;i<=e;i++){
+            if((a->lock[i]=malloc(SEG/BLOCK))==0){
+                munmap(a->a[s],tt*SEG);
+                for(int j=s;j<=e;j++)a->a[j]=0;
+                for(int j=s;j<i;j++){
+                    free(a->lock[j]);
+                    a->lock[j]=0;
+                }
+                return a->lenlock=0;
+            }
+            memset(a->lock[i],0,SEG/BLOCK);
         }
-        memset(a->lock[i],0,SEG/BLOCK);
     }
     a->cptr2=newptr2;
     mb();
@@ -224,7 +232,7 @@ void* ndb2_got(ndb2 handle,const char* key,ll flag){
     char name[48]={0};
     if(!key)return 0;
     int n=strlen(key);
-    if(n<=0||n>47||flag<0||flag>MAXLEN)return 0;
+    if(n<=0||n>47||flag<0||flag>SEG*LIMIT)return 0;
     memcpy(name,key,n);
     ndb* a=(ndb*)handle;
     ll p[10],child=0,ret;
@@ -241,7 +249,7 @@ void* ndb2_got(ndb2 handle,const char* key,ll flag){
         if(check(a,p,name))goto https;
         if(flag==0&&child==(BLOCK-64))return 0;
         if(flag<=cont->next)return cont->name;
-        int nlen=cont->next*2>MAXLEN?MAXLEN:cont->next*2;
+        ll nlen=cont->next*2;
         if(flag>nlen)nlen=flag;
         char*tmplock=gotlock(p[p[0]]);
         LOCK(tmplock);
@@ -348,7 +356,7 @@ static int fx_content(ndb*a,ll p){
     if(!fx_voff(a,p)||(p&15))return 0;
     if(p2p(p)->child!=0)return 0;
     ll len=p2p(p)->next;
-    if(len<=0||len>MAXLEN)return 0;
+    if(len<=0||len>SEG*LIMIT)return 0;
     return fx_voff(a,p+16+len-1);
 }
 static int fx_name(const char*nm){
@@ -360,7 +368,7 @@ static void fx_emit(fixctx*c,const char*nm,ll cont){
     if(!c->nb)return;
     if(ndb2_got(c->nb,nm,0))return;            /* 去重: 已存在 */
     ll len=p2p(cont)->next;
-    void*v=ndb2_got(c->nb,nm,(int)len);
+    void*v=ndb2_got(c->nb,nm,len);
     if(v){ memcpy(v,((char*)p2p(cont))+16,len); c->r->fixed_keys++; }
 }
 static void fx_crole(fixctx*c,ll cont){
