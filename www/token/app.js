@@ -22,7 +22,6 @@
     const usageColors = ['#f97316', '#5b8def', '#36a58b', '#a78bda', '#e7b34f', '#dc8194', '#56b5ce', '#8c94a4'];
     const usageCompactNumber = new Intl.NumberFormat('zh-CN', {notation: 'compact', maximumFractionDigits: 2});
     const CNY_PER_MILLION_CREDITS = 0.3;
-    const CNY_PER_USD = 7;
     const moneyFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 7});
     const balanceFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const STABILITY_BUCKETS = 3 * 24 * 4;
@@ -631,9 +630,9 @@
     function modelProviderPrice(config, id) {
         return mergePrice(config.price, providerConfig(config, id)?.price);
     }
-    function priceMultiplier(price, yuan = false) {
+    function priceMultiplier(price, dollar2cny = 0) {
         const multiplier = Number.isFinite(price.multiply) && price.multiply !== 0 ? price.multiply : 1;
-        return multiplier * (yuan && price.dollar === true ? CNY_PER_USD : 1);
+        return multiplier * (price.dollar === true && dollar2cny > 0 ? dollar2cny : 1);
     }
     function priceColumns(price) {
         if (price.format === 'deepseek') {
@@ -653,8 +652,10 @@
             : ['input', 'output', 'cache', 'makecache', 'makecache_1h', 'websearch'];
         const officialColumns = priceColumns(official);
         const providerColumns = priceColumns(price);
-        const officialMultiplier = priceMultiplier(official, true);
-        const providerMultiplier = priceMultiplier(price, true);
+        const dollar2cny = numeric(state.models?.dollar2cny);
+        if (official.dollar === true && dollar2cny <= 0) return null;
+        const officialMultiplier = priceMultiplier(official, dollar2cny);
+        const providerMultiplier = priceMultiplier(price);
         let ratio = null;
         for (let i = 0; i < officialColumns.length; i++) {
             for (const field of fields) {
@@ -676,13 +677,11 @@
                 else if (Math.abs(value - ratio) > Math.max(Math.abs(value), Math.abs(ratio)) * 1e-9) return null;
             }
         }
-        if (ratio === null || official.dollar !== true) return ratio;
-        const dollar2cny = numeric(state.models?.dollar2cny);
-        return dollar2cny > 0 ? ratio * (CNY_PER_USD / dollar2cny) : null;
+        return ratio;
     }
     function providerPrice(price, compact = false) {
         if (!priceFormats.has(price?.format)) return '价格未配置';
-        const multiplier = priceMultiplier(price, true);
+        const multiplier = priceMultiplier(price);
         const format = amount => compact ? `¥${summaryPriceFormat.format(amount)}` : money(amount);
         if (price.format === 'per' || price.format === 'token') {
             const amount = numeric(price.input) * multiplier;
@@ -705,7 +704,7 @@
         }
         const currency = !site && price.dollar === true ? '$' : '¥';
         const unit = price.format === 'per' ? `${currency}/次` : `${currency}/M tokens`;
-        const multiplier = priceMultiplier(price, site);
+        const multiplier = priceMultiplier(price);
         const columns = priceColumns(price);
         const hasHourlyCache = columns.some(column => Number.isFinite(column.price?.makecache_1h));
         let fields = [['input', '输入'], ['output', '输出'], ['cache', '缓存读取'], ['makecache', '缓存写入']];

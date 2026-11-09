@@ -295,7 +295,7 @@ double gpt5_cost(gpt6_ret* usage,const cppJSON& price,reslog* rl) {//填充倍�
     rl->used_tokens=usage->used_tokens;
     double mul=price["multiply"].valuedouble();
     if(mul==0)mul=1;
-    if(price["dollar"]==true)mul*=7;
+    // if(price["dollar"]==true)mul*=7;
     string format=price["format"];
     if(format=="per"){
         mul*=price["input"].valuedouble();

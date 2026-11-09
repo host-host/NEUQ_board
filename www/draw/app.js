@@ -57,7 +57,6 @@
     let stabilityRequestId = 0;
     const STABILITY_BUCKETS = 3 * 24 * 4;
     const STABILITY_BUCKET_MS = 15 * 60 * 1000;
-    const CNY_PER_USD = 7;
     const CNY_PER_MILLION_CREDITS = 0.3;
     const priceSummaryFormat = new Intl.NumberFormat('zh-CN', {maximumSignificantDigits: 3});
     const priceDetailFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits: 7});
@@ -154,7 +153,7 @@
 
     function formatProviderPrice(price, compact = false) {
         const multiply = Number.isFinite(price.multiply) && price.multiply !== 0 ? price.multiply : 1;
-        const factor = multiply * (price.dollar === true ? CNY_PER_USD : 1);
+        const factor = multiply;
         const format = amount => `¥${(compact ? priceSummaryFormat : priceDetailFormat).format(amount)}`;
         if (price.format === 'per' || price.format === 'token') {
             const amount = price.input * factor;
