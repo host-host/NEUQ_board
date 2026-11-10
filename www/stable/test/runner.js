@@ -8,13 +8,63 @@
     const messageOf = (data, fallback) => data?.error?.message || data?.response?.error?.message ||
         (typeof data?.error === 'string' ? data.error : '') || data?.message || fallback;
 
+    function mergePrice(base, overrides) {
+        const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+        const price = isObject(base) ? {...base} : {};
+        if (isObject(overrides)) {
+            for (const [key, value] of Object.entries(overrides)) {
+                price[key] = isObject(price[key]) && isObject(value) ? mergePrice(price[key], value) : value;
+            }
+        }
+        return price;
+    }
+
+    function officialPriceRatio(official, price, dollar2cny) {
+        if (!['per', 'token', 'normal', 'deepseek', 'lengthdouble'].includes(official?.format) || official.format !== price.format) return null;
+        if (official.format === 'lengthdouble' && official.length !== price.length) return null;
+        if (official.dollar === true && !(number(Number(dollar2cny)) > 0)) return null;
+        const multiplier = value => Number.isFinite(value.multiply) && value.multiply !== 0 ? value.multiply : 1;
+        // Provider prices are billed in CNY; only the official USD price needs conversion.
+        const officialMultiplier = multiplier(official) * (official.dollar === true ? Number(dollar2cny) : 1);
+        const providerMultiplier = multiplier(price);
+        const fields = ['per', 'token'].includes(official.format) ? ['input']
+            : ['input', 'output', 'cache', 'makecache', 'makecache_1h', 'websearch'];
+        const columns = value => value.format === 'lengthdouble' ? [value, value.newprice] : [value];
+        const officialColumns = columns(official);
+        const providerColumns = columns(price);
+        const amount = (column, field, factor) => {
+            let value = column?.[field];
+            if (field === 'makecache_1h' && !Number.isFinite(value)) value = column?.makecache;
+            return (number(Number(value)) ?? 0) * factor;
+        };
+        let ratio = null;
+        for (let i = 0; i < officialColumns.length; i++) {
+            for (const field of fields) {
+                const base = amount(officialColumns[i], field, officialMultiplier);
+                const current = amount(providerColumns[i], field, providerMultiplier);
+                if (!Number.isFinite(base) || !Number.isFinite(current) || base < 0 || current < 0) return null;
+                if (base === 0) {
+                    if (current !== 0) return null;
+                    continue;
+                }
+                const value = current / base;
+                if (!Number.isFinite(value)) return null;
+                if (ratio === null) ratio = value;
+                else if (Math.abs(value - ratio) > Math.max(Math.abs(value), Math.abs(ratio)) * 1e-9) return null;
+            }
+        }
+        return ratio;
+    }
+
     function providersForModel(catalog, model, account) {
-        const ids = catalog?.model?.[model]?.provider;
+        const modelConfig = catalog?.model?.[model];
+        const ids = modelConfig?.provider;
         return [...new Set(Array.isArray(ids) ? ids : [])]
             .filter(id => typeof id === 'string' && id !== 'auto')
             .map(id => {
                 const config = catalog.provider?.[id];
                 return {id, multiply: number(config?.multiply),
+                    ratio: config ? officialPriceRatio(modelConfig.price, mergePrice(modelConfig.price, config.price), catalog.dollar2cny) : null,
                     available: Boolean(config && account && (account.admin === true || config.public === true))};
             });
     }
