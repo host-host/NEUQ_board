@@ -677,7 +677,7 @@ void gpt5_models(http_para* a) {
     http_send(a,Hok Hjson Hc0,response.stringify_Unformatted().c_str(),0);
 }
 void gpt5_model_list(http_para* a) {
-    user_* p=gpt5_api_user(a);
+    user_* p=getuser(a->get);
     int bj=p&&(p->admin&2);
     cppJSON config=cppJSON::from_file(CONFIG);
     if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt4.json.",0);
