@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="/stable/style.css?v=0921v5">
     <link rel="stylesheet" href="/stable/test/style.css?v=0923v3">
     <script src="/auth.js?v=0910v2" defer></script>
-    <script src="/stable/test/runner.js?v=1110v1" defer></script>
-    <script src="/stable/test/app.js?v=1110v1" defer></script>
+    <script src="/stable/test/runner.js?v=1110v2" defer></script>
+    <script src="/stable/test/app.js?v=1110v2" defer></script>
 </head>
 <body>
     <header class="topbar">
@@ -70,7 +70,7 @@
                     <table>
                         <thead><tr>
                             <th class="checkbox-cell"><input id="selectAll" type="checkbox" aria-label="全选可用渠道" disabled></th>
-                            <th>渠道</th><th class="numeric" title="当前渠道价格 / 官方价格（美元官方价按 dollar2cny 换算为人民币）">倍率</th><th>状态</th><th>精确匹配</th><th>回复 Answer</th>
+                            <th>渠道</th><th class="numeric" title="当前渠道成本 / 官方价格（美元官方价按 dollar2cny 换算为人民币）">成本</th><th>状态</th><th>精确匹配</th><th>回复 Answer</th>
                             <th class="numeric" title="从发送请求到收到首个输出，含思考内容">延迟 (s)</th>
                             <th class="numeric" title="输出 Tokens / 请求总耗时（秒）">TPS</th>
                             <th class="numeric">输出 Tokens</th>
@@ -80,7 +80,7 @@
                     </table>
                 </div>
                 <div id="emptyState" class="test-empty" hidden>该模型没有非 auto 渠道。</div>
-                <p class="metrics-help">倍率 = 当前渠道价格 ÷ 官方价格，美元官方价按实时汇率换算为人民币；各计费项倍率不一致或汇率缺失时显示「—」。延迟为首个输出（含思考）的等待时间；TPS = 输出 Tokens ÷ 请求总耗时。输出 Tokens 来自接口用量，缺失时显示「—」；非流式回复无法测量首个输出延迟。multiple 为渠道配置的 multiply。</p>
+                <p class="metrics-help">成本 = 当前渠道成本 ÷ 官方价格，以倍率显示，美元官方价按实时汇率换算为人民币；各计费项倍率不一致或汇率缺失时显示「—」。延迟为首个输出（含思考）的等待时间；TPS = 输出 Tokens ÷ 请求总耗时。输出 Tokens 来自接口用量，缺失时显示「—」；非流式回复无法测量首个输出延迟。multiple 为渠道配置的 multiply。</p>
                 <p id="storageStatus" class="metrics-help" role="status">结果按模型与渠道保存在此浏览器，每个组合保留最近一次测试；刷新页面后可继续查看。</p>
             </section>
         </form>

@@ -677,6 +677,8 @@ void gpt5_models(http_para* a) {
     http_send(a,Hok Hjson Hc0,response.stringify_Unformatted().c_str(),0);
 }
 void gpt5_model_list(http_para* a) {
+    user_* p=gpt5_api_user(a);
+    int bj=p&&(p->admin&2);
     cppJSON config=cppJSON::from_file(CONFIG);
     if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt4.json.",0);
     config.erase("title");
@@ -685,7 +687,7 @@ void gpt5_model_list(http_para* a) {
         provider.erase("url");
         provider.erase("url_claude");
         provider.erase("Authorization");
-        provider.erase("cost");
+        if(!bj)provider.erase("cost");
     }
     http_send(a,Hok Hjson Hc0,config.stringify_Unformatted().c_str(),0);
 }

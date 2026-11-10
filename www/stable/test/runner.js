@@ -24,7 +24,7 @@
         if (official.format === 'lengthdouble' && official.length !== price.length) return null;
         if (official.dollar === true && !(number(Number(dollar2cny)) > 0)) return null;
         const multiplier = value => Number.isFinite(value.multiply) && value.multiply !== 0 ? value.multiply : 1;
-        // Provider prices are billed in CNY; only the official USD price needs conversion.
+        // Provider costs are billed in CNY; only the official USD price needs conversion.
         const officialMultiplier = multiplier(official) * (official.dollar === true ? Number(dollar2cny) : 1);
         const providerMultiplier = multiplier(price);
         const fields = ['per', 'token'].includes(official.format) ? ['input']
@@ -64,7 +64,7 @@
             .map(id => {
                 const config = catalog.provider?.[id];
                 return {id, multiply: number(config?.multiply),
-                    ratio: config ? officialPriceRatio(modelConfig.price, mergePrice(modelConfig.price, config.price), catalog.dollar2cny) : null,
+                    ratio: config ? officialPriceRatio(modelConfig.price, mergePrice(modelConfig.price, config.cost), catalog.dollar2cny) : null,
                     available: Boolean(config && account && (account.admin === true || config.public === true))};
             });
     }

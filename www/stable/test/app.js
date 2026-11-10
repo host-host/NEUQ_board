@@ -161,7 +161,7 @@
             const tokens = node('td', 'numeric');
             const multiply = node('td', 'numeric');
             const ratio = node('td', 'numeric', Number.isFinite(provider.ratio) ? `x${multiplierFormat.format(provider.ratio)}` : '—');
-            ratio.title = '当前渠道价格 / 官方价格（美元官方价已按 dollar2cny 换算为人民币）';
+            ratio.title = '当前渠道成本 / 官方价格（美元官方价已按 dollar2cny 换算为人民币）';
             element.append(checkCell, node('td', 'provider-name', provider.id), ratio, statusCell, match, answer, latency, tps, tokens, multiply);
             const row = {provider, element, checkbox, status, savedAt, error, match, details, answerSummary, reply, placeholder, latency, tps, tokens, multiply,
                 saved: readResult(model(), provider.id), lastRender: 0};
