@@ -170,7 +170,6 @@
         let stream = false;
         let completed = false;
         let failure = null;
-        let bodyRead = false;
         let usage = {};
         const responseParts = new Map();
         const fail = message => { failure ||= new Error(message); };
@@ -287,12 +286,9 @@
                 headers: {'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`}, body: JSON.stringify(request.body)});
             if (!response.ok) {
                 const text = await response.text();
-                bodyRead = true;
                 let data;
                 try { data = JSON.parse(text); } catch (_) { data = null; }
-                const error = new Error(messageOf(data, text.slice(0, 500) || `请求失败（HTTP ${response.status}）`));
-                error.stopBatch = response.status === 401 || response.status === 403 || response.status === 504;
-                throw error;
+                throw new Error(messageOf(data, text.slice(0, 500) || `请求失败（HTTP ${response.status}）`));
             }
             stream = /text\/event-stream/i.test(response.headers.get('content-type') || '');
             if (stream && response.body) {
@@ -305,19 +301,15 @@
                 });
             } else {
                 const text = await response.text();
-                bodyRead = true;
                 let data;
                 try { data = JSON.parse(text); }
                 catch (_) { throw new Error(text.slice(0, 500) || '服务器没有返回有效回复。'); }
                 for (const event of Array.isArray(data) ? data : [data]) consume(event, '', true);
             }
-            bodyRead = true;
             if (failure) throw failure;
-            if (!completed) throw Object.assign(new Error('回复流意外结束，未收到完成标记；已停止后续测试。'), {stopBatch: true});
+            if (!completed) throw new Error('回复流意外结束，未收到完成标记。');
             if (!result.text) throw new Error('渠道没有返回文本回复。');
         } catch (error) {
-            // A broken connection may leave the upstream request running. Do not start another question.
-            if (!bodyRead || error instanceof TypeError || error.name === 'AbortError') error.stopBatch = true;
             failure = error;
         }
         result.elapsed = Math.max(0, (now() - started) / 1000);
@@ -368,8 +360,6 @@
                 const entry = {...error.result, status: 'error', error: error.message || '请求失败', matched: null};
                 results.push({provider: provider.id, ...entry});
                 onResult(provider, entry);
-                // A failed switch may still be applied by the server; stop rather than race another switch.
-                if (phase === 'switching' || error.stopBatch || error.auth) stopped = true;
             }
         }
         return {results, stopped: stopped || shouldStop()};
