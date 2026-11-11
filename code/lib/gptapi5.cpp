@@ -682,12 +682,12 @@ void gpt5_model_list(http_para* a) {
     cppJSON config=cppJSON::from_file(CONFIG);
     if(!config)return http_send(a,Hok Hc0 Htxt,"can not read gpt4.json.",0);
     config.erase("title");
-    for(cppJSON provider:config["provider"]) {
-        provider.erase("name");
-        provider.erase("url");
-        provider.erase("url_claude");
-        provider.erase("Authorization");
-        if(!bj)provider.erase("cost");
-    }
+    if(!bj)for(cppJSON provider:config["provider"]) {
+            provider.erase("name");
+            provider.erase("url");
+            provider.erase("url_claude");
+            provider.erase("Authorization");
+            provider.erase("cost");
+        }
     http_send(a,Hok Hjson Hc0,config.stringify_Unformatted().c_str(),0);
 }

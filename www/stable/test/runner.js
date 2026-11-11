@@ -63,7 +63,7 @@
             .filter(id => typeof id === 'string' && id !== 'auto')
             .map(id => {
                 const config = catalog.provider?.[id];
-                return {id, multiply: number(config?.multiply),
+                return {id, name: typeof config?.name === 'string' ? config.name : '', multiply: number(config?.multiply),
                     ratio: config ? officialPriceRatio(modelConfig.price, mergePrice(modelConfig.price, config.cost), catalog.dollar2cny) : null,
                     available: Boolean(config && account && (account.admin === true || config.public === true))};
             });
