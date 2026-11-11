@@ -181,6 +181,15 @@
         };
         const setUsage = data => {
             if (!data || typeof data !== 'object') return;
+            if (request.format === 'completions') {
+                if (Array.isArray(data)) return;
+                // Match gpt6_parse_completions: keep the maximum cumulative counts.
+                const tokens = value => Math.trunc(number(value) ?? 0);
+                result.inputTokens = Math.max(result.inputTokens ?? 0, tokens(data.prompt_tokens));
+                result.outputTokens = Math.max(result.outputTokens ?? 0, tokens(data.completion_tokens));
+                result.totalTokens = Math.max(result.totalTokens ?? 0, tokens(data.total_tokens), result.inputTokens + result.outputTokens);
+                return;
+            }
             for (const [key, value] of Object.entries(data)) if (number(value) !== null) usage[key] = value;
             if (request.format === 'claude') {
                 result.inputTokens = number(usage.input_tokens);
@@ -193,8 +202,8 @@
                 if (result.outputTokens !== null) result.outputTokens += usage.thoughtsTokenCount || 0;
                 result.totalTokens = number(usage.totalTokenCount);
             } else {
-                result.inputTokens = number(usage.input_tokens ?? usage.prompt_tokens);
-                result.outputTokens = number(usage.output_tokens ?? usage.completion_tokens);
+                result.inputTokens = number(usage.input_tokens);
+                result.outputTokens = number(usage.output_tokens);
                 result.totalTokens = number(usage.total_tokens);
             }
             if (result.totalTokens === null && result.inputTokens !== null && result.outputTokens !== null) {
@@ -313,6 +322,7 @@
             failure = error;
         }
         result.elapsed = Math.max(0, (now() - started) / 1000);
+        // Match the backend's end - start timing, including the full response read.
         result.tps = result.outputTokens !== null && result.elapsed > 0 ? result.outputTokens / result.elapsed : null;
         onUpdate({...result});
         if (failure) {
