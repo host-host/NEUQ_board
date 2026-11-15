@@ -37,7 +37,7 @@
   b. 全文字符 n-gram 似然
   c. 开头两行的字符 n-gram 似然
 """
-import sys, os, json, math, pickle, argparse, collections, re, time
+import sys, os, json, math, pickle, argparse, collections, re, time, random
 
 try:
     import numpy as np
@@ -338,14 +338,19 @@ def read_lib(paths):
             files.extend(found)
         else: files.append(p)
     texts, labels, classes = [], [], []
+    by_class = {}
     for p in files:
         with open(p, encoding='utf-8') as f: D = json.load(f)
         if not isinstance(D, dict): raise SystemExit('%s: 需要 {"模型名": ["输出", ...]} 格式' % p)
         for k, v in D.items():
             v = [t for t in v if isinstance(t, str) and letters(t)]
             if not v: continue
-            if k not in classes: classes.append(k)
-            texts += v; labels += [classes.index(k)] * len(v)
+            if k not in by_class: classes.append(k); by_class[k] = []
+            by_class[k].extend(v)
+    for k, name in enumerate(classes):
+        v = by_class[name]
+        random.shuffle(v)                       # 同名模型跨文件合并后, 再随机打乱
+        texts += v; labels += [k] * len(v)
     return texts, labels, classes
 
 
