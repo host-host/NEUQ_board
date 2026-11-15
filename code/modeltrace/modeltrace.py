@@ -10,8 +10,10 @@
 两个功能:
 
 1) 预处理: 读入样本库(格式同 zero.json: {"模型名": ["输出1", "输出2", ...], ...}), 生成模型文件
-     python3 modeltrace.py prep zero.json [more.json ...] [-o 模型文件]
+     python3 modeltrace.py prep zero.json [more.json ...] [-o 模型文件] [--ptable 校准表]
    输入路径以 / 结尾时，合并该目录直接包含的所有 .json 文件（不递归），可与文件路径混用。
+   同时生成校准表 (默认 <项目根>/www/modeltrace/p.json), 内容 f[A][B] = 真实模型是 A 时模型 B 得到的平均概率,
+   由前端读取后对接口返回的概率做贝叶斯反推。重新训练后校准表要和模型文件一起更新。
 
 2) 查询: 给一段输出, 返回最像的模型
      python3 modeltrace.py query --file out.txt        (不给 --file 则读 stdin)
@@ -47,6 +49,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_MODEL = os.path.join(HERE, '..', '..', 'build', 'modeltrace', 'model.pkl')
+DEFAULT_PTABLE = os.path.join(HERE, '..', '..', 'www', 'modeltrace', 'p.json')
 
 W_LDA, W_NG, W_PRE = 3.0, 1.0, 2.0   # 三路权重
 SHRINK = 0.2                         # LDA 协方差向对角收缩的比例
@@ -372,7 +375,12 @@ def calibrate(samples, y, classes, log):
     rank = [int((S[i] > S[i][y[i]]).sum()) + 1 for i in idx]
     fam = sum(family(classes[int(np.argmax(S[i]))]) == family(classes[y[i]]) for i in idx)
     m = float(len(idx))
-    return float(best[1]), {'n': len(idx), 'top1': sum(r == 1 for r in rank) / m, 'top3': sum(r <= 3 for r in rank) / m,
+    # 校准表 f[A][B]: 真实模型是 A 的折外样本上, 模型 B 得到的概率的平均值 (前端用它做贝叶斯反推)
+    P = {}
+    for k in range(K):
+        v = np.mean([softmax(S[i], best[1]) for i in idx if y[i] == k], axis=0)
+        P[classes[k]] = {classes[j]: round(float(v[j]), 5) for j in range(K)}
+    return float(best[1]), P, {'n': len(idx), 'top1': sum(r == 1 for r in rank) / m, 'top3': sum(r <= 3 for r in rank) / m,
                      'top5': sum(r <= 5 for r in rank) / m, 'family_top1': fam / m, 'log_loss': float(best[0])}
 
 
@@ -382,7 +390,7 @@ def cmd_prep(a):
     if len(classes) < 2: raise SystemExit('样本库里至少要有 2 个有样本的模型')
     log('样本 %d 条, 模型 %d 个, 提取特征...' % (len(texts), len(classes)))
     samples = [prepare(t) for t in texts]
-    T, rep = (1.0, None) if a.no_cv else calibrate(samples, y, classes, log)
+    T, P, rep = (1.0, None, None) if a.no_cv else calibrate(samples, y, classes, log)
     log('训练最终模型...')
     M = fit(samples, y, classes); M['T'] = T; M['cv'] = rep
     M['counts'] = [y.count(k) for k in range(len(classes))]; M['built_at'] = int(time.time())
@@ -391,7 +399,11 @@ def cmd_prep(a):
     tmp = out + '.tmp'
     with open(tmp, 'wb') as f: pickle.dump(M, f, protocol=4)
     os.replace(tmp, out)
-    print(json.dumps({'model': out, 'classes': len(classes), 'samples': len(texts), 'temperature': T, 'cv': rep},
+    if P is not None:                          # 校准表要和模型文件出自同一次训练, 一起部署
+        pt = os.path.abspath(a.ptable); tmp = pt + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f: json.dump(P, f, ensure_ascii=False, separators=(',', ':'))
+        os.replace(tmp, pt)
+    print(json.dumps({'model': out, 'ptable': pt if P is not None else None, 'classes': len(classes), 'samples': len(texts), 'temperature': T, 'cv': rep},
                      ensure_ascii=False, indent=1))
 
 
@@ -479,7 +491,8 @@ def main():
     p = sub.add_parser('prep', help='用样本库生成模型文件')
     p.add_argument('data', nargs='+', help='样本库 json 或以 / 结尾的目录（仅直接包含的 .json），可给多个')
     p.add_argument('-o', '--model', default=DEFAULT_MODEL, help='模型文件输出路径')
-    p.add_argument('--no-cv', action='store_true', help='跳过交叉验证(更快, 但分数不做校准)')
+    p.add_argument('--no-cv', action='store_true', help='跳过交叉验证(更快, 但分数不做校准, 也不生成校准表)')
+    p.add_argument('--ptable', default=DEFAULT_PTABLE, help='校准表输出路径, 默认 www/modeltrace/p.json')
     p.set_defaults(fn=cmd_prep)
     q = sub.add_parser('query', help='查询一段输出最像哪个模型')
     q.add_argument('--file', help='待查询的输出文件, 不给则读 stdin')
