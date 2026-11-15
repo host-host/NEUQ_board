@@ -4,6 +4,7 @@
 #include"lib/check48.h"
 #include"lib/admin.h"
 #include"lib/pay.h"
+#include"lib/modeltrace.h"
 // #include"lib/word.h"
 #include"lib/gptapi4.h"
 #include"lib/gptapi5.h"
@@ -85,6 +86,7 @@ int main() {
     http_add(&a,"POST /api/gpt5_history_rename ",gpt5_history_rename);
     http_add(&a,"POST /api/gpt5_history_delete ",gpt5_history_delete);
     http_add(&a,"POST /api/gpt5_share ",gpt5_share);
+    http_add(&a,"POST /api/modeltrace ",modeltrace);
     http_add(&a,"GET /api/stop ",apistop);
     http_add(&a,"",other);
     return http_start(&a,INADDR_LOOPBACK,1001);//INADDR_ANY

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>模型指纹 - NEUQ Board</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/stable/style.css?v=0921v5">
+    <link rel="stylesheet" href="/modeltrace/style.css?v=1112v7">
+    <script src="/modeltrace/app.js?v=1113v2" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="返回 NEUQ Board 首页"><img src="/newintown.png" alt="NEUQ Board"></a>
+        <div class="topbar-title"><strong>模型指纹</strong><span>根据随机字母输出判断模型</span></div>
+    </header>
+
+    <main class="mt-workspace">
+        <section class="mt-panel" aria-labelledby="promptHeading">
+            <div class="mt-panel-head">
+                <div><h2 id="promptHeading">第一步：让待测模型回答这段提示词</h2><p>提示词要原样发送，把模型的回复整段复制下来。同一个模型多问几次，判断会更稳。</p></div>
+                <button id="copyPrompt" class="mt-button" type="button">复制提示词</button>
+            </div>
+            <pre id="promptText" class="mt-prompt">随机生成一组英文字母选择，大小写均可。逐个选择 400 个英文字母，每行选择 20 个字母，共 20 行，字母间无需空格或分隔符。每个位置都要单独选择。禁止调用或借助任何工具，也不要先编写或运行代码。直接从第一个取值开始输出，不要输出除字母和换行符外的额外内容。</pre>
+        </section>
+
+        <section class="mt-panel" aria-labelledby="queryHeading">
+            <div class="mt-panel-head">
+                <div><h2 id="queryHeading">第二步：粘贴回复并查询</h2><p>把未知模型的回复粘贴进来，一个框放一条回复。同一个模型有多条回复时，点下面的 + 再加一个框。</p></div>
+            </div>
+            <form id="queryForm">
+                <div class="mt-group">
+                    <div id="sampleList" class="mt-sample-list"></div>
+                    <div class="mt-add-row">
+                        <button id="addSample" class="mt-button" type="button" aria-label="再添加一条回复" title="再添加一条回复">+</button>
+                        <span>建议贴2~3条数据，正确率更高</span>
+                    </div>
+                    <div id="samplesFoot" class="mt-group-foot"></div>
+                </div>
+                <div class="mt-actions">
+                    <button id="submitButton" class="mt-button mt-button-primary" type="submit">查询</button>
+                    <span id="status" class="mt-status" role="status"></span>
+                </div>
+            </form>
+        </section>
+
+        <section id="resultsPanel" class="mt-panel" aria-labelledby="resultsHeading" hidden>
+            <div class="mt-panel-head"><div><h2 id="resultsHeading">查询结果</h2><p>匹配率是候选模型之间的相对分数，加起来等于 100%；不在支持列表里的模型也会被归到最像的那个上。</p></div></div>
+            <div id="results" class="mt-results"></div>
+        </section>
+
+        <section class="mt-panel" aria-labelledby="modelsHeading">
+            <div class="mt-panel-head">
+                <div><h2 id="modelsHeading">当前支持的模型</h2><p id="modelsSummary">正在加载…</p></div>
+                <button id="reloadModels" class="mt-button" type="button">刷新</button>
+            </div>
+            <div id="models" class="mt-models"></div>
+        </section>
+    </main>
+</body>
+</html>
