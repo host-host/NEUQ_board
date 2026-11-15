@@ -11,6 +11,7 @@
 
 1) 预处理: 读入样本库(格式同 zero.json: {"模型名": ["输出1", "输出2", ...], ...}), 生成模型文件
      python3 modeltrace.py prep zero.json [more.json ...] [-o 模型文件] [--ptable 校准表]
+   输入路径以 / 结尾时，合并该目录直接包含的所有 .json 文件（不递归），可与文件路径混用。
    同时生成校准表 (默认 <项目根>/www/modeltrace/p.json), 内容 f[A][B] = 真实模型是 A 时模型 B 得到的平均概率,
    由前端读取后对接口返回的概率做贝叶斯反推。重新训练后校准表要和模型文件一起更新。
 
@@ -327,8 +328,17 @@ def split_samples(t):
 
 # ---------------------------------------------------------------- 预处理
 def read_lib(paths):
-    texts, labels, classes = [], [], []
+    files = []
     for p in paths:
+        if p.endswith('/'):
+            if not os.path.isdir(p): raise SystemExit('%s: 不是目录' % p)
+            found = [os.path.join(p, n) for n in sorted(os.listdir(p))
+                     if n.endswith('.json') and os.path.isfile(os.path.join(p, n))]
+            if not found: raise SystemExit('%s: 目录下没有 .json 样本文件' % p)
+            files.extend(found)
+        else: files.append(p)
+    texts, labels, classes = [], [], []
+    for p in files:
         with open(p, encoding='utf-8') as f: D = json.load(f)
         if not isinstance(D, dict): raise SystemExit('%s: 需要 {"模型名": ["输出", ...]} 格式' % p)
         for k, v in D.items():
@@ -474,7 +484,7 @@ def main():
     ap = argparse.ArgumentParser(description='模型字母指纹: 预处理(prep) / 查询(query)')
     sub = ap.add_subparsers(dest='cmd'); sub.required = True
     p = sub.add_parser('prep', help='用样本库生成模型文件')
-    p.add_argument('data', nargs='+', help='样本库 json, 格式同 zero.json, 可给多个')
+    p.add_argument('data', nargs='+', help='样本库 json 或以 / 结尾的目录（仅直接包含的 .json），可给多个')
     p.add_argument('-o', '--model', default=DEFAULT_MODEL, help='模型文件输出路径')
     p.add_argument('--no-cv', action='store_true', help='跳过交叉验证(更快, 但分数不做校准, 也不生成校准表)')
     p.add_argument('--ptable', default=DEFAULT_PTABLE, help='校准表输出路径, 默认 www/modeltrace/p.json')
