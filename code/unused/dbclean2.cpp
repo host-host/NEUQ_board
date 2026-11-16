@@ -22,7 +22,7 @@ int main(){
     ndb2 content_db;//con_id -> content
     content_db=ndb2_init("/web/res/pri/gpt5content.ndb2");
     ndb2 c0=0;//ndb2_init("/web/res/pri/gpt5content2.ndb2");
-    ndb2 c1=0;//ndb2_init("/web/res/pri/gpt5content3.ndb2");
+    ndb2 c1=ndb2_init("/web/res/pri/gpt5content3.ndb2");
     map<int,int>mp;
     char key[48]={0};
     for(content*p=(content*)ndb2_next(content_db,key);p;p=(content*)ndb2_next(content_db,key)){
@@ -40,6 +40,9 @@ int main(){
             return 0;
         }
         memcpy(q,p,len);
+        {
+            if(p->deleted==1)p->deleted=2;
+        }
     }
     for(auto i:mp)cout<<i.first<<" "<<i.second<<endl;
     return 0;

@@ -1,11 +1,10 @@
-/**
- * 临时代码，不进入git
- */
-#include "lib/ndb2.h"
-#include "lib/mylib.h"
-#include "lib/cppJSON.h"
-#include "lib/gptapi5.h"
-#include "lib/gptapi6.h"
+//g++ -O2 -Wall -Wextra code/unused/dbclean.cpp build/ndb2.o build/mylib.o -o build/dbclean -lssl -lcrypto -lcurl -lz
+//需独占gpt5content！！！！
+#include "../lib/ndb2.h"
+#include "../lib/mylib.h"
+#include "../lib/cppJSON.h"
+#include "../lib/gptapi5.h"
+#include "../lib/gptapi6.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -20,59 +19,17 @@
 #include<iostream>
 using namespace std;
 #define ll long long
-string s256(string u){
-    char p[60];
-    mylib_sha256(u.data(),u.size(),p);
-    return (string)p;
-}
-struct point{
-    content*p;
-    vector<string>v;
-};
 int main(){
     ndb2 content_db;//con_id -> content
     content_db=ndb2_init("/web/res/pri/gpt5content.ndb2");
-    map<string,point>mp;
+    map<int,int>mp;
     char key[48]={0};
     for(content*p=(content*)ndb2_next(content_db,key);p;p=(content*)ndb2_next(content_db,key)){
-        mp[key].p=(content*)p;
-        cppJSON a(p->content);
-        a=my_format(a,(string)p->format);
-        if(!a.size()||!a.IsArray()){
-            cout<<"ERROR!! 2 "<<p->con_id<<' '<<p->content<<endl;
-            p->deleted=2;
-            continue;
-        }
-        for(cppJSON i:a){
-            string p=i.stringify_Unformatted();
-            mp[key].v.push_back(s256(p));
-        }
+        mp[p->deleted]++;
+        if(p->deleted==2)ndb2_del(content_db,key);
     }
-    cout<<"ALL"<<mp.size()<<endl;
-    int cnt=0;
-    for(auto i:mp){
-        if(++cnt%10==0)cout<<"WORK on "<<cnt<<endl;
-        content *p=i.second.p;
-        if(p->deleted==2)continue;
-        vector<string>&v=i.second.v;
-        for(auto j:mp){
-            content *q=j.second.p;
-            if(p==q)continue;
-            vector<string>&w=j.second.v;
-            if(w.size()<v.size())continue;
-            int v1=0;
-            for(string tmp:w){
-                if(tmp==v[v1])if(++v1==(int)v.size())break;
-            }
-            if(v1==(int)v.size()){
-                if(q->deleted==2)continue;
-                if(strcmp(q->ownerid,p->ownerid))continue;
-                if(strcmp(q->format,p->format))continue;
-                p->deleted=2;//////////////////
-                cout<<"DELETE "<<p->con_id<<endl;
-                break;
-            }
-        }
-    }
+    ndb2_free(content_db);
+    content_db=ndb2_init_freespace("/web/res/pri/gpt5content.ndb2");
+    for(auto i:mp)cout<<i.first<<" "<<i.second<<endl;
     return 0;
 }
