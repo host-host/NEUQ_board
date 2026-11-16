@@ -1,6 +1,6 @@
 'use strict';
 const API = '/api/modeltrace';
-const MAX_SAMPLES = 20;   // 每条回复单独作为一组查询，后端一次最多 20 组
+const MAX_SAMPLES = 20;   // 一次最多贴多少条回复（后端上限 60 条）
 const BUSY_RETRIES = 12, BUSY_DELAY = 1500;
 
 const $ = id => document.getElementById(id);
@@ -24,54 +24,6 @@ async function call(body, onBusy) {
         const map = { busy: '后端正忙，请稍后再试', not_ready: '后端还没有准备好：' + data.error.message };
         throw new Error(map[data.error.code] || data.error.message || '查询失败');
     }
-}
-
-/* ---------- 校准 ----------
-   p.json 里 f[A][B] = 真实模型是 A 时，后端给模型 B 的平均概率。打开页面时读一次。
-   后端对一条回复给出概率 q 后，按贝叶斯反推：真实是 A 的概率 = Σ_B q[B] × f[A][B] / Σ_A' f[A'][B]。
-   多条回复各自反推后取平均。 */
-let ptable = null;
-const ptableReady = fetch('/modeltrace/p.json', { cache: 'no-cache' })
-    .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-    .then(f => { ptable = f; })
-    .catch(() => { ptable = null; });
-
-function calibrateOne(r, f, names) {
-    const q = {};
-    r.top.forEach(t => { q[t.model] = t.score; });
-    if (r.top.length !== names.length || names.some(n => !(n in q))) throw new Error('校准表和后端模型不一致，需要重新生成 p.json');
-    const p = {};
-    names.forEach(a => { p[a] = 0; });
-    names.forEach(b => {
-        let col = 0;
-        names.forEach(a => { col += f[a][b] || 0; });
-        if (col > 0) names.forEach(a => { p[a] += q[b] * (f[a][b] || 0) / col; });
-        else p[b] += q[b];
-    });
-    return p;
-}
-const ranked = p => Object.keys(p).sort((a, b) => p[b] - p[a]).map(m => ({ model: m, score: p[m] }));
-
-// 把后端"每条回复一组"的结果合成一个结果，字段和后端单组结果一致
-function calibrate(results, f) {
-    const names = Object.keys(f);
-    const ok = results.filter(r => !r.error);
-    if (!ok.length) return { samples: 0, error: (results[0] && results[0].error) || '没有可用的回复' };
-    const avg = {}, votes = {}, per = [];
-    names.forEach(a => { avg[a] = 0; });
-    ok.forEach(r => {
-        const p = calibrateOne(r, f, names), top = ranked(p), s = r.per_sample[0];
-        names.forEach(a => { avg[a] += p[a] / ok.length; });
-        votes[top[0].model] = (votes[top[0].model] || 0) + 1;
-        per.push({ predicted: top[0].model, score: top[0].score, top: top.slice(0, 3), letters: s.letters });
-    });
-    const top = ranked(avg), family = {};
-    top.forEach(t => { const k = t.model.split('-')[0]; family[k] = (family[k] || 0) + t.score; });
-    return {
-        samples: ok.length, predicted: top[0].model, top: top.slice(0, 5),
-        family: Object.fromEntries(Object.entries(family).sort((a, b) => b[1] - a[1])),
-        votes: Object.fromEntries(Object.entries(votes).sort((a, b) => b[1] - a[1])), per_sample: per
-    };
 }
 
 /* ---------- 输入 ---------- */
@@ -109,10 +61,8 @@ async function submit(ev) {
     const button = $('submitButton');
     button.disabled = true; setStatus('正在查询 ' + total + ' 条回复…');
     try {
-        await ptableReady;
-        if (!ptable) throw new Error('校准表 p.json 加载失败，请刷新页面重试');
-        const data = await call({ action: 'query', top: Object.keys(ptable).length, groups: samples.map(s => ({ samples: [s] })) }, n => setStatus('后端正在处理其他查询，排队重试中（第 ' + n + ' 次）…'));
-        renderResults([calibrate(data.results || [], ptable)]);
+        const data = await call({ action: 'query', top: 5, groups: [{ samples }] }, n => setStatus('后端正在处理其他查询，排队重试中（第 ' + n + ' 次）…'));
+        renderResults(data.results || []);
         setStatus('');
         $('resultsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
