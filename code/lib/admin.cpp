@@ -96,6 +96,9 @@ static cppJSON admin_log_json(const admin_log_cursor& cursor){
     item.insert("makecache",(double)log.makecache);
     item.insert("makecache_1h",(double)log.makecache_1h);
     item.insert("cachereturn",(double)log.cachereturn);
+    item.insert("costcache",(double)log.costcache);
+    item.insert("costmakecache",(double)log.costmakecache);
+    item.insert("costmakecache_1h",(double)log.costmakecache_1h);
     item.insert("websearch",(double)log.websearch);
     long long first=log.start>0?log.first-log.start:-1;
     if(first>=0)item.insert("first",first/1000000000.0);

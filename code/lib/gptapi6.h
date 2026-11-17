@@ -15,6 +15,7 @@ struct gpt6_ret{
     long long input,output,cache,makecache;//总输入（包含缓存读写），总输出，缓存读，缓存写
     long long makecache_1h;//makecache包含makecache_1h
     long long websearch;
+    long long fakewant,costcache,costmakecache,costmakecache_1h;//这才是上游真正的cache
     long long start_ns,first_ns,last_ns,end_ns;
     long long upload_bytes;//实际上传的请求体大小（压缩后）
     int curlcode;
@@ -22,10 +23,10 @@ struct gpt6_ret{
     std::string response_id,header,body,bodydelta,info;
     int issse;//0 1no 2yes
     int stable;//0不知道 1正常 2~999用户请求有问题 >=1000上游炸了
-    bool send;
+    bool send,hasmakecache,isauto;
     std::string ca;
 };
 void gpt6_flush(gpt6_ret* ans);
 long long gpt6_now_ns();
-gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format,bool send_before_first=true);
+gpt6_ret gpt6_work3(http_para* a,const char*message,const char*model,cppJSON conf,const char*format,bool send_before_first=true,long long fakewant=0,bool hasmakecache=0,bool isauto=false);
 #endif

@@ -167,6 +167,10 @@ static void gpt5_log(user_* p,const string& model,const string& provider,gpt6_re
     item->end=b.end_ns;
     // item->isimage;在gpt5_cost中填充
     item->stable=b.stable;
+    // item->info;//gpt4_addlog中填充
+    item->costcache=b.costcache;
+    item->costmakecache=b.costmakecache;
+    item->costmakecache_1h=b.costmakecache_1h;
     item->isauto=isauto;
     // item->other1,other2
     item->isswitch=isswitch;
@@ -438,6 +442,9 @@ void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,
     field("makecache",to_string(ans->makecache));
     field("makecache_1h",to_string(ans->makecache_1h));
     field("websearch",to_string(ans->websearch));
+    field("costcache",to_string(ans->costcache));
+    field("costmakecache",to_string(ans->costmakecache));
+    field("costmakecache_1h",to_string(ans->costmakecache_1h));
     field("start",to_string(ans->start_ns/1000000000LL));
     field("first",to_string(ans->first_ns/1000000000LL));
     field("last",to_string(ans->last_ns/1000000000LL));
@@ -471,44 +478,26 @@ user_* gpt5_api_user(http_para* a,string* apikey=nullptr) {
     return p;
 }
 struct cache_entry{
-    long long time,input;
+    long long time,cache;
 };
-#define CACHE_TTL (30*60)
-static void gpt5_cache_compensate(user_* p,const char* format,const string& model,const cppJSON& req,const char* array_name,const gpt6_ret& b,reslog* rl){
-    if(b.input<=1000)return;
+int gpt5_cache_want(user_* p,const char* format,const string& model,const cppJSON& req,const char* array_name,char st[44]){
     cppJSON arr=req[array_name];
-    if(!arr.IsArray())return;
-    string head=(string)"cache_"+p->userid+"\n"+format+"\n"+model;
+    if(!arr.IsArray())return 0;
+    string head=(string)p->userid+format+"\n"+model;
     for(const char* field:{"tools","system","instructions","systemInstruction"}){
         cppJSON v=req[field];
         if(v.a)head+=(string)"\n"+field+"="+my_format(v,format,0).stringify_Unformatted();
     }
-    char st[44];
     mylib_sha256(head.data(),head.size(),st);
     int want=0;
     time_t now=time(0);
     for(cppJSON msg:arr){
-        string s=string(st)+my_format(msg,format,1).stringify_Unformatted();
+        string s=st+my_format(msg,format,1).stringify_Unformatted();
         mylib_sha256(s.data(),s.size(),st);
         cache_entry* e=(cache_entry*)ndb2_got(cache_db,st,0);
-        if(e&&now-e->time<=CACHE_TTL)want=e->input;
+        if(e&&now<=e->time)want=e->cache;
     }
-    cache_entry* e=(cache_entry*)ndb2_got(cache_db,st,sizeof(cache_entry));
-    if(e){
-        e->time=now;
-        e->input=b.input;
-    }
-    if(want>b.input)want=b.input;
-    rl->cachereturn=want;
-    if(b.cache*2<want)want*=0.9;
-    else want*=0.8;
-    if(rl->isimage==2&&want>b.cache){
-        int comp=(want-b.cache)*((double)rl->inputm-rl->cachem)/0.3;
-        if(comp<0)comp=0;
-        if(comp>rl->useage)comp=rl->useage;
-        rl->useage-=comp;
-        rl->cachereturn_refund=comp;
-    }
+    return want;
 }
 void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     long long startns_p=gpt6_now_ns();
@@ -529,11 +518,13 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     gpt6_ret b;
     long long startns=0;
+    char cachekey[44]={0};
+    int want=proret.isauto?gpt5_cache_want(p,format,model,req,array_name,cachekey):0;//只有auto渠道fake缓存
     for(int k=0;k<(int)proret.providers.size();k++){
         string& provider=proret.providers[k].provider;
         bool isauto=proret.isauto,last=k+1==(int)proret.providers.size();
         if(isauto&&!last&&gpt5_should_skip(model+"_"+provider))continue;
-        b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last);
+        b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last,want,config["model"][model]["price"].has("makecache"),isauto);
         b.start_ns=startns_p;
         startns_p=b.end_ns;
         if(b.stable==0||config["file"]==true)makelog(&b,model.c_str(),a->get+a->n,p->name,provider,isauto);//写入日志文件
@@ -549,16 +540,36 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
             a->cl=0;
         }
         reslog rl;
+        int tmpcache=b.cache,tmpmakecache=b.makecache,tmpmakecache_1h=b.makecache_1h;
+        b.cache=b.costcache;
+        b.makecache=b.costmakecache;
+        b.makecache_1h=b.costmakecache_1h;
+        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl);//成本
+        b.cache=tmpcache;
+        b.makecache=tmpmakecache;
+        b.makecache_1h=tmpmakecache_1h;
         double ori=gpt5_cost(&b,config["model"][model]["price"],&rl);//原价
-        double cost=gpt5_cost(&b,proret.providers[k].cost,&rl)*1.018;//+((b.upload_bytes+b.header.size()+b.body.size())*0.8/1000000000.0);//成本(宽带费用0.8/G)
         gpt5_cost(&b,proret.providers[k].price,&rl);//售价
-        if(b.send&&b.used_tokens>0&&proret.isauto)gpt5_cache_compensate(p,format,model,req,array_name,b,&rl);//上游缓存丢失补偿
         if(b.send==0)rl.useage=0;//渠道炸了，不收费
         ADD(&p->token_used,rl.useage);//加入用量
         gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);
         if(b.stable<2||b.stable>=1000)gpt4_addstable((model+"_"+provider).c_str(),b.stable==1,&b,ori,cost,rl.useage);//稳定性统计
         gpt5_log(p,model,provider,b,isauto,!b.send,&rl,cost);//写入个人日志
         if(b.send){
+            int l=b.makecache?b.makecache+b.cache:b.input-26;
+            ll t=time(0),td=model.substr(0,6)=="claude"?5*60:30*60;
+            if(b.makecache_1h){
+                l=b.makecache_1h+b.cache;
+                td=60*60;
+            }
+            if(l<1024)l=0;//最低缓存长度1024
+            if(l){
+                cache_entry* e=(cache_entry*)ndb2_got(cache_db,cachekey,sizeof(cache_entry));
+                if(e){
+                    e->cache=l;
+                    e->time=t+td;
+                }
+            }
             if(isauto)if(b.stable<2||b.stable>=1000)gpt4_addstable((model+"_auto").c_str(),b.stable==1,&b,ori,cost,rl.useage);//稳定性统计auto
             break;
         }

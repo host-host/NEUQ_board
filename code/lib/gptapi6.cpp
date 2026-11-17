@@ -32,17 +32,53 @@ static bool same(const cppJSON& a,const cppJSON& b) {
     if(a["text"].IsString()&&b["text"].IsString())return (a["thought"]==true)==(b["thought"]==true);
     return a.has("thoughtSignature")&&b.has("thoughtSignature");
 }
-void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
+void fakecache(gpt6_ret* ans){
+    ll m=min(ans->fakewant,ans->input-2)-ans->cache;
+    if(m<0)m=0;
+    ans->cache+=m;
+    ll mm=std::min(m,ans->makecache);
+    ans->makecache-=mm;
+    ans->makecache_1h=std::min(ans->makecache_1h,ans->makecache);
+    if(ans->hasmakecache&&ans->makecache==0&&ans->input-26>=1024)ans->makecache=std::max(ans->input-26-ans->cache,0ll);
+}
+void gpt6_parse_responses(gpt6_ret* ans,string& resp,bool issse){
+    /**
+        "usage": {
+            "input_tokens": 17,
+            "input_tokens_details": {
+                "cache_write_tokens": 0,
+                "cache_write_tokens_details": {
+                    "ttl_12h_tokens": 0,
+                    "ttl_30m_tokens": 0
+                },
+                "cached_tokens": 0
+            },
+            "output_tokens": 23,
+            "output_tokens_details": {
+                "reasoning_tokens": 10
+            },
+            "total_tokens": 40
+        },
+     */
     auto f=[](gpt6_ret* ans,cppJSON t){
         if(!t)return;
         ans->used_tokens=t["total_tokens"].valuedouble();
         ans->input=t["input_tokens"].valuedouble();//input包含cache
-        ans->cache=t["input_tokens_details"]["cached_tokens"].valuedouble();
-        ans->makecache=t["input_tokens_details"]["cache_write_tokens"].valuedouble();//makecache==0
+        ans->costcache=ans->cache=t["input_tokens_details"]["cached_tokens"].valuedouble();
+        ans->costmakecache=ans->makecache=t["input_tokens_details"]["cache_write_tokens"].valuedouble();//makecache==0
         ans->output=t["output_tokens"].valuedouble();
+        if(ans->isauto){
+            fakecache(ans);
+            char ttt[1024];
+            sprintf(ttt,R"({"input_tokens": %lld,"input_tokens_details": {"cache_write_tokens": %lld,"cache_write_tokens_details": 
+                {"ttl_12h_tokens": %lld,"ttl_30m_tokens": %lld},"cached_tokens": %lld},"output_tokens": %lld,"output_tokens_details": {"reasoning_tokens": %lld},"total_tokens": %lld})",
+                ans->input,ans->makecache,0ll,ans->makecache,ans->cache,ans->output,(ll)t["output_tokens_details"]["reasoning_tokens"].valuedouble(),ans->used_tokens);
+            t.replace(cppJSON(ttt));
+        }
     };
-    if(issse&&tmp.find("data: ")==0){
-        cppJSON a(&tmp[6]);
+    if(issse&&resp.find("data: ")==0){
+        cppJSON a(&resp[6]);
+        if(!a)return;
         string type=a["type"];
         if(type=="response.output_item.added")gpt6_mark_first(ans);
         if(type=="response.output_item.done")gpt6_mark_first(ans);
@@ -52,6 +88,7 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
         if(type=="response.completed"){
             ans->response_id=a["response"]["id"];
             f(ans,a["response"]["usage"]);
+            if(ans->isauto)resp="data: "+a.stringify_Unformatted()+"\n";
         }
         if(type=="response.failed"){
             ans->stable=1001;
@@ -63,15 +100,15 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
             cppJSON info=a["error"];
             gpt6_set_info(ans,info?info:a);
         }
-        // if(type=="codex.rate_limits")ans->stable=1003;
     }else {
+        cppJSON a(resp.c_str());
+        if(!a)return;
         if(!issse){
-            cppJSON r(tmp.c_str());
-            ans->append=r["output"].clone();
-            ans->response_id=r["id"].valuestring();
-            f(ans,r["usage"]);
+            ans->append=a["output"].clone();
+            ans->response_id=a["id"].valuestring();
+            f(ans,a["usage"]);
+            if(ans->isauto)resp=a.stringify_Unformatted();
         }
-        cppJSON a(&tmp[0]);
         gpt6_set_info(ans,a["error"]);
         if(a["code"]=="GROUP_DISABLED")ans->stable=1007;
         string p=a["error"]["type"];
@@ -81,20 +118,49 @@ void gpt6_parse_responses(gpt6_ret* ans,string& tmp,bool issse){
         if(p=="invalid_request_error")ans->stable=2;
     }
 }
-void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
+void gpt6_parse_completions(gpt6_ret* ans,string& resp,bool issse){
+    /**
+    "usage": {
+        "prompt_tokens": 73,
+        "completion_tokens": 72,
+        "total_tokens": 145,
+        "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 0,
+            "audio_tokens": 0,
+            "video_tokens": 0
+        },
+        "completion_tokens_details": {
+            "reasoning_tokens": 28,
+            "image_tokens": 0,
+            "audio_tokens": 0,
+            "accepted_prediction_tokens": 0,
+            "rejected_prediction_tokens": 0
+        }
+    }
+     */
     auto f=[](gpt6_ret* ans,cppJSON usage){
         if(!usage.IsObject())return;
         ans->input=max(ans->input,usage["prompt_tokens"].valuedouble());
         ans->output=max(ans->output,usage["completion_tokens"].valuedouble());
-        ans->cache=max(ans->cache,usage["prompt_tokens_details"]["cached_tokens"].valuedouble());
-        ans->makecache=max(ans->makecache,usage["prompt_tokens_details"]["cache_write_tokens"].valuedouble());
+        ans->costcache=ans->cache=max(ans->costcache,usage["prompt_tokens_details"]["cached_tokens"].valuedouble());
+        ans->costmakecache=ans->makecache=max(ans->costmakecache,usage["prompt_tokens_details"]["cache_write_tokens"].valuedouble());
         ans->used_tokens=max(ans->used_tokens,max(usage["total_tokens"].valuedouble(),ans->input+ans->output));
+        if(ans->isauto){
+            fakecache(ans);
+            char ttt[1024];
+            sprintf(ttt,R"({"prompt_tokens": %lld,"completion_tokens": %lld,"total_tokens": %lld,"prompt_tokens_details": {"cached_tokens": %lld,"cache_write_tokens": %lld,"audio_tokens": %lld,
+                "video_tokens": %lld},"completion_tokens_details": {"reasoning_tokens": %lld,"image_tokens": %lld,"audio_tokens": %lld,"accepted_prediction_tokens": %lld,"rejected_prediction_tokens": %lld}})",
+                ans->input,ans->output,ans->used_tokens,ans->cache,ans->makecache,0ll,0ll,(ll)usage["completion_tokens_details"]["reasoning_tokens"].valuedouble(),0ll,0ll,0ll,0ll);
+            usage.replace(cppJSON(ttt));
+        }
     };
-    if(issse&&tmp.find("data: ")==0){
-        cppJSON res(tmp.data()+6);
+    if(issse&&resp.find("data: ")==0){
+        cppJSON res(resp.data()+6);
         if(!res.IsObject())return;
         gpt6_set_info(ans,res["error"]);
         f(ans,res["usage"]);
+        if(ans->isauto)resp="data: "+res.stringify_Unformatted()+"\n";
         if(ans->response_id.empty())ans->response_id=res["id"].valuestring();
         cppJSON delta=res["choices"][0]["delta"];
         if(!delta.IsObject())return;
@@ -124,41 +190,66 @@ void gpt6_parse_completions(gpt6_ret* ans,string& tmp,bool issse){
             }
             if(ans->append[0]["content"].valuestring().empty())ans->append[0].insert("content",(const char*)0);
         }
-        return;
     }else{
+        cppJSON a(resp.c_str());
+        if(!a)return;
         if(!issse){
-            cppJSON res=cppJSON(tmp.c_str());
-            gpt6_set_info(ans,res["error"]);
-            f(ans,res["usage"]);
-            cppJSON message=res["choices"][0]["message"].clone();
-            // message.erase("reasoning_content");//我不知道应不应该删
+            gpt6_set_info(ans,a["error"]);
+            f(ans,a["usage"]);
+            if(ans->isauto)resp=a.stringify_Unformatted();
+            cppJSON message=a["choices"][0]["message"].clone();
             if(message)ans->append.push_back(std::move(message));
-            ans->response_id=res["id"].valuestring();
+            ans->response_id=a["id"].valuestring();
         }
-        cppJSON a(&tmp[0]);
         gpt6_set_info(ans,a["error"]);
         string p=a["error"]["type"];
         if(p=="rate_limit_error")ans->stable=1001;
         if(p=="model_not_found")ans->stable=1002;
     }
 }
-void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
+void gpt6_parse_claude(gpt6_ret* ans,string& resp,bool issse){
+    /*
+    "usage": {
+        "input_tokens": 2,
+        "output_tokens": 1730,
+        "output_tokens_details": {
+            "thinking_tokens": 78
+        },
+        "cache_creation_input_tokens": 37636,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 37636
+        }
+    }
+    */
     auto f=[](gpt6_ret* ans,cppJSON usage){
         if(!usage.IsObject())return;
-        ll input=max(ans->input-ans->cache-ans->makecache,usage["input_tokens"].valuedouble());
+        ll input=max(ans->input-ans->costcache-ans->costmakecache,usage["input_tokens"].valuedouble());
         ans->output=max(ans->output,usage["output_tokens"].valuedouble());
-        ans->cache=max(ans->cache,usage["cache_read_input_tokens"].valuedouble());
-        ans->makecache_1h=max(ans->makecache_1h,usage["cache_creation"]["ephemeral_1h_input_tokens"].valuedouble());
-        ans->makecache=max(ans->makecache,usage["cache_creation_input_tokens"].valuedouble());
-        ans->makecache=max(ans->makecache,ans->makecache_1h);
+        ans->costcache=ans->cache=max(ans->costcache,usage["cache_read_input_tokens"].valuedouble());
+        ans->costmakecache_1h=ans->makecache_1h=max(ans->costmakecache_1h,usage["cache_creation"]["ephemeral_1h_input_tokens"].valuedouble());
+        ans->costmakecache=max(ans->costmakecache,usage["cache_creation_input_tokens"].valuedouble());
+        ans->costmakecache=ans->makecache=max(ans->costmakecache,ans->makecache_1h);
         ans->input=input+ans->cache+ans->makecache;
         ans->used_tokens=ans->input+ans->output;
+        if(ans->isauto){
+            fakecache(ans);
+            char ttt[1024];
+            sprintf(ttt,R"({"input_tokens": %lld,"output_tokens": %lld,"output_tokens_details": {"thinking_tokens": %lld},"cache_creation_input_tokens": %lld,
+                "cache_read_input_tokens": %lld,"cache_creation": {"ephemeral_5m_input_tokens": %lld,"ephemeral_1h_input_tokens": %lld}})",
+                ans->input-ans->cache-ans->makecache,ans->output,(ll)usage["output_tokens_details"]["thinking_tokens"].valuedouble(),
+                ans->makecache,ans->cache,ans->makecache-ans->makecache_1h,ans->makecache_1h);
+            usage.replace(cppJSON(ttt));
+        }
     };
-    if(issse&&tmp.find("data: ")==0){
-        cppJSON res(tmp.data()+6),append,tmp;
+    if(issse&&resp.find("data: ")==0){
+        cppJSON res(resp.data()+6),append,tmp;
+        if(!res)return;
         gpt6_set_info(ans,res["error"]);
         f(ans,res["usage"]);
         f(ans,res["message"]["usage"]);
+        if(ans->isauto)resp="data: "+res.stringify_Unformatted()+"\n";
         if(ans->response_id.empty())ans->response_id=res["message"]["id"].valuestring();
         string type=res["type"];
         if(!ans->append.size())ans->append=cppJSON(R"([{"role":"assistant","content":[]}])");
@@ -181,10 +272,12 @@ void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
         }
         if(type=="error")ans->stable=1001;
     }else{
+        cppJSON res(resp.c_str());
+        if(!res)return;
         if(!issse){//未验证
-            cppJSON res(tmp.c_str(),(int)tmp.size());
             gpt6_set_info(ans,res["error"]);
             f(ans,res["usage"]);
+            if(ans->isauto)resp=res.stringify_Unformatted();
             ans->response_id=res["id"].valuestring();
             if(!(res["type"]=="message"))return;
             cppJSON history("{}");
@@ -200,11 +293,12 @@ void gpt6_parse_claude(gpt6_ret* ans,string& tmp,bool issse){
     }
 }
 void gpt6_parse_gemini(gpt6_ret* ans,string& tmp,bool issse){//未验证
+    //暂不做faketoken
     auto f=[](gpt6_ret* ans,cppJSON usage){
         if(!usage.IsObject())return;
         ans->input=max(ans->input,usage["promptTokenCount"].valuedouble());
         ans->output=max(ans->output,usage["candidatesTokenCount"].valuedouble()+usage["thoughtsTokenCount"].valuedouble());
-        ans->cache=max(ans->cache,usage["cachedContentTokenCount"].valuedouble());
+        ans->costcache=ans->cache=max(ans->cache,usage["cachedContentTokenCount"].valuedouble());
         ans->used_tokens=max(ans->used_tokens,usage["totalTokenCount"].valuedouble());
     };
     if(issse&&tmp.find("data: ")==0){
@@ -260,6 +354,7 @@ void gpt6_parse(gpt6_ret* ans,string tmp,bool issse){//处理 append used_tokens
     if(strcmp(ans->format,"claude")==0)gpt6_parse_claude(ans,tmp,issse);
     if(strcmp(ans->format,"gemini")==0)gpt6_parse_gemini(ans,tmp,issse);
     if(strcmp(ans->format,"image")==0)gpt6_parse_image(ans,tmp,issse);
+    if(ans->a)ans->ca+=tmp;
 }
 static size_t gpt6header(char* ptr,size_t size,size_t count,void* userdata) {
     gpt6_ret* p=(gpt6_ret*)userdata;
@@ -269,7 +364,7 @@ static size_t gpt6header(char* ptr,size_t size,size_t count,void* userdata) {
 }
 void gpt6_flush(gpt6_ret* ans){
     if(!ans->send)return;
-    http_send(ans->a,0,ans->ca.data(),ans->ca.size());
+    if(ans->a)http_send(ans->a,0,ans->ca.data(),ans->ca.size());
     ans->ca.clear();
 }
 static size_t gpt6body(void* ptr,size_t size,size_t count,void* userdata) {
@@ -285,14 +380,13 @@ static size_t gpt6body(void* ptr,size_t size,size_t count,void* userdata) {
         head+=ans->issse==2?Hsse Hc0 Hclo "\r\n":Hjson Hc0 Hclo "\r\n";
         if(ans->a)ans->ca+=head;
     }
-    if(ans->a)ans->ca+=string((char*)ptr,n);
     string tmp((char*)ptr,n);
     if(ans->issse==2)ans->bodydelta+=tmp;
     ans->body+=tmp;
     if(ans->issse==2&&tmp.find('\n')!=string::npos){
         size_t u=0;
         while((u=ans->bodydelta.find('\n'))!=string::npos){
-            gpt6_parse(ans,ans->bodydelta.substr(0,u),true);
+            gpt6_parse(ans,ans->bodydelta.substr(0,u+1),true);
             ans->bodydelta=ans->bodydelta.substr(u+1);
         }
     }
@@ -356,9 +450,12 @@ static void gpt6_responses_sum2rea(cppJSON& request){//这个函数ai写的！
         item.insert("summary",std::move(remaining));
     }
 }
-gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON conf,const char* format,bool send_before_first){
+gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON conf,const char* format,bool send_before_first,ll fakewant,bool hasmakecache,bool isauto){
     if(conf["map"][model].IsString())model=conf["map"][model].a->valuestring;
     gpt6_ret ans{};
+    ans.fakewant=fakewant;
+    ans.isauto=isauto;
+    ans.hasmakecache=hasmakecache;
     ans.send=send_before_first;
     ans.a=a;
     ans.format=format;
@@ -436,10 +533,8 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(ans.info.empty()&&ans.curlcode!=0)ans.info=curl_error[0]?curl_error:curl_easy_strerror((CURLcode)ans.curlcode);
     if(ans.info.empty()&&ans.httpcode>=400)ans.info=ans.body;
     if(ans.used_tokens)ans.stable=ans.stable<=1?1/*正常*/:0/*有花费并且有问题，需要写日志人工看看*/;
-    if(ans.send==0&&ans.stable==1){
-        ans.send=1;
-        gpt6_flush(&ans);
-    }
+    if(ans.send==0&&ans.stable==1)ans.send=1;
+    gpt6_flush(&ans);
     return ans;
 }
 string gpt6_request_model(http_para* a,const cppJSON& request,const string& format) {
