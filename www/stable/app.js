@@ -1,9 +1,15 @@
 const BUCKET_COUNT = 3 * 24 * 4;
 const BUCKET_MS = 15 * 60 * 1000;
 const CNY_PER_MILLION_CREDITS = 0.3;
+const PAGE_SIZE = 10;
+const bucketTimeFormat = new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+});
+const costFormat = new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 6});
 
 const state = {
     items: [],
+    page: 0,
     privateStatsLoaded: false,
     filter: 'all',
     search: '',
@@ -12,6 +18,10 @@ const state = {
 
 const elements = {
     list: document.getElementById('providerList'),
+    pager: document.getElementById('providerPager'),
+    pageInfo: document.getElementById('pageInfo'),
+    prevPage: document.getElementById('prevPage'),
+    nextPage: document.getElementById('nextPage'),
     notice: document.getElementById('notice'),
     empty: document.getElementById('emptyState'),
     template: document.getElementById('providerTemplate'),
@@ -55,10 +65,10 @@ function normalizeStatValue(value) {
     return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
-function formatCost(amount) {
+function formatCost(amount, prefix = '¥') {
     if (!Number.isFinite(amount)) return '--';
-    if (amount > 0 && amount < 0.000001) return '<¥0.000001';
-    return '¥' + new Intl.NumberFormat('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 6}).format(amount);
+    if (amount > 0 && amount < 0.000001) return `<${prefix}0.000001`;
+    return prefix + costFormat.format(amount);
 }
 
 function bucketLevel(bucket) {
@@ -79,15 +89,14 @@ function sumBuckets(buckets) {
 
 function normalizeBuckets(raw, currentBucket) {
     const values = Array.isArray(raw) ? raw : [];
-    const physical = Array.from({length: BUCKET_COUNT}, (_, index) => ({
-        stable: Number(values[index * 2]) || 0,
-        total: Number(values[index * 2 + 1]) || 0
-    }));
-
     return Array.from({length: BUCKET_COUNT}, (_, index) => {
         const number = currentBucket - BUCKET_COUNT + 1 + index;
         const physicalIndex = ((number % BUCKET_COUNT) + BUCKET_COUNT) % BUCKET_COUNT;
-        return {...physical[physicalIndex], number, start: number * BUCKET_MS};
+        return {
+            stable: Number(values[physicalIndex * 2]) || 0,
+            total: Number(values[physicalIndex * 2 + 1]) || 0,
+            start: number * BUCKET_MS
+        };
     });
 }
 
@@ -170,8 +179,9 @@ async function loadData() {
     if (elements.refresh.disabled) return;
     state.items = [];
     state.privateStatsLoaded = false;
-    hideTooltip();
-    render();
+    updateSummary(state.items);
+    updateAutoProfit();
+    renderList();
     elements.empty.hidden = true;
     elements.refresh.disabled = true;
     elements.refresh.classList.add('refreshing');
@@ -217,7 +227,9 @@ async function loadData() {
             elements.notice.textContent = privateError;
         }
         elements.updatedAt.textContent = `${new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})} 更新`;
-        render();
+        updateSummary(state.items);
+        updateAutoProfit();
+        renderList();
     } catch (error) {
         elements.list.innerHTML = '';
         elements.notice.hidden = false;
@@ -245,8 +257,7 @@ function makeHeatmap(item, container) {
         row.className = 'heat-day';
         const label = document.createElement('span');
         label.className = 'day-label';
-        const date = new Date(dayBuckets[0].start);
-        label.textContent = date.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+        label.textContent = bucketTimeFormat.format(dayBuckets[0].start);
         row.appendChild(label);
 
         dayBuckets.forEach(bucket => {
@@ -258,11 +269,6 @@ function makeHeatmap(item, container) {
             cell.dataset.stable = String(bucket.stable);
             cell.dataset.total = String(bucket.total);
             cell.setAttribute('aria-label', bucketAriaLabel(bucket));
-            cell.addEventListener('mouseenter', showTooltip);
-            cell.addEventListener('mousemove', moveTooltip);
-            cell.addEventListener('mouseleave', hideTooltip);
-            cell.addEventListener('focus', showTooltip);
-            cell.addEventListener('blur', hideTooltip);
             row.appendChild(cell);
         });
         container.appendChild(row);
@@ -280,16 +286,15 @@ function makeHeatmap(item, container) {
 }
 
 function bucketAriaLabel(bucket) {
-    const time = new Date(bucket.start).toLocaleString('zh-CN', {
-        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    });
+    const time = bucketTimeFormat.format(bucket.start);
     return bucket.total
         ? `${time}，稳定率 ${formatRate(bucket.stable, bucket.total)}，${bucket.total} 次请求`
         : `${time}，无请求`;
 }
 
 function showTooltip(event) {
-    const cell = event.currentTarget;
+    const cell = event.target;
+    if (!cell.classList.contains('heat-cell')) return;
     const start = Number(cell.dataset.start);
     const stable = Number(cell.dataset.stable);
     const total = Number(cell.dataset.total);
@@ -305,7 +310,7 @@ function showTooltip(event) {
 }
 
 function moveTooltip(event) {
-    if (!elements.tooltip.hidden) positionTooltip(event, event.currentTarget);
+    if (!elements.tooltip.hidden && event.target.classList.contains('heat-cell')) positionTooltip(event, event.target);
 }
 
 function positionTooltip(event, cell) {
@@ -349,8 +354,7 @@ function createProviderRow(item) {
             element.textContent = Number.isFinite(value) ? formatNumber(value) : '--';
             element.title = Number.isFinite(value) ? String(value) : '';
         });
-        fragment.querySelector('.official-cost').textContent = formatCost(stats.o_cost);
-        fragment.querySelector('.official-cost').title = '后端累计原价成本，人民币';
+        fragment.querySelector('.official-cost').textContent = formatCost(stats.o_cost, '');
         fragment.querySelector('.usage-cost').textContent = formatCost(stats.cost);
         fragment.querySelector('.usage-sell').textContent = formatCost(
             Number.isFinite(stats.sell) ? stats.sell / 1000000 * CNY_PER_MILLION_CREDITS : NaN);
@@ -407,15 +411,20 @@ function updateSummary(items) {
     indicator.className = `large-indicator ${status}`;
 }
 
-function render() {
-    updateSummary(state.items);
-    updateAutoProfit();
+function renderList(page = 0) {
+    hideTooltip();
     const items = filteredItems();
-    elements.list.innerHTML = '';
+    const pages = Math.ceil(items.length / PAGE_SIZE);
+    state.page = Math.max(0, Math.min(page, pages - 1));
+    const start = state.page * PAGE_SIZE;
     const fragment = document.createDocumentFragment();
-    items.forEach(item => fragment.appendChild(createProviderRow(item)));
-    elements.list.appendChild(fragment);
+    items.slice(start, start + PAGE_SIZE).forEach(item => fragment.appendChild(createProviderRow(item)));
+    elements.list.replaceChildren(fragment);
     elements.empty.hidden = items.length > 0;
+    elements.pager.hidden = pages <= 1;
+    elements.pageInfo.textContent = pages ? `${state.page + 1} / ${pages} 页 · 共 ${items.length} 个渠道` : '';
+    elements.prevPage.disabled = state.page === 0;
+    elements.nextPage.disabled = state.page + 1 >= pages;
 }
 
 function updateAutoProfit() {
@@ -435,21 +444,31 @@ function updateAutoProfit() {
     elements.profit.title = Number.isFinite(profit) ? '' : '部分 auto 渠道费用数据缺失，无法计算完整差额';
 }
 
+elements.list.addEventListener('mouseover', showTooltip);
+elements.list.addEventListener('mousemove', moveTooltip);
+elements.list.addEventListener('mouseout', hideTooltip);
+elements.list.addEventListener('focusin', showTooltip);
+elements.list.addEventListener('focusout', hideTooltip);
+elements.pager.addEventListener('click', event => {
+    if (event.target !== elements.prevPage && event.target !== elements.nextPage) return;
+    renderList(state.page + (event.target === elements.prevPage ? -1 : 1));
+    elements.list.scrollIntoView({block: 'start'});
+});
 elements.refresh.addEventListener('click', loadData);
 elements.search.addEventListener('input', event => {
     state.search = event.target.value;
-    render();
+    renderList();
 });
 elements.filters.addEventListener('click', event => {
     const button = event.target.closest('button[data-filter]');
     if (!button) return;
     state.filter = button.dataset.filter;
     elements.filters.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
-    render();
+    renderList();
 });
 elements.sort.addEventListener('change', event => {
     state.sort = event.target.value;
-    render();
+    renderList();
 });
 
 loadData();

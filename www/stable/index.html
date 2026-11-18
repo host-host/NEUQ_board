@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <title>Provider 稳定性 - NEUQ Board</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=1014v1">
+    <link rel="stylesheet" href="style.css?v=1118v1">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
@@ -103,6 +103,11 @@
                 <span>正在获取 Provider 状态</span>
             </div>
             <div id="providerList" class="provider-list" aria-live="polite"></div>
+            <nav id="providerPager" class="provider-pager" aria-label="渠道列表分页" hidden>
+                <button id="prevPage" type="button" class="admin-link">上一页</button>
+                <span id="pageInfo" role="status"></span>
+                <button id="nextPage" type="button" class="admin-link">下一页</button>
+            </nav>
             <div id="emptyState" class="empty-state" hidden>
                 <strong>没有符合条件的线路</strong>
                 <span>调整搜索内容或状态筛选</span>
@@ -180,7 +185,7 @@
                             <dd class="usage-tps">--</dd>
                         </div>
                         <div data-private-stat hidden>
-                            <dt>累计原价成本（¥）</dt>
+                            <dt>累计原价成本</dt>
                             <dd class="official-cost">--</dd>
                         </div>
                         <div data-private-stat hidden>
@@ -199,6 +204,6 @@
     </template>
 
     <div id="heatTooltip" class="heat-tooltip" role="tooltip" hidden></div>
-    <script src="app.js?v=1027v1"></script>
+    <script src="app.js?v=1118v1"></script>
 </body>
 </html>

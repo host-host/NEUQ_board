@@ -33,7 +33,7 @@ static bool same(const cppJSON& a,const cppJSON& b) {
     return a.has("thoughtSignature")&&b.has("thoughtSignature");
 }
 void fakecache(gpt6_ret* ans){
-    ll m=min(ans->fakewant,ans->input-2)-ans->cache;
+    ll m=min(ans->fakewant,ans->input-14)-ans->cache;
     if(m<0)m=0;
     ans->cache+=m;
     ll mm=std::min(m,ans->makecache);

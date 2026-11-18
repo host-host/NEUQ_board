@@ -249,7 +249,10 @@ button { color: inherit; }
 .heat-warn { background: #e7ad4e; }
 .heat-bad { background: #d65a63; }
 
-.provider-list { display: grid; gap: 10px; }
+.provider-list { display: grid; gap: 10px; scroll-margin-top: 68px; }
+.provider-pager:not([hidden]) { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; color: var(--muted); font-size: 13px; }
+.provider-pager button { cursor: pointer; }
+.provider-pager button:disabled { opacity: .5; cursor: default; }
 
 .provider-row {
     min-width: 0;
