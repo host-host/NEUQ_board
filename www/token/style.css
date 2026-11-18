@@ -254,7 +254,7 @@ input::placeholder { color: var(--muted); }
 .model-price-button:hover, .model-price-button[aria-expanded="true"] { color: var(--accent-hover); }
 .model-log-button { display: inline-grid; place-items: center; flex-shrink: 0; width: 22px; height: 26px; padding: 0; background: transparent; color: #b45309; cursor: help; }
 .model-log-button:hover, .model-log-button:focus-visible { color: #92400e; }
-.model-log-icon { width: 16px; height: 16px; fill: var(--accent-soft); stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.model-log-icon { width: 22px; height: 22px; fill: var(--accent-soft); stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .provider-picker { min-width: 0; }
 .provider-select-trigger {
     -webkit-appearance: none;
