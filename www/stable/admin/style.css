@@ -24,7 +24,7 @@ select:focus, #refreshButton:focus-visible, .grant-open-button:focus-visible { b
 .grant-open-button { padding:0 14px; border-color:var(--accent); background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .grant-open-button span { margin-right:3px; font-size:18px; font-weight:400; line-height:1; }
 .grant-open-button:hover { background:#c2410c; color:#fff; }
-.filter-bar { display:grid; grid-template-columns:minmax(220px,1.2fr) minmax(190px,1fr) minmax(190px,1fr) auto; align-items:end; gap:12px; margin-bottom:20px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.filter-bar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; gap:12px; margin-bottom:20px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .filter-control { display:grid; gap:6px; color:var(--muted); font-size:12px; }
 .filter-control input { width:100%; min-width:0; height:38px; padding:0 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); outline:0; }
 .filter-control input:focus { border-color:var(--accent); }
@@ -114,7 +114,6 @@ th:nth-child(n+6):not(:last-child), td:nth-child(n+6):not(:last-child) { text-al
 .grant-dialog-actions button:disabled { opacity:.55; cursor:not-allowed; }
 @media (max-width:900px) {
     .filter-bar { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .user-filter { grid-column:1 / -1; }
     .filter-actions { justify-content:flex-end; }
 }
 @media (max-width:700px) {
@@ -123,7 +122,6 @@ th:nth-child(n+6):not(:last-child), td:nth-child(n+6):not(:last-child) { text-al
     .panel-heading { align-items:flex-start; flex-direction:column; }
     .list-controls { width:100%; flex-wrap:wrap; justify-content:space-between; }
     .filter-bar { grid-template-columns:1fr; }
-    .user-filter { grid-column:auto; }
     .filter-actions button { flex:1; }
     .grant-dialog { width:min(100% - 24px,520px); }
     .grant-result { grid-template-columns:1fr; }

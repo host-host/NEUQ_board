@@ -9,6 +9,8 @@
 #include <limits>
 #include <queue>
 #include <string>
+#include <string_view>
+#include <unordered_set>
 #include <vector>
 using namespace std;
 
@@ -67,7 +69,7 @@ struct admin_log_cursor_less{
         return a.index<b.index;
     }
 };
-static bool admin_contains_ignore_case(const string& value,const string& query){
+static bool admin_contains_ignore_case(string_view value,const string& query){
     if(query.empty())return true;
     if(query.size()>value.size())return false;
     for(size_t i=0;i+query.size()<=value.size();i++){
@@ -123,8 +125,27 @@ void admin_log_list(http_para* a){
     cppJSON start=req["start"],end=ans["end"],items=ans["item"];
     long long from=req["from"].valuedouble(),to=req["to"].valuedouble();
     string user_query=req["user"].valuestring();
-    if(from<0||to<0||(from&&to&&from>to)||user_query.size()>64)
+    cppJSON model=req["model"],excluded=req["exclude_users"];
+    string model_query=model.valuestring();
+    if(from<0||to<0||(from&&to&&from>to)||user_query.size()>64||
+       (model&&(!model.IsString()||model_query.size()>64))||(excluded&&!excluded.IsArray()))
         return http_send(a,H400 Hjson Hc0,"{\"error\":{\"message\":\"Bad request.\"}}",0);
+    unordered_set<string> excluded_users;
+    for(cppJSON entry:excluded){
+        string name=entry.valuestring();
+        if(!entry.IsString()||name.empty()||name.size()>=sizeof(user_::name))
+            return http_send(a,H400 Hjson Hc0,"{\"error\":{\"message\":\"Invalid excluded username.\"}}",0);
+        excluded_users.insert(std::move(name));
+    }
+    auto matching_index=[&](const reslogs* entries,int index){
+        for(;index>=0;index--){
+            const reslog& log=entries->a[index];
+            if(from&&log.time<from)break;
+            if(to&&log.time>to)continue;
+            if(model_query.empty()||admin_contains_ignore_case(log.model,model_query))return index;
+        }
+        return -1;
+    };
     priority_queue<admin_log_cursor,vector<admin_log_cursor>,admin_log_cursor_less> logs;
     char key[48]={0};
     for(reslogs* value=(reslogs*)ndb2_next(log_db,key);value;value=(reslogs*)ndb2_next(log_db,key)){
@@ -138,11 +159,11 @@ void admin_log_list(http_para* a){
         user_* owner=getuser_by_id(key);
         string username=owner?string(owner->name,strnlen(owner->name,sizeof(owner->name))):string();
         string userid=key;
-        if(!admin_user_matches(userid,username,user_query))continue;
+        if(excluded_users.count(username)||!admin_user_matches(userid,username,user_query))continue;
         int index=start.IsObject()?(int)start[key].valuedouble():n-1;
         if(index>=n)index=n-1;
-        while(index>=0&&to&&value->a[index].time>to)index--;
-        if(index<0||(from&&value->a[index].time<from))continue;
+        index=matching_index(value,index);
+        if(index<0)continue;
         end.insert(key,(double)index);
         logs.push({value,index,std::move(userid),std::move(username)});
     }
@@ -150,8 +171,8 @@ void admin_log_list(http_para* a){
         admin_log_cursor current=logs.top();
         logs.pop();
         items.push_back(admin_log_json(current));
-        current.index--;
-        if(current.index>=0&&(!from||current.logs->a[current.index].time>=from)){
+        current.index=matching_index(current.logs,current.index-1);
+        if(current.index>=0){
             end.insert(current.userid.c_str(),(double)current.index);
             logs.push(std::move(current));
         }else end.erase(current.userid.c_str());

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>全用户 API 日志</title>
-    <link rel="stylesheet" href="style.css?v=1118v1">
+    <link rel="stylesheet" href="style.css?v=1119v1">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
@@ -34,8 +34,14 @@
             </div>
 
             <form id="filterForm" class="filter-bar">
-                <label class="filter-control user-filter">用户
+                <label class="filter-control">用户
                     <input id="userFilter" type="search" maxlength="64" placeholder="用户名或用户 ID" autocomplete="off">
+                </label>
+                <label class="filter-control">排除用户名（完整匹配，区分大小写）
+                    <input id="excludeUsersFilter" type="text" placeholder="多个用户名用逗号或空格分隔" autocomplete="off">
+                </label>
+                <label class="filter-control">模型
+                    <input id="modelFilter" type="search" maxlength="64" placeholder="模型名称或关键词" autocomplete="off">
                 </label>
                 <label class="filter-control">开始时间
                     <input id="fromFilter" type="datetime-local" step="1">
@@ -148,6 +154,6 @@
             </footer>
         </form>
     </dialog>
-    <script src="app.js?v=1118v1"></script>
+    <script src="app.js?v=1119v1"></script>
 </body>
 </html>
