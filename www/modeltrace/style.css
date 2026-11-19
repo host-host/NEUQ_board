@@ -10,15 +10,40 @@
 .mt-button { min-height: 36px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; white-space: nowrap; flex: 0 0 auto; }
 .mt-button:hover:enabled { background: var(--surface-soft); border-color: #94a3b0; }
 .mt-button:disabled { cursor: not-allowed; opacity: .55; }
-.mt-button:focus-visible, .mt-group textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.mt-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .mt-button-primary { background: var(--blue); border-color: var(--blue); color: #fff; min-width: 96px; }
 .mt-button-primary:hover:enabled { background: #1d508a; border-color: #1d508a; }
 
 .mt-prompt { margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-soft); font: inherit; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .mt-group { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--surface-soft); }
-.mt-group textarea { display: block; width: 100%; min-height: 190px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--text); resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.55; }
-.mt-group textarea + textarea { margin-top: 10px; }
+.mt-sample-list { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.mt-sample { width: min(100%, 240px); border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); }
+.mt-sample:focus-within { border-color: var(--blue); box-shadow: 0 0 0 2px #2563a826; }
+.mt-sample-head { display: flex; justify-content: space-between; align-items: center; padding: 7px 11px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.mt-sample-head label { cursor: text; }
+.mt-format-button { min-height: 24px; padding: 2px 7px; font-size: 12px; }
+.mt-sample textarea {
+    --cell-height: 16px;
+    --frame-width: calc(20ch + 20px);
+    --frame-height: calc(20 * var(--cell-height));
+    display: block;
+    width: 100%;
+    height: calc(var(--frame-height) + 60px);
+    padding: 12px;
+    border: 0;
+    border-radius: 0 0 8px 8px;
+    outline: none;
+    background:
+        linear-gradient(var(--surface), var(--surface)) 12px 12px / calc(var(--frame-width) - 1px) calc(var(--frame-height) - 1px) no-repeat,
+        linear-gradient(var(--line), var(--line)) 11px 11px / calc(var(--frame-width) + 1px) calc(var(--frame-height) + 1px) no-repeat,
+        var(--surface);
+    color: var(--text);
+    resize: vertical;
+    font: 14px/var(--cell-height) ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 1px;
+}
+.mt-sample textarea::placeholder { color: var(--muted); }
 .mt-add-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 13px; }
 .mt-add-row .mt-button { min-width: 40px; font-size: 18px; line-height: 1; }
 .mt-group-foot { margin-top: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }

@@ -34,10 +34,21 @@ function addSample() {
     const box = $('sampleList');
     if (box.children.length >= MAX_SAMPLES) return;
     const n = box.children.length + 1;
-    const ta = el('textarea'); ta.spellcheck = false; ta.setAttribute('aria-label', '第 ' + n + ' 条模型回复');
-    ta.placeholder = n === 1 ? '把模型的回复粘贴到这里。' : '把同一个模型的第 ' + n + ' 条回复粘贴到这里。';
+    const sample = el('div', 'mt-sample');
+    const head = el('div', 'mt-sample-head');
+    const label = el('label', '', '第 ' + n + ' 条回复');
+    const ta = el('textarea'); ta.spellcheck = false; ta.wrap = 'off';
+    ta.id = 'mt-sample-' + n; label.htmlFor = ta.id;
+    ta.placeholder = '在此粘贴模型回复';
     ta.addEventListener('input', updateFoot);
-    box.append(ta);
+    const format = el('button', 'mt-button mt-format-button', '格式化');
+    format.type = 'button';
+    format.setAttribute('aria-label', '格式化第 ' + n + ' 条回复');
+    format.addEventListener('click', () => {
+        ta.value = ta.value.replace(/\\n/g, '\n').replace(/[^A-Za-z\n]/g, '');
+        updateFoot();
+    });
+    head.append(label, format); sample.append(head, ta); box.append(sample);
     $('addSample').disabled = box.children.length >= MAX_SAMPLES;
     return ta;
 }
