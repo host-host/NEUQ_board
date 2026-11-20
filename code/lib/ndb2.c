@@ -162,6 +162,7 @@ static ll ndb_allocate(ndb*a,ll len){
     a->cptr2=newptr2;
     mb();
     a->filelen=end;
+    mb();
     a->lenlock=0;
     return newptr2-need;
 }
