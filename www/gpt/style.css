@@ -1502,6 +1502,17 @@ body, html {
     color: #ffffff;
 }
 
+.sidebar-provider {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
 /* 移动端顶距覆盖 */
 @media (max-width: 768px) {
     .sidebar-aside {

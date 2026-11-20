@@ -52,6 +52,7 @@ async function ensureGpt5ApiKey() {
     }
     gpt5ApiKey = data.api_key;
     defaultProviders = data.selected_provider || {};
+    updateSidebarProvider();
     if (document.getElementById('selectionModal').open) renderProviderOptions();
     return gpt5ApiKey;
 }
@@ -106,6 +107,16 @@ function availableModelVariants(name, requireAccess = true) {
     return model.variants.filter(variant => !requireAccess || variant.isPublic || isAdmin);
 }
 
+function updateSidebarProvider() {
+    const selected = document.getElementById('selectButton');
+    const name = selected.textContent;
+    const defaultProvider = defaultProviders[name];
+    const defaultLabel = typeof defaultProvider === 'string' && defaultProvider ? `默认(${defaultProvider})` : '默认';
+    document.getElementById('sidebarProvider').textContent = modelCatalog.has(name)
+        ? selected.dataset.provider || defaultLabel
+        : '—';
+}
+
 function setSelectedModel(name, provider = '') {
     const selectButton = document.getElementById('selectButton');
     const allVariants = availableModelVariants(name, false);
@@ -119,6 +130,7 @@ function setSelectedModel(name, provider = '') {
     selectButton.textContent = name;
     selectButton.dataset.provider = provider;
     selectButton.dataset.format = variant.format;
+    updateSidebarProvider();
     document.querySelectorAll('#modelsContainer button').forEach(button => {
         button.setAttribute('aria-pressed', button.textContent === name);
     });
@@ -205,7 +217,7 @@ async function handleLogout(event) {//注销登录
 function openModelPicker() {
     renderProviderOptions();
     document.getElementById('selectionModal').showModal();
-    focusPickerPage('modelsContainer');
+    focusPickerPage('modelsContainer', false);
 }
 
 function selectModelInPicker(name) {
@@ -213,12 +225,14 @@ function selectModelInPicker(name) {
     focusPickerPage('providerOptions');
 }
 
-function focusPickerPage(id) {
+function focusPickerPage(id, animate = true) {
     const list = document.getElementById(id);
-    if (window.matchMedia('(max-width: 768px)').matches) {
-        list.closest('section').scrollIntoView({block: 'nearest', inline: 'start'});
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) {
+        const smooth = animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        list.closest('section').scrollIntoView({behavior: smooth ? 'smooth' : 'instant', block: 'nearest', inline: 'start'});
     }
-    list.querySelector('[aria-pressed="true"]')?.focus();
+    list.querySelector('[aria-pressed="true"]')?.focus({preventScroll: isMobile});
 }
 
 function renderProviderOptions() {
@@ -239,8 +253,8 @@ function renderProviderOptions() {
         button.textContent = provider || '默认';
         button.setAttribute('aria-pressed', provider === selected.dataset.provider);
         button.onclick = () => {
-            document.getElementById('selectionModal').close();
             setSelectedModel(name, provider);
+            focusPickerPage('providerOptions');
         };
         row.appendChild(button);
         let note = '';
