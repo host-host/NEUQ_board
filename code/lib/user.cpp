@@ -33,12 +33,17 @@ static inline int min(int x,int y){
     return x<y?x:y;
 }
 user_* getuser(const char* get){
-	char* tmpp=(char*)strstr(get,"ookie: id=");
-	if(tmpp){
-		char kb[9];
-		user_* p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),0);
-		if(p1&&ndb2_gotmaxlen(p1)<(ll)sizeof(user_))p1=(user_*)ndb2_got(user,idkey(tmpp+10,kb),sizeof(user_));
-		if(p1&&memcmp(tmpp+10+8,p1->cookie_rand,8)==0&&time(0)<p1->time)return p1;
+	const char* t=strcasestr(get,"\ncookie:");
+	if(t){
+		char* end=(char*)strstr(t,"\r\n"),td[10]={0};
+		if(!end||end-t>20480)return 0;
+		while((t=strstr(t,"id="))){
+			if(t>end)break;
+			memcpy(td,t+=3,8);
+			user_* p1=(user_*)ndb2_got(user,td,0);
+			if(p1&&ndb2_gotmaxlen(p1)<(ll)sizeof(user_))p1=(user_*)ndb2_got(user,td,sizeof(user_));
+			if(p1&&memcmp(t+8,p1->cookie_rand,8)==0&&time(0)<p1->time)return p1;
+		}
 	}
     return 0;
 }
