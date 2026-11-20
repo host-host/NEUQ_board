@@ -10,17 +10,31 @@
     <link rel="stylesheet" href="/cdn/cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="/cdn/cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="/cdn/cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.8/purify.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=1015v1">
+    <link rel="stylesheet" href="style.css?v=1120v7">
     <script src="/auth.js?v=0910v2" defer></script>
 </head>
 <body>
-    <div id="selectionModal" class="modal">
-        <div class="modal-content ai-container">
-            <span class="close" onclick="document.getElementById('selectionModal').style.display = 'none'">&times;</span>
-            <h3 class="modal-title">模型</h3>
-            <div id="modelsContainer"></div>
+    <dialog id="selectionModal" class="modal" aria-labelledby="modelPickerTitle" onclick="if (event.target === this) this.close()">
+        <div class="modal-content">
+            <button type="button" class="close" aria-label="关闭" onclick="this.closest('dialog').close()">&times;</button>
+            <div class="picker-columns">
+                <section>
+                    <div class="picker-heading">
+                        <h3 id="modelPickerTitle" class="modal-title">模型</h3>
+                        <button type="button" class="picker-page-link" onclick="focusPickerPage('providerOptions')">渠道 →</button>
+                    </div>
+                    <div id="modelsContainer" class="model-options"></div>
+                </section>
+                <section id="providerPanel" aria-label="可选渠道">
+                    <div class="picker-heading">
+                        <h3 class="modal-title">渠道 <small>可选</small></h3>
+                        <button type="button" class="picker-page-link" onclick="focusPickerPage('modelsContainer')">← 模型</button>
+                    </div>
+                    <div id="providerOptions" class="model-options"></div>
+                </section>
+            </div>
         </div>
-    </div>
+    </dialog>
     <div class="app-layout">
         <aside class="sidebar-aside" id="sidebarPanel">
             <div class="sidebar-logo">
@@ -71,7 +85,7 @@
                     </div>
                 </div>
                 <div class="model-section">
-                    <button class="button-choice-sidebar" id="selectButton" onclick="document.getElementById('selectionModal').style.display = 'block'">载入中...</button>
+                    <button class="button-choice-sidebar" id="selectButton" aria-haspopup="dialog" onclick="openModelPicker()">载入中...</button>
                 </div>
             </div>
         </aside>
@@ -153,11 +167,11 @@
     </div>
     <script src="utils.js"></script><!-- 工具函数 -->
     <script src="ui.js?v=0920v3"></script><!-- 渲染ui -->
-    <script src="api.js?v=1015v1"></script><!-- 通用数据接口与会话管理 -->
+    <script src="api.js?v=1120v6"></script><!-- 通用数据接口与会话管理 -->
     <script src="api_completions.js?v=1102v1"></script><!-- Chat Completions 协议解析 -->
     <script src="api_responses.js?v=0920v1"></script><!-- Responses 协议解析 -->
     <script src="api_claude.js?v=0920v1"></script><!-- Claude Messages 原生协议 -->
     <script src="api_gemini.js?v=0920v1"></script><!-- Gemini generateContent 原生协议 -->
-    <script src="app.js?v=1102v1"></script><!-- 其他函数 -->
+    <script src="app.js?v=1120v2"></script><!-- 其他函数 -->
 </body>
 </html>

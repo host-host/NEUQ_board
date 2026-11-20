@@ -3,6 +3,7 @@ const modelCatalog = new Map();
 let isAdmin = false; // 当前用户是否有授权模型权限
 let isLoggedIn = false;
 let gpt5ApiKey = '';
+let defaultProviders = {};
 const chatTitleCache = {};
 const chatContentCache = {};
 let requestSettings = { max_tokens: '' };
@@ -50,6 +51,8 @@ async function ensureGpt5ApiKey() {
         throw new Error('服务器没有返回有效的 API 密钥');
     }
     gpt5ApiKey = data.api_key;
+    defaultProviders = data.selected_provider || {};
+    if (document.getElementById('selectionModal').open) renderProviderOptions();
     return gpt5ApiKey;
 }
 
@@ -103,19 +106,23 @@ function availableModelVariants(name, requireAccess = true) {
     return model.variants.filter(variant => !requireAccess || variant.isPublic || isAdmin);
 }
 
-function setSelectedModel(name, preferredFormat = currentChatFormat) {
+function setSelectedModel(name, provider = '') {
     const selectButton = document.getElementById('selectButton');
     const allVariants = availableModelVariants(name, false);
-    const variants = availableModelVariants(name);
+    const variants = availableModelVariants(name).filter(item => !provider || item.provider === provider);
     if (!selectButton || allVariants.length === 0) return;
     if (variants.length === 0) {
         alert('该模型需要授权后使用');
         return;
     }
-    const variant = variants.find(item => item.format === preferredFormat) || variants[0];
+    const variant = variants.find(item => item.format === currentChatFormat) || variants[0];
     selectButton.textContent = name;
-    selectButton.dataset.provider = variant.provider;
+    selectButton.dataset.provider = provider;
     selectButton.dataset.format = variant.format;
+    document.querySelectorAll('#modelsContainer button').forEach(button => {
+        button.setAttribute('aria-pressed', button.textContent === name);
+    });
+    if (document.getElementById('selectionModal').open) renderProviderOptions();
     updateModelCompatibilityWarning();
     requestSettings.max_tokens = '';
     showMaxTokensPresets();
@@ -177,6 +184,7 @@ function loaduser() {//加载用户信息
         isLoggedIn = Boolean(data.name);
         if (!data.name) {
             gpt5ApiKey = '';
+            defaultProviders = {};
             document.getElementById('drop').style.display = 'block';
             document.getElementById('userContainer').style.display = 'none';
         } else {
@@ -194,6 +202,60 @@ async function handleLogout(event) {//注销登录
     const response = await fetch('/api/logout', { method: 'POST' });
     location.reload();
 }
+function openModelPicker() {
+    renderProviderOptions();
+    document.getElementById('selectionModal').showModal();
+    focusPickerPage('modelsContainer');
+}
+
+function selectModelInPicker(name) {
+    if (document.getElementById('selectButton').textContent !== name) setSelectedModel(name);
+    focusPickerPage('providerOptions');
+}
+
+function focusPickerPage(id) {
+    const list = document.getElementById(id);
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        list.closest('section').scrollIntoView({block: 'nearest', inline: 'start'});
+    }
+    list.querySelector('[aria-pressed="true"]')?.focus();
+}
+
+function renderProviderOptions() {
+    const selected = document.getElementById('selectButton');
+    const name = selected.textContent;
+    const variants = availableModelVariants(name);
+    const options = document.getElementById('providerOptions');
+    options.replaceChildren();
+    if (!variants.length) return;
+    const providers = new Set(['', ...variants.map(variant => variant.provider)]);
+    const official = ['openai', 'google-ai-studio', 'anthropic'].filter(provider => providers.has(provider));
+    const defaultProvider = defaultProviders[name];
+    for (const provider of providers) {
+        const row = document.createElement('div');
+        row.className = 'provider-option';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = provider || '默认';
+        button.setAttribute('aria-pressed', provider === selected.dataset.provider);
+        button.onclick = () => {
+            document.getElementById('selectionModal').close();
+            setSelectedModel(name, provider);
+        };
+        row.appendChild(button);
+        let note = '';
+        if (!provider && typeof defaultProvider === 'string' && defaultProvider) note = `(${defaultProvider})`;
+        else if (provider === 'auto' && official.length) note = `不一定能和${official.join('、')}混用`;
+        else if (official.includes(provider)) note = '直接转发到官方';
+        if (note) {
+            const text = document.createElement('small');
+            text.textContent = note;
+            row.appendChild(text);
+        }
+        options.appendChild(row);
+    }
+}
+
 async function fetchModels() {//获取 AI 模型列表
     try {
         const response = await fetch('/api/gpt5_model_list', { method: 'POST' });
@@ -235,19 +297,14 @@ async function fetchModels() {//获取 AI 模型列表
         Models = [...modelCatalog.values()];
         const container = document.getElementById('modelsContainer');
         container.innerHTML = '';
-        const appendModelOption = (model, target) => {
-            const variants = availableModelVariants(model.name);
-            const li = document.createElement('li');
-            li.textContent = model.name;
-            li.title = [...new Set(variants.map(variant => variant.format))].join(' / ');
-            li.onclick = () => {
-                setSelectedModel(model.name);
-                document.getElementById('selectionModal').style.display = 'none';
-            };
-            target.appendChild(li);
-        };
         const accessibleModels = Models.filter(model => availableModelVariants(model.name).length > 0);
-        accessibleModels.forEach(model => appendModelOption(model, container));
+        for (const model of accessibleModels) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = model.name;
+            button.onclick = () => selectModelInPicker(model.name);
+            container.appendChild(button);
+        }
         const defaultModel = accessibleModels[0];
         if (defaultModel) setSelectedModel(defaultModel.name);
         else document.getElementById('selectButton').textContent = '暂无可用模型';

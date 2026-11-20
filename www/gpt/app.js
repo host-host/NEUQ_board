@@ -32,7 +32,7 @@ sidebarMedia.addEventListener('change', () => {
     syncSidebarState();
 });
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') closeMobileSidebar();
+    if (event.key === 'Escape' && !document.getElementById('selectionModal').open) closeMobileSidebar();
 });
 syncSidebarState();
 
@@ -77,7 +77,7 @@ function startNewChat() {//新建对话
     closeMobileSidebar();
     const selectButton = document.getElementById('selectButton');
     if (selectButton && modelCatalog.has(selectButton.textContent))
-        setSelectedModel(selectButton.textContent);
+        setSelectedModel(selectButton.textContent, selectButton.dataset.provider);
     updateModelCompatibilityWarning();
     updateHeaderButtons();
 }
@@ -322,6 +322,7 @@ async function sendMessage() {//发送消息的核心入口
         stream_options: {include_usage: true},
         enable_thinking: true
     };
+    if (selectButton.dataset.provider) bodyData.nit_web_provider = selectButton.dataset.provider;
     const maxTokens = Number(requestSettings.max_tokens);
     if (Number.isInteger(maxTokens) && maxTokens > 0) {
         if (requestFormat === 'responses') bodyData.max_output_tokens = maxTokens;

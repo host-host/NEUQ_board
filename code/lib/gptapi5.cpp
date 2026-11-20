@@ -106,10 +106,10 @@ bool checkpro(pro_ret&a,user_*p,cppJSON& config,string& model,string saved){
     }
     return 0;
 }
-pro_ret gotprovider(user_*p,cppJSON& config,string& model){
+pro_ret gotprovider(user_*p,cppJSON& config,string& model,const char*saved=0){
     pro_ret ans;
     string key=(string)p->userid+"_"+model;
-    char* saved=(char*)ndb2_got(provider_db,key.c_str(),0);
+    if(!saved)saved=(const char*)ndb2_got(provider_db,key.c_str(),0);
     cppJSON pros=config["model"][model]["provider"];
     if(pros.has(saved)&&checkpro(ans,p,config,model,saved))return ans;
     for(cppJSON pro:pros)if(checkpro(ans,p,config,model,pro))return ans;
@@ -513,7 +513,11 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         string b=(string)"{\"error\":{\"message\":\"模型 "+model +" 不支持 "+format+ " 格式\"}}";
         return http_send(a,H400 Hc0 Hjson,b.c_str(),b.size());
     }
-    pro_ret proret=gotprovider(p,config,model);
+    pro_ret proret;
+    bool web=!strncmp(a->get,"POST /api/",10);
+    string provider=req["nit_web_provider"].valuestring();
+    if(!provider.empty())proret=gotprovider(p,config,model,provider.c_str());
+    else proret=gotprovider(p,config,model);
     if(proret.providers.empty())return ERROR(H400,"Model not found.");
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     gpt6_ret b;
@@ -535,7 +539,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
                 gpt6_flush(&b);
             }
         }
-        if(memcmp(a->get,"POST /api",9)!=0&&b.send){//网页端阻塞到标题创建完成
+        if(!web&&b.send){//网页端阻塞到标题创建完成
             close(a->cl);
             a->cl=0;
         }

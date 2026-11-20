@@ -484,6 +484,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(strcmp(format,"gemini")==0)url=url+"/v1beta/models/"+model+":streamGenerateContent?alt=sse";
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
     cppJSON u(message);
+    u.erase("nit_web_provider");//网页端自定义字段
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
     if(strcmp(format,"completions")==0&&conf["responses_sum2rea"]==true)gpt6_chat_res2recon(u);
     if(strcmp(format,"responses")==0&&conf["responses_sum2rea"]==true)gpt6_responses_sum2rea(u);//deepseek特例，需要 return the reasoning_content
