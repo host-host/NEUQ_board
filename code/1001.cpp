@@ -16,9 +16,7 @@ void other(http_para* a){
     http_send(a,H404 Hc0 Htxt,"Not Found",0);
 }
 void apistop(http_para* a){//curl http://127.0.0.1:1001/api/stop
-    a->get[a->n]=0;
-    if(strstr(a->get,"\r\nX-Forwarded-For:")||strstr(a->get,"\r\nX-Real-IP:"))
-        return http_send(a,Hok Hc0 Htxt,"Error: Permission Denied.",0);
+    if(!local_request(a))return http_send(a,Hok Hc0 Htxt,"Error: Permission Denied.",0);
     http_send(a,Hok Hc0 Htxt,"ok",0);
     http_stop(a->f);
 }
@@ -87,7 +85,8 @@ int main() {
     http_add(&a,"POST /api/gpt5_history_delete ",gpt5_history_delete);
     http_add(&a,"POST /api/gpt5_share ",gpt5_share);
     http_add(&a,"POST /api/modeltrace ",modeltrace);
-    http_add(&a,"GET /api/stop ",apistop);
+    http_add(&a,"GET /api/stop ",apistop);//curl http://127.0.0.1:1001/api/stop
+    http_add(&a,"POST /api/dbclean4 ",gpt5_dbclean4);//curl http://127.0.0.1:1001/api/dbclean4 -d "300"
     http_add(&a,"",other);
     return http_start(&a,INADDR_LOOPBACK,1001);//INADDR_ANY
 }

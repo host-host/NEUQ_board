@@ -706,3 +706,74 @@ void gpt5_model_list(http_para* a) {
         }
     http_send(a,Hok Hjson Hc0,config.stringify_Unformatted().c_str(),0);
 }
+bool local_request(http_para* a){
+    char c=a->get[a->n];
+    a->get[a->n]=0;
+    bool bj=!strcasestr(a->get,"\r\nX-Forwarded-For:")&&!strcasestr(a->get,"\r\nX-Real-IP:");
+    a->get[a->n]=c;
+    return bj;
+}
+struct history_entry{
+    char con_id[32];
+    content* con;
+    long long updatetime;
+};
+static bool arcc(ndb2 db3,content* p){
+    int len=strlen(p->content);
+    content* p2=(content*)ndb2_got(db3,p->con_id,sizeof(content)+len+1);
+    if(!p2){
+        ndb2_free(db3);
+        return 1;
+    }
+    memcpy(p2,p,sizeof(content)+len+1);
+    return 0;
+}
+void gpt5_dbclean4(http_para* a){
+    if(!local_request(a))return http_send(a,Hok Hc0 Htxt,"Error: Permission Denied.",0);
+    int maxx=0;
+    sscanf(a->get+a->n,"%d",&maxx);
+    if(maxx<100||maxx>10000)return http_send(a,Hok Hc0 Htxt,"Error: maxx",0);
+    ndb2 db3=ndb2_init("/web/res/pri/gpt5content3.ndb2");
+    if(!db3)return http_send(a,Hok Hc0 Htxt,"Error: db open",0);
+    char key[48]={0};
+    int cons=0,cona=0;
+    http_send(a,0,Hok Hc0 Htxt "\r\n\r\nstart\n",0);
+    std::set<string>se;
+    for(history* h=(history*)ndb2_next(history_db,key); h; h=(history*)ndb2_next(history_db,key)) {
+        int n=h->n;
+        cons+=n;
+        std::vector<history_entry>he(n);
+        for(int i=0;i<n;i++){
+            memcpy(he[i].con_id,h->con_id[i],sizeof(he[i].con_id));
+            content* p=(content*)ndb2_got(content_db,h->con_id[i],0);
+            he[i].con=p;
+            he[i].updatetime=p?p->updatetime:0;
+        }
+        for(int i=0;i<n;i++)if(!he[i].con)swap(he[i--],he[--n]);
+        std::sort(he.begin(),he.begin()+n,[](const history_entry& a,const history_entry& b){
+            return a.updatetime<b.updatetime;
+        });
+        int s=max(0,n-maxx);
+        for(int i=0;i<s;i++){
+            if(arcc(db3,he[i].con))return http_send(a,0,"Error: db",0);
+            ndb2_del(content_db,he[i].con_id);
+        }
+        for(int i=0;s+i<n;i++){
+            memcpy(h->con_id[i],he[s+i].con_id,sizeof(h->con_id[i]));
+            se.insert(h->con_id[i]);
+        }
+        h->n=n-s;
+        cona+=n-s;
+        char c[48];
+        sprintf(c,"H %d %d\n",cons,cona);
+        http_send(a,0,c,0);
+    }
+    http_send(a,0,"ok 1\n",0);
+    memset(key,0,sizeof(key));
+    while(content *p=(content*)ndb2_next(content_db,key))if(!se.count(key)){
+            if(arcc(db3,p))return http_send(a,0,"Error: db",0);
+            ndb2_del(content_db,key);
+        }
+    ndb2_free(db3);
+    http_send(a,0,"ok 2\n",0);
+}

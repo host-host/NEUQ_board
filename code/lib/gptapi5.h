@@ -10,7 +10,7 @@ extern "C"{
 #include <time.h>
 struct content{
     bool publish;
-    char deleted;//0没删，1软删除但保留，2即将硬删除
+    char deleted;//废弃
     bool isusing;
     char ownerid[10];
     char ownername[24];
@@ -24,6 +24,7 @@ struct content{
     char content[0];
 };
 void gptapi5_init();
+void gpt5_dbclean4(http_para* a);
 void* gpt5_probe_loop(void*);
 void gpt5_apikey(http_para* a);
 void gpt5_resolve(http_para* a);
@@ -40,6 +41,7 @@ void gpt5_claude_messages(http_para* a);
 void gpt5_gemini_generate_content(http_para* a);
 void gpt5_image_generations(http_para* a);
 void gpt5_model_list(http_para *a);
+bool local_request(http_para* a);
 
 #ifdef __cplusplus
 }
