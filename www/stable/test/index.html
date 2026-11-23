@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="/stable/style.css?v=0921v5">
     <link rel="stylesheet" href="/stable/test/style.css?v=0923v3">
     <script src="/auth.js?v=0910v2" defer></script>
-    <script src="/stable/test/runner.js?v=1118v1" defer></script>
-    <script src="/stable/test/app.js?v=1118v1" defer></script>
+    <script src="/stable/test/runner.js?v=1123v1" defer></script>
+    <script src="/stable/test/app.js?v=1123v1" defer></script>
 </head>
 <body>
     <header class="topbar">
@@ -38,7 +38,7 @@
                         <label for="modelSelect">模型</label>
                         <select id="modelSelect" required disabled><option value="">正在加载…</option></select>
                     </div>
-                    <div class="model-meta"><span id="modelFormat">—</span><span id="currentProvider">当前渠道：—</span></div>
+                    <div class="model-meta"><span id="modelFormat">—</span><span id="currentProvider">账户默认渠道：—</span></div>
                 </div>
                 <div class="prompt-fields">
                     <div class="field">
@@ -61,7 +61,7 @@
                         <button id="startButton" class="button button-primary" type="submit" disabled>开始测试</button>
                     </div>
                 </div>
-                <p class="routing-note">每次先切换账户渠道，再发送独立提问，等待回复结束后继续。测试结束或停止后自动切回 auto 渠道；测试期间请勿在其他页面切换此模型渠道。</p>
+                <p class="routing-note">每次提问只指定本次请求的渠道，等回复结束后再测试下一个。测试不会更改账户默认渠道。</p>
                 <div id="runProgress" class="run-progress" hidden>
                     <div><span id="progressText" role="status"></span><span id="resultSummary"></span></div>
                     <progress id="progressBar" value="0" max="1" aria-label="测试进度"></progress>

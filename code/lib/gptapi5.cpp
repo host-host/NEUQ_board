@@ -107,12 +107,13 @@ bool checkpro(pro_ret&a,user_*p,cppJSON& config,string& model,string saved){
     return 0;
 }
 pro_ret gotprovider(user_*p,cppJSON& config,string& model,const char*saved=0){
-    pro_ret ans;
+    pro_ret ans{};
+    bool bj=saved==0;
     string key=(string)p->userid+"_"+model;
     if(!saved)saved=(const char*)ndb2_got(provider_db,key.c_str(),0);
     cppJSON pros=config["model"][model]["provider"];
     if(pros.has(saved)&&checkpro(ans,p,config,model,saved))return ans;
-    for(cppJSON pro:pros)if(checkpro(ans,p,config,model,pro))return ans;
+    if(bj)for(cppJSON pro:pros)if(checkpro(ans,p,config,model,pro))return ans;
     return ans;
 }
 void gpt5_apikey(http_para* a) {
@@ -507,7 +508,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     if(!p)return http_send(a,H404 Hc0 Htxt,"Not Found",0);//return ERROR(H400,"Invalid API key."); 藏好了
     cppJSON req(a->get+a->n),config=cppJSON::from_file(CONFIG);
     string model=gpt6_request_model(a,req,format);
-    if(!config["model"].has(model))return ERROR(H400,"Model not found.");
+    if(!config["model"].has(model))return ERROR(H400,"Model not found or provider error.");
     cppJSON tmpcheck=config["model"][model]["format"];
     if(tmpcheck&&!tmpcheck.has(format)){
         string b=(string)"{\"error\":{\"message\":\"模型 "+model +" 不支持 "+format+ " 格式\"}}";

@@ -3,7 +3,7 @@
 
     const $ = id => document.getElementById(id);
     const api = window.StableChannelTest;
-    const state = {catalog: null, account: null, loading: false, running: false, restoring: false, stop: false,
+    const state = {catalog: null, account: null, loading: false, running: false, stop: false,
         rows: [], queue: []};
     const resultCache = new Map();
     const recordKey = (name, provider) => `stable-channel-test:result:v1:${JSON.stringify([name, provider])}`;
@@ -76,8 +76,8 @@
         $('selectAll').indeterminate = selected.length > 0 && selected.length < available.length;
         state.rows.forEach(row => { row.checkbox.disabled = busy || !row.provider.available; });
         $('startButton').disabled = busy || !ready || !selected.length;
-        $('startButton').textContent = state.restoring ? '正在切回 auto…' : state.running ? '测试中…' : '开始测试';
-        $('stopButton').hidden = !state.running || state.restoring;
+        $('startButton').textContent = state.running ? '测试中…' : '开始测试';
+        $('stopButton').hidden = !state.running;
         $('stopButton').disabled = state.stop;
         $('stopButton').textContent = state.stop ? '等待当前请求结束…' : '完成当前后停止';
         $('selectionSummary').textContent = `共 ${state.rows.length} 个非 auto 渠道 · 已选 ${selected.length} 个` +
@@ -87,7 +87,7 @@
     function updateModelMeta() {
         $('modelFormat').textContent = state.catalog?.model?.[model()]
             ? `请求格式：${formatNames[modelFormat(state.catalog.model[model()])]}` : '—';
-        $('currentProvider').textContent = `当前渠道：${state.account?.selected_provider?.[model()] || '—'}`;
+        $('currentProvider').textContent = `账户默认渠道：${state.account?.selected_provider?.[model()] || '—'}`;
     }
 
     function resetResult(row, status = 'idle') {
@@ -100,8 +100,8 @@
     function renderResult(row) {
         const result = row.result;
         const statusText = {idle: row.provider.available ? '待测试' : state.account ? '无权限或未配置' : '需登录',
-            queued: '等待中', switching: '切换渠道…', asking: '请求中…', done: '已完成', error: '失败', skipped: '已跳过'};
-        const active = ['switching', 'asking'].includes(result.status);
+            queued: '等待中', asking: '请求中…', done: '已完成', error: '失败', skipped: '已跳过'};
+        const active = result.status === 'asking';
         row.element.classList.toggle('is-active', active);
         row.status.textContent = statusText[result.status];
         row.status.className = `status-label ${active ? 'busy' : result.status}`;
@@ -215,14 +215,14 @@
         const done = rows.filter(row => row.result.status === 'done');
         const failed = rows.filter(row => row.result.status === 'error');
         const skipped = rows.filter(row => row.result.status === 'skipped');
-        const active = rows.find(row => ['switching', 'asking'].includes(row.result.status));
+        const active = rows.find(row => row.result.status === 'asking');
         const count = done.length + failed.length;
         $('progressBar').max = rows.length || 1;
         $('progressBar').value = count + skipped.length;
         $('progressText').textContent = finished
             ? `${stopped ? '测试已停止' : '测试完成'} · 已测试 ${count}/${rows.length}`
             : state.stop ? '等待当前请求结束后停止…'
-                : active ? `${count + 1}/${rows.length} · ${active.provider.id} · ${active.result.status === 'switching' ? '切换渠道' : '等待回复'}`
+                : active ? `${count + 1}/${rows.length} · ${active.provider.id} · 等待回复`
                     : `已测试 ${count}/${rows.length}`;
         $('resultSummary').textContent = `匹配 ${done.filter(row => row.result.matched).length} · 未匹配 ${done.filter(row => !row.result.matched).length} · 失败 ${failed.length}` +
             (skipped.length ? ` · 跳过 ${skipped.length}` : '');
@@ -243,7 +243,7 @@
         state.stop = false;
         updateControls();
         notice('');
-        const execute = async () => {
+        try {
             state.queue = selected;
             selected.forEach(row => {
                 row.saved = readResult(selectedModel, row.provider.id);
@@ -251,19 +251,10 @@
             });
             $('runProgress').hidden = false;
             updateProgress();
-            let summary;
-            let runError;
-            let restoreError;
             try {
-                summary = await api.runSequential({
-                    providers: selected.map(row => row.provider), model: selectedModel, format, question, answer,
+                const summary = await api.runSequential({
+                    providers: selected.map(row => row.provider), model: selectedModel, format, question, answer, apiKey: state.account.api_key,
                     shouldStop: () => state.stop,
-                    switchProvider: async (name, provider) => {
-                        const account = await api.requestJson('/api/gpt5_apikey', {model: name, provider});
-                        state.account = account;
-                        updateModelMeta();
-                        return account;
-                    },
                     onResult: (provider, result) => {
                         const row = selected.find(item => item.provider.id === provider.id);
                         row.result = {...row.result, ...result};
@@ -277,40 +268,17 @@
                         if (result.status !== 'asking' || result.text === undefined) updateProgress();
                     }
                 });
+                updateProgress(true, summary.stopped);
             } catch (error) {
-                runError = error;
                 selected.forEach(row => {
-                    if (!['queued', 'switching', 'asking'].includes(row.result.status)) return;
+                    if (!['queued', 'asking'].includes(row.result.status)) return;
                     row.result = {...row.result, status: 'error', error: error.message || '测试中断'};
                     saveResult(row, selectedModel, question, answer);
                     renderResult(row);
                 });
-            } finally {
-                // Keep this page's controls disabled until the account is restored.
-                state.restoring = true;
-                updateControls();
-                $('progressText').textContent = '本轮请求已结束，正在切回 auto 渠道…';
-                try {
-                    const account = await api.requestJson('/api/gpt5_apikey', {model: selectedModel, provider: 'auto'});
-                    state.account = account;
-                    updateModelMeta();
-                    if (account.selected_provider?.[selectedModel] !== 'auto') throw new Error('服务端返回的当前渠道不是 auto。');
-                } catch (error) {
-                    restoreError = error;
-                } finally {
-                    state.restoring = false;
-                }
+                updateProgress(true, true);
+                throw error;
             }
-            updateProgress(true, Boolean(runError || summary?.stopped));
-            $('progressText').textContent += restoreError ? ' · 切回 auto 失败' : ' · 已切回 auto';
-            const messages = [];
-            if (runError) messages.push(runError.message || '测试失败，请刷新后重试。');
-            else if (summary?.stopped && !state.stop) messages.push('测试已停止，请检查失败渠道的信息后重试。');
-            if (restoreError) messages.push(`切回 auto 渠道失败：${restoreError.message || '请求失败'} 请到模型广场确认并手动切换；本轮结果已保留。`);
-            notice(messages.join(' '), messages.length > 0);
-        };
-        try {
-            await execute();
         } catch (error) {
             notice(error.message || '测试失败，请刷新后重试。', true);
         } finally {

@@ -161,8 +161,9 @@
         return {text: '', latency: null, elapsed: null, inputTokens: null, outputTokens: null, totalTokens: null, tps: null};
     }
 
-    async function ask({model, format, question, apiKey}, {fetcher = fetch, now = () => performance.now(), onUpdate = () => {}} = {}) {
+    async function ask({model, format, question, provider, apiKey}, {fetcher = fetch, now = () => performance.now(), onUpdate = () => {}} = {}) {
         const request = buildRequest(model, format, question);
+        request.body.nit_web_provider = provider;
         const result = createResult();
         const started = now();
         let stream = false;
@@ -330,7 +331,7 @@
         return result;
     }
 
-    async function runSequential({providers, model, format, question, answer, switchProvider, askQuestion = ask,
+    async function runSequential({providers, model, format, question, answer, apiKey, askQuestion = ask,
         shouldStop = () => false, onResult = () => {}}) {
         const results = [];
         let stopped = false;
@@ -340,26 +341,10 @@
                 stopped = true;
                 continue;
             }
-            let phase = 'switching';
-            onResult(provider, {status: phase});
+            onResult(provider, {status: 'asking'});
             try {
-                const account = await switchProvider(model, provider.id);
-                if (account.selected_provider?.[model] !== provider.id) {
-                    throw new Error('渠道切换未生效，未发送提问。');
-                }
-                if (typeof account.api_key !== 'string' || !account.api_key.startsWith('sk-')) {
-                    throw new Error('没有取得有效的 API Key，未发送提问。');
-                }
-                if (shouldStop()) {
-                    onResult(provider, {status: 'skipped'});
-                    stopped = true;
-                    continue;
-                }
-                phase = 'asking';
-                onResult(provider, {status: phase});
-                // Await the entire response, including EOF and usage, before switching the next provider.
-                const result = await askQuestion({model, format, question, apiKey: account.api_key}, {
-                    onUpdate: partial => onResult(provider, {...partial, status: phase})
+                const result = await askQuestion({model, format, question, provider: provider.id, apiKey}, {
+                    onUpdate: partial => onResult(provider, {...partial, status: 'asking'})
                 });
                 const entry = {...result, status: 'done', matched: answer.length > 0 && result.text.includes(answer)};
                 results.push({provider: provider.id, ...entry});
