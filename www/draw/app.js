@@ -115,7 +115,7 @@
             modelConfig = config;
             model.replaceChildren();
             for (const [name, entry] of Object.entries(config.model)) {
-                if (!Array.isArray(entry?.format) || !entry.format.includes('image') || !availableProviders(name).length) continue;
+                if (!Array.isArray(entry?.format) || !entry.format.includes('image') || (!availableProviders(name).length && !accountData?.selected_provider?.[name])) continue;
                 const option = document.createElement('option');
                 option.value = name;
                 option.textContent = name;
@@ -184,17 +184,19 @@
             option.textContent = `${id} · ${formatProviderPrice(selectedProviderPrice(model.value, id), true)}`;
             provider.appendChild(option);
         }
-        if (!ids.length) {
+        const saved = accountData?.selected_provider?.[model.value];
+        if (!ids.length || (saved && !ids.includes(saved))) {
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = '暂无可用 Provider';
-            provider.appendChild(option);
+            option.textContent = saved || '暂无可用 Provider';
+            option.disabled = true;
+            provider.prepend(option);
+            provider.value = '';
         } else {
-            const saved = accountData?.selected_provider?.[model.value];
-            provider.value = ids.includes(saved) ? saved : ids[0];
+            provider.value = saved || ids[0];
         }
-        providerInfo.hidden = !ids.length;
-        if (ids.length) {
+        providerInfo.hidden = !provider.value;
+        if (provider.value) {
             const config = providerConfig(model.value, provider.value);
             const price = selectedProviderPrice(model.value, provider.value);
             providerPrice.textContent = formatProviderPrice(price);
@@ -225,8 +227,8 @@
                 body: JSON.stringify({model: selectedModel, provider: selectedProvider})
             });
             const {data} = await readJson(response);
+            if (data?.selected_provider) accountData = data;
             if (data?.selected_provider?.[selectedModel] !== selectedProvider) throw new Error('Provider 未保存，请重试');
-            accountData = data;
             if (typeof data.api_key === 'string' && data.api_key.startsWith('sk-')) siteApiKey = data.api_key;
             providerStatus.textContent = 'Provider 已保存';
         } catch (error) {
@@ -384,7 +386,7 @@
     function syncFormState() {
         const busy = accountLoading || isSubmitting || providerSaving;
         model.disabled = busy || !model.value;
-        provider.disabled = busy || !provider.value;
+        provider.disabled = busy || !availableProviders(model.value).length;
         generateButton.disabled = !accessAllowed || busy || sourceImageLoading || !model.value || !provider.value;
         logoutButton.disabled = busy;
         sourceImageInput.disabled = isSubmitting;

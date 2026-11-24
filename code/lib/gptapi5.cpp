@@ -55,7 +55,8 @@ struct pro_ret1{
 };
 struct pro_ret{
     vector<pro_ret1>providers;
-    bool isauto;
+    bool isauto,modelava;
+    const char*saved;
 };
 static void mergeprice(cppJSON& price,const cppJSON& overrides){
     for(cppJSON i:overrides){
@@ -107,13 +108,16 @@ bool checkpro(pro_ret&a,user_*p,cppJSON& config,string& model,string saved){
     return 0;
 }
 pro_ret gotprovider(user_*p,cppJSON& config,string& model,const char*saved=0){
-    pro_ret ans{};
-    bool bj=saved==0;
+    pro_ret ans{},ans2{};
     string key=(string)p->userid+"_"+model;
     if(!saved)saved=(const char*)ndb2_got(provider_db,key.c_str(),0);
+    ans.saved=saved;
     cppJSON pros=config["model"][model]["provider"];
     if(pros.has(saved)&&checkpro(ans,p,config,model,saved))return ans;
-    if(bj)for(cppJSON pro:pros)if(checkpro(ans,p,config,model,pro))return ans;
+    for(cppJSON pro:pros)if(checkpro(saved?ans2:ans,p,config,model,pro)){
+            ans.modelava=true;
+            return ans;
+        }
     return ans;
 }
 void gpt5_apikey(http_para* a) {
@@ -124,7 +128,8 @@ void gpt5_apikey(http_para* a) {
     bool rotate=request["rotate"]==true;
     string model=request["model"],provider=request["provider"];
     if(!model.empty()&&!provider.empty()) {
-        if(!config["model"][model]["provider"].has(provider.c_str()))return my_http_error(a,"Invalid provider.");
+        pro_ret tmp{};
+        if(!config["model"][model]["provider"].has(provider.c_str())||!checkpro(tmp,p,config,model,provider))return my_http_error(a,"Invalid provider.");
         string key=(string)p->userid+"_"+model;
         char* saved=(char*)ndb2_got(provider_db,key.c_str(),provider.size()+1);
         if(saved)memcpy(saved,provider.c_str(),provider.size()+1);
@@ -141,6 +146,7 @@ void gpt5_apikey(http_para* a) {
         string model=item.a->string;
         pro_ret sel=gotprovider(p,config,model);
         if(sel.providers.size()>0)selected.insert(model.c_str(),sel.isauto?(string)"auto":sel.providers[0].provider);
+        else if(sel.modelava&&sel.saved)selected.insert(model.c_str(),sel.saved+(string)"(已失效)");
     }
     ans.insert("selected_provider",std::move(selected));
     http_send(a,Hok Hjson Hc0,ans.stringify_Unformatted().c_str(),0);
@@ -519,7 +525,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     string provider=req["nit_web_provider"].valuestring();
     if(!provider.empty())proret=gotprovider(p,config,model,provider.c_str());
     else proret=gotprovider(p,config,model);
-    if(proret.providers.empty())return ERROR(H400,"Model not found.");
+    if(proret.providers.empty())return proret.modelava?ERROR(H400,"你选择的渠道已失效，请选择其他渠道"):ERROR(H400,"Model not found.");
     if(p->token_used>=p->token_limit)return ERROR(H400,"余额不足，访问 https://www.neuqboard.cn/token 获取更多信息");
     gpt6_ret b;
     long long startns=0;

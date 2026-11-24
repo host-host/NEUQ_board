@@ -774,6 +774,8 @@
         const config = state.models?.model?.[pricePopoverTarget.dataset.model];
         const select = pricePopoverTarget.closest('.provider-row')?.querySelector('.provider-select');
         if (!config || !select) return hidePricePopover();
+        $('sitePriceTitle').closest('section').hidden = !select.value;
+        if (!select.value) return;
         const price = modelProviderPrice(config, select.value);
         const itemized = priceFormats.has(price.format) && price.format !== 'per' && price.format !== 'token';
         $('sitePriceProvider').textContent = `Provider · ${select.value}`;
@@ -910,7 +912,7 @@
     function syncProviderSelect(select) {
         const trigger = select.parentElement.querySelector('.provider-select-trigger');
         const option = select.selectedOptions[0];
-        trigger.textContent = option ? `${option.value} · ${option.dataset.price}` : '';
+        trigger.textContent = option ? `${option.value} · ${option.dataset.price}` : state.account?.selected_provider?.[select.dataset.model] || '';
         if (option?.dataset.ratio) trigger.append(node('span', 'provider-price-ratio', ` (x${option.dataset.ratio})`));
         trigger.disabled = select.disabled;
     }
@@ -1055,7 +1057,7 @@
         document.querySelectorAll('.provider-exchange-rate').forEach(element => {
             element.textContent = dollar2cny > 0 ? `实时汇率(1$=${dollar2cny}¥)` : '实时汇率暂不可用';
         });
-        const entries = Object.entries(state.models.model || {}).map(([name, config]) => ({name, config, providers: availableProviders(config)})).filter(item => item.providers.length);
+        const entries = Object.entries(state.models.model || {}).map(([name, config]) => ({name, config, providers: availableProviders(config)})).filter(item => item.providers.length || state.account.selected_provider?.[item.name]);
         const textCount = entries.filter(item => supportsModelType(item.config, 'text')).length;
         $('textModelCount').textContent = String(textCount);
         $('imageModelCount').textContent = String(entries.filter(item => supportsModelType(item.config, 'image')).length);
@@ -1085,8 +1087,8 @@
                 option.dataset.ratio = ratioText;
                 select.append(option);
             });
-            select.value = providers.includes(state.account.selected_provider?.[name]) ? state.account.selected_provider[name] : providers[0];
-            select.disabled = state.saving;
+            select.value = state.account.selected_provider?.[name] || providers[0] || '';
+            select.disabled = state.saving || !providers.length;
             select.addEventListener('change', () => saveProvider(name, select));
             const stability = node('div', 'provider-stability');
             const bars = node('div', 'stability-bars');
@@ -1117,7 +1119,7 @@
         $('confirmRotate').disabled = value;
         if (value) hideProviderOptions();
         document.querySelectorAll('.provider-select').forEach(select => {
-            select.disabled = value;
+            select.disabled = value || !select.options.length;
             syncProviderSelect(select);
         });
     }
@@ -1126,22 +1128,23 @@
         const selected = select.value;
         const trigger = select.parentElement.querySelector('.provider-select-trigger');
         const restoreFocus = document.activeElement === trigger;
-        const previous = state.account.selected_provider?.[model] || select.options[0]?.value;
         updateSitePrice();
         setSaving(true);
         $('providerStatus').classList.remove('error-text');
         $('providerStatus').textContent = `正在保存 ${model}…`;
         try {
-            await api('/api/gpt5_apikey', {model, provider: selected});
+            const data = await api('/api/gpt5_apikey', {model, provider: selected});
             if (state.accountStatus !== 'ready') return;
             // Only merge this change; other response fields may predate a key rotation or account refresh.
-            state.account.selected_provider = {...state.account.selected_provider, [model]: selected};
+            const saved = data.selected_provider?.[model];
+            state.account.selected_provider = {...state.account.selected_provider, [model]: saved};
+            if (saved !== selected) throw new Error('Provider 未保存，请重试');
             $('providerStatus').textContent = `${model} 已切换至 ${selected}`;
             toast('Provider 已保存');
             renderProviders();
         } catch (error) {
             if (error.auth) expireSession();
-            select.value = previous;
+            select.value = state.account?.selected_provider?.[model] || select.options[0]?.value || '';
             updateSitePrice();
             $('providerStatus').classList.add('error-text');
             $('providerStatus').textContent = `保存失败：${error.message}`;
@@ -1158,8 +1161,8 @@
         const id = ++state.stabilityRequest;
         const rows = [...$('providerRows').children].map(row => {
             const select = row.querySelector('select');
-            return {row, key: `${select.dataset.model}_${select.value}`};
-        });
+            return {row, key: select.value && `${select.dataset.model}_${select.value}`};
+        }).filter(item => item.key);
         if (!rows.length) return;
         rows.forEach(({row}) => {
             row.querySelectorAll('.stability-bar').forEach(bar => {
