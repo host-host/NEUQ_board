@@ -26,3 +26,4 @@ button.cell.none { cursor: default; }
 .vtime-dialog label { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 12px 0; font-size: 14px; }
 .vtime-dialog input { width: 130px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 6px; }
 .vtime-dialog .test-actions { justify-content: flex-end; margin-top: 18px; }
+#historyRows > tr:hover > td:not(.hour-cell) { background: #e3eefa; }

@@ -126,7 +126,7 @@
             cellTd.append(cells);
             row.append(nameCell, node('td', '', provider.name),
                 node('td', 'numeric', Number.isFinite(provider.ratio) ? `x${Number(provider.ratio.toFixed(6))}` : '—'),
-                node('td', '', autos.includes(provider.id) ? '是' : '—'), blocked, node('td', '', state.data.question.map(q => `${q}: ${vtime[q] || 0}`).join('，') || '—'), cellTd);
+                node('td', '', autos.includes(provider.id) ? '是' : '—'), blocked, node('td', '', state.data.question.filter(q => vtime[q] > 0).map(q => `${q}: ${vtime[q]}`).join('，')), cellTd);
             if (state.selected?.provider !== provider.id) return [row];
             const detailRow = node('tr'), detailCell = node('td', 'hour-cell');
             detailCell.colSpan = row.children.length;
