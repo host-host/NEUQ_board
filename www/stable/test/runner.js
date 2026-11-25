@@ -358,7 +358,7 @@
         return {results, stopped: stopped || shouldStop()};
     }
 
-    const api = {providersForModel, formatFor, buildRequest, requestJson, readEvents, ask, runSequential};
+    const api = {mergePrice, officialPriceRatio, providersForModel, formatFor, buildRequest, requestJson, readEvents, ask, runSequential};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else globalThis.StableChannelTest = api;
 })();

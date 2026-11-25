@@ -1,0 +1,27 @@
+.test-panel h2 { margin-bottom: 14px; }
+.model-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.auto-line { margin: 0; font-size: 14px; line-height: 1.8; word-break: break-all; }
+.link-button { padding: 0; border: 0; background: none; color: var(--blue); font-weight: 600; cursor: pointer; text-align: left; }
+.link-button:hover { text-decoration: underline; }
+.test-workspace { max-width: none; }
+#historyRows td { white-space: nowrap; }
+#historyRows td:last-child { width: 100%; padding-right: 0; }
+.cells { display: flex; gap: 1px; }
+.cell { display: inline-block; flex: 1 1 0; min-width: 3px; max-width: 14px; width: 11px; height: 26px; padding: 0; border: 1px solid var(--line-strong); border-radius: 2px; background: #fff; }
+button.cell { cursor: pointer; }
+button.cell.none { cursor: default; }
+.cell.none { background: #c9d0d6; border-color: #c9d0d6; }
+.cell.plain { background: #fff; }
+.cell.ok { background: var(--green); border-color: var(--green); }
+.cell.bad { background: var(--red); border-color: var(--red); }
+.cell.selected { outline: 2px solid var(--blue); outline-offset: 1px; }
+.legend { margin-left: 12px; white-space: nowrap; }
+.legend .cell { width: 11px; height: 11px; margin: 0 4px 0 10px; vertical-align: -1px; }
+.hour-title { margin: 22px 0 12px; }
+.result-ok { color: var(--green); }
+.result-bad { color: var(--red); }
+.vtime-dialog { width: min(92vw, 420px); padding: 22px; border: 1px solid var(--line); border-radius: 8px; }
+.vtime-dialog::backdrop { background: rgba(20, 29, 36, .35); }
+.vtime-dialog label { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 12px 0; font-size: 14px; }
+.vtime-dialog input { width: 130px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 6px; }
+.vtime-dialog .test-actions { justify-content: flex-end; margin-top: 18px; }

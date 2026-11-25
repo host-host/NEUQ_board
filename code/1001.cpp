@@ -8,6 +8,7 @@
 // #include"lib/word.h"
 #include"lib/gptapi4.h"
 #include"lib/gptapi5.h"
+#include"lib/autotest.h"
 #include"lib/mylib.h"
 #include<cstdio>
 #include<cstring>
@@ -25,6 +26,7 @@ int main() {
     check48_init();
     gpt4_init();
     gptapi5_init();
+    autotest_init();
     user_init();
     card_init();
     http a;
@@ -85,6 +87,8 @@ int main() {
     http_add(&a,"POST /api/gpt5_history_delete ",gpt5_history_delete);
     http_add(&a,"POST /api/gpt5_share ",gpt5_share);
     http_add(&a,"POST /api/modeltrace ",modeltrace);
+    http_add(&a,"POST /api/gpt5_autotest_get ",autotest_get);
+    http_add(&a,"POST /api/gpt5_autotest_set ",autotest_set);
     http_add(&a,"GET /api/stop ",apistop);//curl http://127.0.0.1:1001/api/stop
     http_add(&a,"POST /api/dbclean4 ",gpt5_dbclean4);//curl http://127.0.0.1:1001/api/dbclean4 -d "300"
     http_add(&a,"",other);

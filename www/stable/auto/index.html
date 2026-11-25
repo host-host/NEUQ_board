@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>自动测试 - NEUQ Board</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/stable/style.css?v=0921v5">
+    <link rel="stylesheet" href="/stable/test/style.css?v=0923v3">
+    <link rel="stylesheet" href="/stable/auto/style.css?v=1125v2">
+    <script src="/auth.js?v=0910v2" defer></script>
+    <script src="/stable/test/runner.js?v=1125v1" defer></script>
+    <script src="/stable/auto/app.js?v=1125v3" defer></script>
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="返回 NEUQ Board 首页"><img src="/newintown.png" alt="NEUQ Board"></a>
+        <div class="topbar-title"><strong>自动测试</strong><span>auto 渠道维护</span></div>
+        <nav class="topbar-actions" aria-label="相关页面">
+            <a class="admin-link" href="/stable/admin/">管理日志</a>
+            <a class="admin-link" href="/stable/test/">渠道测试</a>
+        </nav>
+    </header>
+
+    <main class="test-workspace">
+        <div class="page-heading">
+            <div><h1 id="pageTitle">配置了 auto 的模型</h1><p id="pageHint">点击模型查看渠道与测试历史。</p></div>
+            <div class="test-actions">
+                <button id="refreshButton" class="button" type="button">刷新</button>
+            </div>
+        </div>
+        <div id="notice" class="test-notice" role="status" hidden></div>
+
+        <section id="modelPanel" class="test-panel"><div id="modelList" class="model-list"></div></section>
+
+        <div id="detail" hidden>
+            <section class="test-panel">
+                <h2>当前 auto 渠道顺序</h2>
+                <p id="autoLine" class="auto-line"></p>
+            </section>
+
+            <section class="test-panel">
+                <h2>all 渠道（按成本从低到高）与测试历史（最近 3 天，每格 1 小时，右侧为最新）</h2>
+                <p class="metrics-help">点击渠道名调整各问题的测试间隔；点击格子查看该小时的请求。
+                    <span class="legend"><i class="cell none"></i>无请求 <i class="cell plain"></i>有请求（未配置 ans） <i class="cell ok"></i>匹配 ans <i class="cell bad"></i>未匹配或请求失败</span></p>
+                <div class="table-scroll">
+                    <table>
+                        <thead><tr><th>渠道</th><th>name</th><th class="numeric" title="当前渠道成本 / 官方价格">成本</th>
+                            <th>在 auto 中</th><th title="屏蔽后 auto 不再走该渠道，用户单独选择该渠道不受影响">屏蔽</th>
+                            <th>间隔（小时）</th><th>历史</th></tr></thead>
+                        <tbody id="historyRows"></tbody>
+                    </table>
+                </div>
+                <div id="hourDetail" hidden>
+                    <h2 id="hourTitle" class="hour-title"></h2>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>时间</th><th>问题</th><th>结果</th><th class="numeric">首字延迟</th><th class="numeric">总耗时</th>
+                                <th class="numeric">输出 Token</th><th class="numeric">TPS</th><th>回复</th></tr></thead>
+                            <tbody id="hourRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <dialog id="vtimeDialog" class="vtime-dialog">
+        <form id="vtimeForm" method="dialog">
+            <h2 id="vtimeTitle"></h2>
+            <p class="metrics-help">单位小时，可填小数；0 表示不测试。期间有用户请求成功会顺延，但最长不超过 2 倍间隔。</p>
+            <div id="vtimeFields"></div>
+            <div class="test-actions">
+                <button class="button" type="button" id="vtimeCancel">取消</button>
+                <button class="button button-primary" type="submit">保存</button>
+            </div>
+        </form>
+    </dialog>
+</body>
+</html>

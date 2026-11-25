@@ -2,6 +2,7 @@
 #include "gptapi4.h"
 #include "cppJSON.h"
 #include "gptapi6.h"
+#include "autotest.h"
 #include "mylib.h"
 #include "ndb2.h"
 #include "user.h"
@@ -78,7 +79,7 @@ bool checkpro(pro_ret&a,user_*p,cppJSON& config,string& model,string saved){
         initproret(&tmpre,jmodel["auto"],jmodel["price"]);
         for(cppJSON i:aut["provider"]){
             cppJSON tmp=config["provider"][i];
-            if(tmp&&(p->admin||tmp["public"]==true)){
+            if(tmp&&(p->admin||tmp["public"]==true)&&!autotest_blocked(model.c_str(),((string)i).c_str())){
                 tmpre.provider=i;
                 pro_ret1 tmp2;
                 initproret(&tmp2,tmp,jmodel["price"]);
@@ -491,6 +492,7 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
         gpt4_adduseage(apikey.c_str(),model.c_str(),strcmp(format,"image")==0?0:b.used_tokens,rl.useage);
         if(b.stable<2||b.stable>=1000)gpt4_addstable((model+"_"+provider).c_str(),b.stable==1,&b,ori,cost,rl.useage);//稳定性统计
         gpt5_log(p,model,provider,b,isauto,!b.send,&rl,cost);//写入个人日志
+        if(b.send&&b.stable==1)autotest_userok(model.c_str(),provider.c_str());//自动测试顺延
         if(b.send){
             int l=b.makecache?b.makecache+b.cache:b.input-26;
             ll t=time(0),td=model.substr(0,6)=="claude"?5*60:30*60;
