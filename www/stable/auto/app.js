@@ -67,7 +67,16 @@
             const details = node('details');
             details.append(node('summary', '', '查看'), node('pre', 'reply-text',
                 (record.ans !== undefined ? `预期 ans：${record.ans}\n\n` : '') + replyText(record.append) + (record.info ? `\n\n${record.info}` : '')));
-            reply.append(details);
+            const copy = node('button', 'link-button copy-button', '复制');
+            copy.type = 'button';
+            copy.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(replyText(record.append));
+                    copy.textContent = '已复制';
+                } catch (_) { copy.textContent = '复制失败'; }
+                setTimeout(() => { copy.textContent = '复制'; }, 1500);
+            });
+            reply.append(copy, details);
             row.append(node('td', '', timeText(record.time)), node('td', '', record.name),
                 node('td', color === 'bad' ? 'result-bad' : color === 'ok' ? 'result-ok' : '', result),
                 node('td', 'numeric', fixed(record.first)), node('td', 'numeric', fixed(record.total)),
