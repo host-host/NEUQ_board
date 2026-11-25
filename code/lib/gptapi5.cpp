@@ -6,7 +6,6 @@
 #include "ndb2.h"
 #include "user.h"
 #include "http.h"
-#include <pthread.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <algorithm>
@@ -44,9 +43,6 @@ void gptapi5_init() {
     provider_db=ndb2_init("/web/res/pri/gpt5provider.ndb2");
     cache_db=ndb2_init("/web/res/pri/gpt5cache.ndb2");
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    pthread_t thread_id;
-    if(!pthread_create(&thread_id,0,gpt5_probe_loop,0))pthread_detach(thread_id);
-    else exit(-98);
 }
 #define ERROR(H,message) http_send(a,H Hjson Hc0,"{\"error\":{\"message\":\"" message "\"}}",0)
 struct pro_ret1{
@@ -352,76 +348,6 @@ double gpt5_cost(gpt6_ret* usage,const cppJSON& price,reslog* rl) {//填充倍�
     if(format=="lengthdouble")return usage->input>price["length"].valuedouble()?f(usage,price["newprice"],mul,rl):f(usage,price,mul,rl);
     return 0;
 }
-static bool gpt5_should_skip(const string& key) {
-    stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),0);
-    if(!cc||(unsigned long long)ndb2_gotmaxlen(cc)<sizeof(stablelog))return false;
-    LOCK(&cc->lock);
-    int t=time(0)/(15*60);
-    bool skip=true;
-    for(int window=0;window<2&&skip;window++) {
-        long long stable=0,total=0;
-        for(int i=t-window*8-7;i<=t-window*8;i++) {
-            if(i>cc->uptime||i<=cc->uptime-ST_D)continue;
-            int index=(i+ST_D)%ST_D;
-            stable+=cc->c[index][0];
-            total+=cc->c[index][1];
-        }
-        if(total==0||stable*20>=total)skip=false;
-    }
-    UNLOCK(cc->lock);
-    return skip;
-}
-static bool gpt5_should_probe(const string& key) {
-    stablelog* cc=(stablelog*)ndb2_got(stable_db,key.c_str(),sizeof(stablelog));
-    if(!cc)return false;
-    LOCK(&cc->lock);
-    int (*c)[2]=cc->c;
-    int t=time(0)/(15*60),l=cc->uptime;
-    for(int i=l+1;i<=t&&i<=l+ST_D;i++)c[i%ST_D][0]=c[i%ST_D][1]=0;
-    cc->uptime=t;
-    int stable2=0,total2=0,stable4=0,total4=0;
-    for(int i=t-15;i<=t;i++) {
-        int index=(i+ST_D)%ST_D;
-        stable4+=c[index][0];
-        total4+=c[index][1];
-        if(i>=t-7) {
-            stable2+=c[index][0];
-            total2+=c[index][1];
-        }
-    }
-    UNLOCK(cc->lock);
-    return (total2>0&&stable2*5<=total2)||(total4>0&&stable4*2<=total4);
-}
-static void gpt5_probe(const string& model,const string& provider,const cppJSON& conf) {
-    cppJSON request("{\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]}");
-    request.insert("model",model);
-    gpt6_ret a=gpt6_work3(0,request.stringify_Unformatted().c_str(),model.c_str(),conf,"completions");
-    string key=model+"_"+provider;
-    gpt4_addstable(key.c_str(),a.used_tokens>0,0,0,0,0);
-}
-void* gpt5_probe_loop(void*) {
-    const time_t interval=2*60*60;
-    for(;;) {
-        time_t next=(time(0)/interval+1)*interval;
-        while(time(0)<next)sleep(next-time(0));
-        cppJSON config=cppJSON::from_file(CONFIG);
-        if(!config)continue;
-        for(cppJSON item:config["model"]) {
-            if(!item["format"].has("completions"))continue;
-            string model=item.a->string;
-            set<string>s;
-            for(cppJSON value:item["provider"])s.insert((string)value);
-            for(cppJSON value:item["auto"]["provider"])s.insert((string)value);
-            for(const string& provider:s) {
-                if(provider=="auto")continue;
-                cppJSON conf=config["provider"][provider.c_str()];
-                if(!conf)continue;
-                if(gpt5_should_probe(model+"_"+provider))gpt5_probe(model,provider,conf);
-            }
-        }
-    }
-    return 0;
-}
 void makelog(gpt6_ret*ans,const char* model,const char* message,const char*name,string&provider,bool isauto){
     if(!ans||!ans->format||!ans->format[0])return;
     time_t now=time(0);
@@ -534,7 +460,6 @@ void gpt5_coreapi(http_para*a,const char* format,const char* array_name){
     for(int k=0;k<(int)proret.providers.size();k++){
         string& provider=proret.providers[k].provider;
         bool isauto=proret.isauto,last=k+1==(int)proret.providers.size();
-        if(isauto&&!last&&gpt5_should_skip(model+"_"+provider))continue;
         b=gpt6_work3(a,a->get+a->n,model.c_str(),config["provider"][provider],format,last,want,config["model"][model]["price"].has("makecache"),isauto);
         b.start_ns=startns_p;
         startns_p=b.end_ns;
