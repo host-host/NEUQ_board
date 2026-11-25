@@ -4,6 +4,7 @@
     const $ = id => document.getElementById(id);
     const api = window.StableChannelTest;
     const HOURS = 72;
+    const hourDetail = $('hourDetail'), hourTitle = $('hourTitle'), hourRows = $('hourRows');//会被移动到表格行内，先留引用
     const state = {catalog: null, model: '', data: null, selected: null, editing: ''};
     const node = (tag, className, text) => {
         const element = document.createElement(tag);
@@ -53,11 +54,11 @@
 
     function renderHour() {
         const selected = state.selected;
-        $('hourDetail').hidden = !selected;
+        hourDetail.hidden = !selected;
         if (!selected) return;
-        $('hourTitle').textContent = `${selected.provider} · ${timeText(selected.hour * 3600)} 起 1 小时`;
+        hourTitle.textContent = `${selected.provider} · ${timeText(selected.hour * 3600)} 起 1 小时`;
         const records = state.data.record.filter(record => record.provider === selected.provider && Math.floor(record.time / 3600) === selected.hour);
-        $('hourRows').replaceChildren(...records.map(record => {
+        hourRows.replaceChildren(...records.map(record => {
             const row = node('tr');
             const color = recordColor(record);
             const result = record.stable !== 1 ? `请求失败 #${record.stable}（HTTP ${record.httpcode}）`
@@ -82,7 +83,7 @@
         const providers = allProviders();
         $('autoLine').textContent = autos.length ? autos.map(id => state.data.state[id]?.blocked ? `${id}（已屏蔽）` : id).join(' → ') : '未配置';
         const current = Math.floor(Date.now() / 3600000);
-        $('historyRows').replaceChildren(...providers.map(provider => {
+        $('historyRows').replaceChildren(...providers.flatMap(provider => {
             const row = node('tr');
             const checkbox = node('input');
             checkbox.type = 'checkbox';
@@ -115,7 +116,8 @@
                 cell.title = `${timeText(hour * 3600)} · ${records.length} 次请求`;
                 if (state.selected?.provider === provider.id && state.selected.hour === hour) cell.classList.add('selected');
                 if (records.length) cell.addEventListener('click', () => {
-                    state.selected = {provider: provider.id, hour};
+                    const same = state.selected?.provider === provider.id && state.selected.hour === hour;
+                    state.selected = same ? null : {provider: provider.id, hour};
                     renderDetail();
                 });
                 cells.append(cell);
@@ -125,7 +127,12 @@
             row.append(nameCell, node('td', '', provider.name),
                 node('td', 'numeric', Number.isFinite(provider.ratio) ? `x${Number(provider.ratio.toFixed(6))}` : '—'),
                 node('td', '', autos.includes(provider.id) ? '是' : '—'), blocked, node('td', '', state.data.question.map(q => `${q}: ${vtime[q] || 0}`).join('，') || '—'), cellTd);
-            return row;
+            if (state.selected?.provider !== provider.id) return [row];
+            const detailRow = node('tr'), detailCell = node('td', 'hour-cell');
+            detailCell.colSpan = row.children.length;
+            detailCell.append(hourDetail);
+            detailRow.append(detailCell);
+            return [row, detailRow];
         }));
         renderHour();
     }

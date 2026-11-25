@@ -4,8 +4,9 @@
 .link-button { padding: 0; border: 0; background: none; color: var(--blue); font-weight: 600; cursor: pointer; text-align: left; }
 .link-button:hover { text-decoration: underline; }
 .test-workspace { max-width: none; }
-#historyRows td { white-space: nowrap; }
-#historyRows td:last-child { width: 100%; padding-right: 0; }
+#historyRows > tr > td { white-space: nowrap; }
+#historyRows > tr > td.hour-cell { white-space: normal; padding: 0 12px 16px 28px; background: var(--surface-soft); }
+#historyRows > tr > td:last-child:not(.hour-cell) { width: 100%; padding-right: 0; }
 .cells { display: flex; gap: 1px; }
 .cell { display: inline-block; flex: 1 1 0; min-width: 3px; max-width: 14px; width: 11px; height: 26px; padding: 0; border: 1px solid var(--line-strong); border-radius: 2px; background: #fff; }
 button.cell { cursor: pointer; }
@@ -17,7 +18,7 @@ button.cell.none { cursor: default; }
 .cell.selected { outline: 2px solid var(--blue); outline-offset: 1px; }
 .legend { margin-left: 12px; white-space: nowrap; }
 .legend .cell { width: 11px; height: 11px; margin: 0 4px 0 10px; vertical-align: -1px; }
-.hour-title { margin: 22px 0 12px; }
+.hour-title { margin: 14px 0 10px; }
 .result-ok { color: var(--green); }
 .result-bad { color: var(--red); }
 .vtime-dialog { width: min(92vw, 420px); padding: 22px; border: 1px solid var(--line); border-radius: 8px; }
