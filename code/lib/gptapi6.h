@@ -4,11 +4,15 @@
 #include"cppJSON.h"
 #include<ctime>
 #include<map>
+#include<memory>
 #include<string>
 std::string gpt6_request_model(http_para* a,const cppJSON& request,const std::string& format);
 cppJSON my_format(const cppJSON& a,const std::string& format,int k=2);
 struct gpt6_ret{
     http_para*a;
+    void *internal;
+    void(*change_response)(std::string& resp,void* internal,bool issse);
+    void(*change_clean)(void* internal);
     const char* format;
     cppJSON append;
     long long used_tokens;

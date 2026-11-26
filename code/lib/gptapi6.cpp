@@ -1,4 +1,5 @@
 #include "gptapi6.h"
+#include "completions2claude.h"
 #include <bits/stdc++.h>
 #include <curl/curl.h>
 #include <fcntl.h>
@@ -347,14 +348,26 @@ void gpt6_parse_image(gpt6_ret* ans,string& tmp,bool issse) {
         gpt6_mark_first(ans);
     }
 }
-void gpt6_parse(gpt6_ret* ans,string tmp,bool issse){//处理 append used_tokens input output cache makecache first response_id
-    while(!tmp.empty()&&tmp.back()=='\r')tmp.pop_back();
+void gpt6_parse2(gpt6_ret* ans,string &tmp,bool issse){
     if(strcmp(ans->format,"responses")==0)gpt6_parse_responses(ans,tmp,issse);
     if(strcmp(ans->format,"completions")==0)gpt6_parse_completions(ans,tmp,issse);
     if(strcmp(ans->format,"claude")==0)gpt6_parse_claude(ans,tmp,issse);
     if(strcmp(ans->format,"gemini")==0)gpt6_parse_gemini(ans,tmp,issse);
     if(strcmp(ans->format,"image")==0)gpt6_parse_image(ans,tmp,issse);
     if(ans->a)ans->ca+=tmp;
+}
+void gpt6_parse(gpt6_ret* ans,string tmp,bool issse){//处理 append used_tokens input output cache makecache first response_id
+    while(!tmp.empty()&&tmp.back()=='\r')tmp.pop_back();
+    if(ans->change_response)ans->change_response(tmp,ans->internal,issse);
+    if(ans->change_response&&issse){
+        size_t u;
+        while((u=tmp.find('\n'))!=string::npos){
+            string line=tmp.substr(0,u+1);
+            gpt6_parse2(ans,line,issse);
+            tmp.erase(0,u+1);
+        }
+        if(!tmp.empty())gpt6_parse2(ans,tmp,issse);
+    }else gpt6_parse2(ans,tmp,issse);
 }
 static size_t gpt6header(char* ptr,size_t size,size_t count,void* userdata) {
     gpt6_ret* p=(gpt6_ret*)userdata;
@@ -468,31 +481,39 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
         return ans;
     }
     char curl_error[CURL_ERROR_SIZE]={0};
-    string Authorization=conf["Authorization"],url=conf["url"],mm,proxy=conf["proxy"];
-    if(conf.has("url_claude")&&strcmp(format,"claude")==0)url=conf["url_claude"];//单独适配deepseek的两种格式url不同
+    string Authorization=conf["Authorization"],url=conf["url"],mm,proxy=conf["proxy"],realf=conf["fmap"][format];
+    if(realf.empty())realf=format;
+    if(conf.has("url_claude")&&realf=="claude")url=conf["url_claude"];//单独适配deepseek的两种格式url不同
     struct curl_slist* headers=curl_slist_append(0,"Content-Type: application/json");
-    if(strcmp(format,"responses")==0||strcmp(format,"completions")==0||strcmp(format,"image")==0)Authorization="Authorization: Bearer "+Authorization;
-    if(strcmp(format,"claude")==0)Authorization="x-api-key: "+Authorization;
-    if(strcmp(format,"gemini")==0)Authorization="x-goog-api-key: "+Authorization;
+    if(realf=="responses"||realf=="completions"||realf=="image")Authorization="Authorization: Bearer "+Authorization;
+    if(realf=="claude")Authorization="x-api-key: "+Authorization;
+    if(realf=="gemini")Authorization="x-goog-api-key: "+Authorization;
     headers=curl_slist_append(headers,Authorization.c_str());
-    if(strcmp(format,"claude")==0)headers=curl_slist_append(headers,"anthropic-version: 2023-06-01");
+    if(realf=="claude")headers=curl_slist_append(headers,"anthropic-version: 2023-06-01");
     if(!url.empty()&&url.back()=='/')url.pop_back();
-    if(strcmp(format,"responses")==0)url+="/v1/responses";
-    if(strcmp(format,"completions")==0)url+="/v1/chat/completions";
-    if(strcmp(format,"claude")==0)url+="/v1/messages";
-    if(strcmp(format,"image")==0)url+="/v1/images/generations";
-    if(strcmp(format,"gemini")==0)url=url+"/v1beta/models/"+model+":streamGenerateContent?alt=sse";
+    if(realf=="responses")url+="/v1/responses";
+    if(realf=="completions")url+="/v1/chat/completions";
+    if(realf=="claude")url+="/v1/messages";
+    if(realf=="image")url+="/v1/images/generations";
+    if(realf=="gemini")url=url+"/v1beta/models/"+model+":streamGenerateContent?alt=sse";
     curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
     cppJSON u(message);
-    u.erase("nit_web_provider");//网页端自定义字段
+    u.erase("nit_web_provider");//自定义字段
+    if(conf["fmap"][format].IsString()){
+        if(strcmp(format,"completions")==0&&realf=="claude"){
+            completions2claude_request(u,ans.internal);
+            ans.change_response=completions2claude_response;
+            ans.change_clean=completions2claude_clean;
+        }
+    }
     for(auto i:conf["append"])u.insert(i.a->string,i);//执行消息内容追加
-    if(strcmp(format,"completions")==0&&conf["responses_sum2rea"]==true)gpt6_chat_res2recon(u);
-    if(strcmp(format,"responses")==0&&conf["responses_sum2rea"]==true)gpt6_responses_sum2rea(u);//deepseek特例，需要 return the reasoning_content
-    if(strcmp(format,"completions")==0&&u["stream"]==true){
+    if(realf=="completions"&&conf["responses_sum2rea"]==true)gpt6_chat_res2recon(u);
+    if(realf=="responses"&&conf["responses_sum2rea"]==true)gpt6_responses_sum2rea(u);//deepseek特例，需要 return the reasoning_content
+    if(realf=="completions"&&u["stream"]==true){
         if(!u["stream_options"].IsObject())u.insert("stream_options",cppJSON("{}"));
         u["stream_options"].insert("include_usage",true);
     }
-    if(strcmp(format,"gemini"))u["model"]=model;//执行名字map映射
+    if(realf!="gemini")u["model"]=model;//执行名字map映射
     mm=u.stringify_Unformatted();
     u.clear();//提前释放，防止内存爆
     if(conf["gzip"]==true){
@@ -536,6 +557,7 @@ gpt6_ret gpt6_work3(http_para* a,const char* message,const char* model,cppJSON c
     if(ans.used_tokens)ans.stable=ans.stable<=1?1/*正常*/:0/*有花费并且有问题，需要写日志人工看看*/;
     if(ans.send==0&&ans.stable==1)ans.send=1;
     gpt6_flush(&ans);
+    if(ans.change_clean)ans.change_clean(ans.internal);
     return ans;
 }
 string gpt6_request_model(http_para* a,const cppJSON& request,const string& format) {
