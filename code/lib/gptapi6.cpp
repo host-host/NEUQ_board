@@ -226,12 +226,11 @@ void gpt6_parse_claude(gpt6_ret* ans,string& resp,bool issse){
     */
     auto f=[](gpt6_ret* ans,cppJSON usage){
         if(!usage.IsObject())return;
-        ll input=max(ans->input-ans->costcache-ans->costmakecache,usage["input_tokens"].valuedouble());
+        ll input=usage["input_tokens"].valuedouble();
         ans->output=max(ans->output,usage["output_tokens"].valuedouble());
-        ans->costcache=ans->cache=max(ans->costcache,usage["cache_read_input_tokens"].valuedouble());
-        ans->costmakecache_1h=ans->makecache_1h=max(ans->costmakecache_1h,usage["cache_creation"]["ephemeral_1h_input_tokens"].valuedouble());
-        ans->costmakecache=max(ans->costmakecache,usage["cache_creation_input_tokens"].valuedouble());
-        ans->costmakecache=ans->makecache=max(ans->costmakecache,ans->makecache_1h);
+        ans->costcache=ans->cache=usage["cache_read_input_tokens"].valuedouble();
+        ans->costmakecache_1h=ans->makecache_1h=usage["cache_creation"]["ephemeral_1h_input_tokens"].valuedouble();
+        ans->costmakecache=ans->makecache=max((ll)usage["cache_creation_input_tokens"].valuedouble(),ans->makecache_1h);
         ans->input=input+ans->cache+ans->makecache;
         ans->used_tokens=ans->input+ans->output;
         if(ans->isauto){
