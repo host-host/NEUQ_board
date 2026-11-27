@@ -291,10 +291,16 @@ void completions2claude_request(cppJSON& u,void*& internal){
         if(choice)r.insert("tool_choice",std::move(choice));
     }
     //thinking：优先透传客户端的thinking/output_config；否则reasoning_effort(或reasoning.effort) -> adaptive + output_config.effort
+    //claude-5.x 不能关thinking（发disabled会400），所有"关闭"一律改成 adaptive+low（cc-switch thinking_cannot_be_disabled 同）
+    const char* LOW="{\"effort\":\"low\"}";
     cppJSON thinking,oc;
     if(u["thinking"].IsObject()){
         thinking=u["thinking"].clone();
         if(u["output_config"].IsObject())oc=u["output_config"].clone();
+        if(thinking["type"]=="disabled"){
+            thinking=cppJSON("{\"type\":\"adaptive\"}");
+            oc=cppJSON(LOW);
+        }
     }else{
         string raw=u["reasoning_effort"].IsString()?u["reasoning_effort"].valuestring():u["reasoning"]["effort"].valuestring();
         string effort=c2c_effort(raw);
@@ -302,16 +308,21 @@ void completions2claude_request(cppJSON& u,void*& internal){
             thinking=cppJSON("{\"type\":\"adaptive\"}");
             oc=cppJSON("{}");
             oc.insert("effort",effort);
-        }else if(raw=="none")thinking=cppJSON("{\"type\":\"disabled\"}");//显式关闭
+        }else if(raw=="none"){
+            thinking=cppJSON("{\"type\":\"adaptive\"}");
+            oc=cppJSON(LOW);
+        }
         //不认识的effort不开thinking，保留采样参数（cc-switch同）
     }
     bool on=thinking.IsObject()&&!(thinking["type"]=="disabled");
+    //工具续写轮即使没有签名thinking块也保持adaptive（关不掉），能否被上游接受待实测
+    (void)thinking_ok;
+    //开着thinking时claude不接受强制tool_choice(any/tool)：降级为auto，保留thinking和disable_parallel_tool_use
     string ct=r["tool_choice"]["type"];
-    //工具续写轮的assistant没有签名thinking块，或强制tool_choice(any/tool)时，claude都不接受thinking -> 本次关闭
-    if(on&&(!thinking_ok||ct=="any"||ct=="tool")){
-        thinking=cppJSON("{\"type\":\"disabled\"}");
-        oc=cppJSON();
-        on=false;
+    if(on&&(ct=="any"||ct=="tool")){
+        cppJSON tcj=r["tool_choice"];
+        tcj.insert("type","auto");
+        tcj.erase("name");
     }
     if(thinking)r.insert("thinking",std::move(thinking));
     if(oc)r.insert("output_config",std::move(oc));
